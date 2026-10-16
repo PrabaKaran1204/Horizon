@@ -1,0 +1,25 @@
+Item Code,Price List,Rate,Currency,Selling,Buying
+RM-STEEL-PLATE,Standard Buying,65.0,INR,0,1
+RM-MS-CHANNEL,Standard Buying,180.0,INR,0,1
+RM-WELD-ROD,Standard Buying,120.0,INR,0,1
+RM-PAINT-GREY,Standard Buying,350.0,INR,0,1
+RM-BOLT-M10,Standard Buying,8.0,INR,0,1
+RM-BOLT-M8,Standard Buying,5.0,INR,0,1
+CMP-MOTOR-5HP,Standard Buying,18000.0,INR,0,1
+CMP-GEARBOX,Standard Buying,12000.0,INR,0,1
+CMP-BEARING-6205,Standard Buying,250.0,INR,0,1
+CMP-SHAFT-25,Standard Buying,1400.0,INR,0,1
+CMP-SEAL-KIT,Standard Buying,900.0,INR,0,1
+CMP-CONTACTOR,Standard Buying,1100.0,INR,0,1
+CMP-CASTING,Standard Buying,4500.0,INR,0,1
+CMP-BELT-1M,Standard Buying,2200.0,INR,0,1
+HZ-PUMP-100,Standard Selling,185000.0,INR,1,0
+HZ-PUMP-100,North Selling,190550.0,INR,1,0
+HZ-CONV-200,Standard Selling,240000.0,INR,1,0
+HZ-CONV-200,North Selling,247200.0,INR,1,0
+SP-IMPELLER,Standard Selling,6500.0,INR,1,0
+SP-IMPELLER,North Selling,6695.0,INR,1,0
+SP-SEAL-SET,Standard Selling,2400.0,INR,1,0
+SP-SEAL-SET,North Selling,2472.0,INR,1,0
+SP-BELT-KIT,Standard Selling,5200.0,INR,1,0
+SP-BELT-KIT,North Selling,5356.0,INR,1,0

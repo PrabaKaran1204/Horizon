@@ -1,0 +1,5 @@
+Title,Apply On,Item Groups,Applicable For,Customer Group,Min Qty,Discount Percentage,Priority,Valid From,Valid Upto,Selling,Company,Currency
+PR-PREMIUM-5,Item Group,Equipment; Spares; Components,Customer Group,Premium,0,5,1,,,1,Horizon Manufacturing Ltd,INR
+PR-COMPONENTS-3,Item Group,Components,,,0,3,1,,,1,Horizon Manufacturing Ltd,INR
+PR-VOLUME-8,Item Group,Spares; Components,,,51,8,2,,,1,Horizon Manufacturing Ltd,INR
+PR-Q4-SPARES-10,Item Group,Spares,,,0,10,3,2026-10-01,2026-12-31,1,Horizon Manufacturing Ltd,INR

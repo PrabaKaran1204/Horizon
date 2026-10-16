@@ -1,0 +1,43 @@
+Item (BOM),Company,Quantity,Line Type,Item Code / Operation,Qty (BOM Item),Workstation (BOM Operation),Operation Time (mins),Sequence ID
+SA-MOTOR-01,Horizon Manufacturing Ltd,1,Material,CMP-MOTOR-5HP,1,,,
+SA-MOTOR-01,Horizon Manufacturing Ltd,1,Material,RM-BOLT-M10,8,,,
+SA-MOTOR-01,Horizon Manufacturing Ltd,1,Material,CMP-CONTACTOR,1,,,
+SA-MOTOR-01,Horizon Manufacturing Ltd,1,Operation,Assembly,,Line A,45,1
+SA-MOTOR-01,Horizon Manufacturing Ltd,1,Operation,Testing,,Line A,15,2
+SA-HOUSING-01,Horizon Manufacturing Ltd,1,Material,CMP-CASTING,1,,,
+SA-HOUSING-01,Horizon Manufacturing Ltd,1,Material,CMP-SEAL-KIT,1,,,
+SA-HOUSING-01,Horizon Manufacturing Ltd,1,Material,RM-BOLT-M8,12,,,
+SA-HOUSING-01,Horizon Manufacturing Ltd,1,Material,RM-PAINT-GREY,0.5,,,
+SA-HOUSING-01,Horizon Manufacturing Ltd,1,Operation,Machining,,Line B,60,1
+SA-HOUSING-01,Horizon Manufacturing Ltd,1,Operation,Painting,,Line A,30,2
+SA-HOUSING-01,Horizon Manufacturing Ltd,1,Operation,Assembly,,Line A,30,3
+SA-PANEL-01,Horizon Manufacturing Ltd,1,Material,CMP-CONTACTOR,2,,,
+SA-PANEL-01,Horizon Manufacturing Ltd,1,Material,RM-BOLT-M8,6,,,
+SA-PANEL-01,Horizon Manufacturing Ltd,1,Operation,Wiring,,Line B,40,1
+SA-FRAME-01,Horizon Manufacturing Ltd,1,Material,RM-MS-CHANNEL,12,,,
+SA-FRAME-01,Horizon Manufacturing Ltd,1,Material,RM-STEEL-PLATE,15,,,
+SA-FRAME-01,Horizon Manufacturing Ltd,1,Material,RM-WELD-ROD,2,,,
+SA-FRAME-01,Horizon Manufacturing Ltd,1,Material,RM-PAINT-GREY,1.5,,,
+SA-FRAME-01,Horizon Manufacturing Ltd,1,Operation,Cutting,,Line B,30,1
+SA-FRAME-01,Horizon Manufacturing Ltd,1,Operation,Welding,,Line A,90,2
+SA-FRAME-01,Horizon Manufacturing Ltd,1,Operation,Painting,,Line A,45,3
+SA-DRIVE-01,Horizon Manufacturing Ltd,1,Material,CMP-GEARBOX,1,,,
+SA-DRIVE-01,Horizon Manufacturing Ltd,1,Material,CMP-SHAFT-25,1,,,
+SA-DRIVE-01,Horizon Manufacturing Ltd,1,Material,CMP-BEARING-6205,2,,,
+SA-DRIVE-01,Horizon Manufacturing Ltd,1,Material,CMP-MOTOR-5HP,1,,,
+SA-DRIVE-01,Horizon Manufacturing Ltd,1,Operation,Assembly,,Line A,60,1
+HZ-PUMP-100,Horizon Manufacturing Ltd,1,Material,SA-MOTOR-01,1,,,
+HZ-PUMP-100,Horizon Manufacturing Ltd,1,Material,SA-HOUSING-01,1,,,
+HZ-PUMP-100,Horizon Manufacturing Ltd,1,Material,SA-PANEL-01,1,,,
+HZ-PUMP-100,Horizon Manufacturing Ltd,1,Material,RM-BOLT-M10,16,,,
+HZ-PUMP-100,Horizon Manufacturing Ltd,1,Operation,Assembly,,Line A,120,1
+HZ-PUMP-100,Horizon Manufacturing Ltd,1,Operation,Testing,,Line A,60,2
+HZ-CONV-200,Horizon Manufacturing Ltd,1,Material,SA-FRAME-01,1,,,
+HZ-CONV-200,Horizon Manufacturing Ltd,1,Material,SA-DRIVE-01,1,,,
+HZ-CONV-200,Horizon Manufacturing Ltd,1,Material,CMP-BELT-1M,3,,,
+HZ-CONV-200,Horizon Manufacturing Ltd,1,Material,RM-BOLT-M10,24,,,
+HZ-CONV-200,Horizon Manufacturing Ltd,1,Operation,Assembly,,Line A,180,1
+HZ-CONV-200,Horizon Manufacturing Ltd,1,Operation,Testing,,Line A,60,2
+SP-IMPELLER,Horizon Manufacturing Ltd,5,Material,CMP-CASTING,1,,,
+SP-IMPELLER,Horizon Manufacturing Ltd,5,Material,RM-BOLT-M8,10,,,
+SP-IMPELLER,Horizon Manufacturing Ltd,5,Operation,Machining,,Line B,200,1

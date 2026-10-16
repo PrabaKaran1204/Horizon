@@ -1,0 +1,7 @@
+Customer Name,Customer Type,Customer Group,Territory,GSTIN / UIN,GST Category,Default Price List,Credit Limit,Address Line 1,City/Town,State/Province,Postal Code,Contact First Name,Contact Last Name,Contact Email
+Tata Precision Works,Company,Premium,West,27AABCT4512Q1Z0,Registered Regular,,2500000,"Gat 118, Chakan MIDC Phase II",Pune,Maharashtra,410501,Rohan,Deshmukh,rohan@tataprecision.example
+Larsen Industrial Supplies,Company,Premium,West,27AABCL7823R1ZU,Registered Regular,,2500000,"Unit 9, Taloja Industrial Estate",Navi Mumbai,Maharashtra,410208,Meera,Iyer,meera@larsenind.example
+Delhi Metro Fabricators,Company,Standard,North,07AADCD3391K1ZH,Registered Regular,North Selling,,"B-44, Mayapuri Industrial Area Phase I",New Delhi,Delhi,110064,Sandeep,Kapoor,sandeep@dmfab.example
+Haryana Agro Machines,Company,Standard,North,06AAECH5520M1ZJ,Registered Regular,North Selling,,"Plot 31, Sector 37, HSIIDC",Gurugram,Haryana,122001,Vikram,Yadav,vikram@haryanaagro.example
+Bharat Mining Co,Company,Standard,West,24AACCB6618N1ZI,Registered Regular,,,"Survey 77, GIDC Makarpura",Vadodara,Gujarat,390010,Kiran,Patel,kiran@bharatmining.example
+ABC Corp,Company,Standard,West,27AAACA1234B1ZI,Registered Regular,,,"12, Bhandup Industrial Estate",Mumbai,Maharashtra,400078,Anil,Bhatia,anil@abccorp.example

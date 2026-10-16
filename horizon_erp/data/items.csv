@@ -1,0 +1,26 @@
+Item Code,Item Name,Item Group,Default Unit of Measure,Maintain Stock,Valuation Rate,Standard Selling Rate,Lead Time in days,HSN/SAC,Criticality,Demand Pattern,Machine Hours per Unit,Default Line,Has Batch No,Batch Number Series,Has Serial No,Serial Number Series,Company (Item Defaults),Default Warehouse (Item Defaults),Default Cost Center (Item Defaults),Default Supplier (Item Defaults),Check in (group) (Item Reorder),Re-order Level (Item Reorder),Re-order Qty (Item Reorder),Quality Inspection Template
+RM-STEEL-PLATE,MS Steel Plate 6mm,Raw Material,Kg,1,65.0,0.0,28,72085110,A,,,,0,,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,Mumbai Steel Traders,HQ Raw Materials - HML,400,1000,RM Steel Incoming
+RM-MS-CHANNEL,MS Channel 75x40,Raw Material,Meter,1,180.0,0.0,21,72163100,A,,,,0,,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,Mumbai Steel Traders,HQ Raw Materials - HML,150,400,RM Steel Incoming
+RM-WELD-ROD,Welding Rod E6013,Raw Material,Kg,1,120.0,0.0,2,83111000,C,,,,1,WR-.####,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,ABC Supplies,HQ Raw Materials - HML,50,100,
+RM-PAINT-GREY,Industrial Paint Grey,Raw Material,Litre,1,350.0,0.0,7,32081010,B,,,,1,PG-.####,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,,HQ Raw Materials - HML,40,100,
+RM-BOLT-M10,Hex Bolt M10x40,Raw Material,Nos,1,8.0,0.0,2,73181500,C,,,,0,,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,Delhi Fastener House,HQ Raw Materials - HML,500,2000,Fastener Incoming
+RM-BOLT-M8,Hex Bolt M8x25,Raw Material,Nos,1,5.0,0.0,2,73181500,C,,,,0,,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,Delhi Fastener House,HQ Raw Materials - HML,500,2000,Fastener Incoming
+CMP-MOTOR-5HP,Electric Motor 5HP,Components,Nos,1,18000.0,0.0,14,85015210,A,,,,0,,1,MOT-.####,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,Pune Electricals,HQ Raw Materials - HML,5,10,Electrical Incoming
+CMP-GEARBOX,Worm Gearbox 1:20,Components,Nos,1,12000.0,0.0,21,84834000,A,,,,0,,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,Bharat Castings Ltd,HQ Raw Materials - HML,3,6,
+CMP-BEARING-6205,Ball Bearing 6205,Components,Nos,1,250.0,0.0,5,84821011,B,,,,0,,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,ABC Corp,HQ Raw Materials - HML,100,200,
+CMP-SHAFT-25,Drive Shaft 25mm,Components,Nos,1,1400.0,0.0,10,84831091,B,,,,0,,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,,HQ Raw Materials - HML,10,20,
+CMP-SEAL-KIT,Mechanical Seal Kit,Components,Nos,1,900.0,0.0,7,84842000,B,,,,0,,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,ABC Corp,HQ Raw Materials - HML,20,40,
+CMP-CONTACTOR,Contactor 25A,Components,Nos,1,1100.0,0.0,5,85364900,B,,,,0,,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,Pune Electricals,HQ Raw Materials - HML,10,20,Electrical Incoming
+CMP-CASTING,Pump Casing Casting,Components,Nos,1,4500.0,0.0,28,84139190,A,,,,0,,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,Bharat Castings Ltd,HQ Raw Materials - HML,6,12,
+CMP-BELT-1M,Conveyor Belt 1m,Components,Nos,1,2200.0,0.0,10,84314990,B,,,,0,,0,,Horizon Manufacturing Ltd,HQ Raw Materials - HML,Mfg - Components - HML,,HQ Raw Materials - HML,5,10,
+SA-MOTOR-01,Motor Assembly,Sub Assemblies,Nos,1,0.0,0.0,0,85015210,,,1.5,,0,,0,,Horizon Manufacturing Ltd,HQ Work In Progress - HML,Mfg - Equipment - HML,,,,,
+SA-HOUSING-01,Pump Housing Assembly,Sub Assemblies,Nos,1,0.0,0.0,0,84139190,,,2.5,,0,,0,,Horizon Manufacturing Ltd,HQ Work In Progress - HML,Mfg - Equipment - HML,,,,,
+SA-PANEL-01,Control Panel,Sub Assemblies,Nos,1,0.0,0.0,0,85364900,,,1.5,,0,,0,,Horizon Manufacturing Ltd,HQ Work In Progress - HML,Mfg - Equipment - HML,,,,,
+SA-FRAME-01,Conveyor Frame,Sub Assemblies,Nos,1,0.0,0.0,0,84314990,,,3,,0,,0,,Horizon Manufacturing Ltd,HQ Work In Progress - HML,Mfg - Equipment - HML,,,,,
+SA-DRIVE-01,Drive Unit,Sub Assemblies,Nos,1,0.0,0.0,0,84834000,,,2,,0,,0,,Horizon Manufacturing Ltd,HQ Work In Progress - HML,Mfg - Equipment - HML,,,,,
+HZ-PUMP-100,Industrial Pump Unit 100,Equipment,Nos,1,0.0,185000.0,21,84137010,,,6,Any,0,,1,PMP-.####,Horizon Manufacturing Ltd,HQ Finished Goods - HML,Mfg - Equipment - HML,,,,,Assembly Inspection
+HZ-CONV-200,Conveyor Module 200,Equipment,Nos,1,0.0,240000.0,28,84283900,,,8,Line A,0,,1,CNV-.####,Horizon Manufacturing Ltd,HQ Finished Goods - HML,Mfg - Equipment - HML,,,,,Assembly Inspection
+SP-IMPELLER,Pump Impeller,Spares,Nos,1,3200.0,6500.0,0,84139190,B,Seasonal Q4,0.5,,0,,0,,Horizon Manufacturing Ltd,HQ Finished Goods - HML,Mfg - Spares - HML,,HQ Finished Goods - HML,20,50,
+SP-SEAL-SET,Seal Replacement Set,Spares,Nos,1,1100.0,2400.0,0,84842000,B,Seasonal Q4,,,0,,0,,Horizon Manufacturing Ltd,HQ Finished Goods - HML,Mfg - Spares - HML,,HQ Finished Goods - HML,30,60,
+SP-BELT-KIT,Belt Replacement Kit,Spares,Nos,1,2600.0,5200.0,0,84314990,C,Seasonal Q4,,,0,,0,,Horizon Manufacturing Ltd,HQ Finished Goods - HML,Mfg - Spares - HML,,HQ Finished Goods - HML,10,30,
+FA-CNC-LATHE,CNC Lathe 2m,Fixed Assets,Nos,0,0.0,0.0,0,84581100,,,,,0,,0,,Horizon Manufacturing Ltd,,Admin - HML,,,,,

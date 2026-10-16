@@ -1,0 +1,9 @@
+Cost Center Name,Parent Cost Center,Is Group,Company
+Manufacturing,Horizon Manufacturing Ltd - HML,1,Horizon Manufacturing Ltd
+Mfg - Equipment,Manufacturing - HML,0,Horizon Manufacturing Ltd
+Mfg - Spares,Manufacturing - HML,0,Horizon Manufacturing Ltd
+Mfg - Components,Manufacturing - HML,0,Horizon Manufacturing Ltd
+Mfg - Shared,Manufacturing - HML,0,Horizon Manufacturing Ltd
+Sales,Horizon Manufacturing Ltd - HML,0,Horizon Manufacturing Ltd
+Admin,Horizon Manufacturing Ltd - HML,0,Horizon Manufacturing Ltd
+R&D,Horizon Manufacturing Ltd - HML,0,Horizon Manufacturing Ltd

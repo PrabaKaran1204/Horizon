@@ -1,0 +1,11 @@
+Warehouse Name,Parent Warehouse,Is Group,Company,Is Rejected Warehouse,Warehouse Type,Address Line 1,City,State,PIN
+Mumbai HQ,All Warehouses - HML,1,Horizon Manufacturing Ltd,0,,"Plot 14, MIDC Andheri East",Mumbai,Maharashtra,400093
+Delhi DC,All Warehouses - HML,1,Horizon Manufacturing Ltd,0,,"Khasra 22, Okhla Industrial Area Phase II",New Delhi,Delhi,110020
+HQ Raw Materials,Mumbai HQ - HML,0,Horizon Manufacturing Ltd,0,,"Plot 14, MIDC Andheri East",Mumbai,Maharashtra,400093
+HQ QC Hold,Mumbai HQ - HML,0,Horizon Manufacturing Ltd,0,,"Plot 14, MIDC Andheri East",Mumbai,Maharashtra,400093
+HQ Work In Progress,Mumbai HQ - HML,0,Horizon Manufacturing Ltd,0,,"Plot 14, MIDC Andheri East",Mumbai,Maharashtra,400093
+HQ Finished Goods,Mumbai HQ - HML,0,Horizon Manufacturing Ltd,0,,"Plot 14, MIDC Andheri East",Mumbai,Maharashtra,400093
+HQ Rejected,Mumbai HQ - HML,0,Horizon Manufacturing Ltd,1,,"Plot 14, MIDC Andheri East",Mumbai,Maharashtra,400093
+HQ Scrap,Mumbai HQ - HML,0,Horizon Manufacturing Ltd,0,,"Plot 14, MIDC Andheri East",Mumbai,Maharashtra,400093
+DEL Finished Goods,Delhi DC - HML,0,Horizon Manufacturing Ltd,0,,"Khasra 22, Okhla Industrial Area Phase II",New Delhi,Delhi,110020
+DEL Goods In Transit,Delhi DC - HML,0,Horizon Manufacturing Ltd,0,Transit,"Khasra 22, Okhla Industrial Area Phase II",New Delhi,Delhi,110020

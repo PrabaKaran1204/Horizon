@@ -1,0 +1,7 @@
+Supplier Name,Supplier Type,Supplier Group,GSTIN / UIN,GST Category,Is Blacklisted,Blacklisted On,Blacklist Reason,Address Line 1,City/Town,State/Province,Postal Code,Contact First Name,Contact Last Name,Contact Email
+ABC Supplies,Company,Raw Material,27AABCA9981C1ZL,Registered Regular,1,2026-07-15,Repeated weld-quality rejections Q1 FY26-27,"Shed 5, Bhiwandi Industrial Park",Thane,Maharashtra,421302,Suresh,Rane,suresh@abcsupplies.example
+ABC Corp,Company,Raw Material,27AAACA1234B1ZI,Registered Regular,0,,,"12, Bhandup Industrial Estate",Mumbai,Maharashtra,400078,Anil,Bhatia,anil@abccorp.example
+Mumbai Steel Traders,Company,Raw Material,27AAFCM2210D1Z3,Registered Regular,0,,,"Darukhana, Reay Road",Mumbai,Maharashtra,400010,Haresh,Shah,haresh@mumbaisteel.example
+Pune Electricals,Company,Electrical,27AAHCP4471E1ZD,Registered Regular,0,,,"J-Block, MIDC Bhosari",Pune,Maharashtra,411026,Prakash,Kulkarni,prakash@puneelec.example
+Delhi Fastener House,Company,Raw Material,07AAJCD8865F1Z9,Registered Regular,0,,,"Shop 3, Chawri Bazar",New Delhi,Delhi,110006,Rakesh,Gupta,rakesh@delhifastener.example
+Bharat Castings Ltd,Company,Raw Material,24AABCB7732G1ZX,Registered Regular,0,,,"Plot 210, GIDC Rajkot",Rajkot,Gujarat,360003,Jayesh,Mehta,jayesh@bharatcastings.example
