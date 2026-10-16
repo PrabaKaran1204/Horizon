@@ -6,11 +6,13 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, nowdate
 
 from horizon_erp.horizon_operations.test_fixtures import ensure_bom, make_work_order, setup_common
+from horizon_erp.tests.cleanup import purge_test_residue
 
 
 class TestManufacturing(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
+		cls.addClassCleanup(purge_test_residue)  # LIFO: runs after FrappeTestCase's rollback
 		super().setUpClass()
 		frappe.set_user("Administrator")
 		cls.wh = setup_common()

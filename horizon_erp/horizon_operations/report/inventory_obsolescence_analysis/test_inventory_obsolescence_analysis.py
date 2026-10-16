@@ -9,6 +9,7 @@ from horizon_erp.horizon_operations.report.inventory_obsolescence_analysis.inven
 	execute,
 )
 from horizon_erp.horizon_operations.scrap import get_default_dimensions, mark_for_scrap
+from horizon_erp.tests.cleanup import purge_test_residue
 
 COMPANY = "Horizon Manufacturing Ltd"
 ITEM = "RPTTEST-OBS-ITEM"
@@ -17,6 +18,7 @@ ITEM = "RPTTEST-OBS-ITEM"
 class TestInventoryObsolescenceAnalysis(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
+		cls.addClassCleanup(purge_test_residue)  # LIFO: runs after FrappeTestCase's rollback
 		super().setUpClass()
 		cls.warehouse = frappe.db.get_value(
 			"Warehouse", {"company": COMPANY, "is_group": 0, "name": ["like", "%Stores%"]}, "name"

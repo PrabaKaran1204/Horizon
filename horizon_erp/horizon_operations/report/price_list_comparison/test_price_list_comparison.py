@@ -5,6 +5,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from horizon_erp.horizon_operations.report.price_list_comparison.price_list_comparison import execute
+from horizon_erp.tests.cleanup import purge_test_residue
 
 COMPANY = "Horizon Manufacturing Ltd"
 ITEM = "RPTTEST-PRICE-ITEM"
@@ -13,6 +14,7 @@ ITEM = "RPTTEST-PRICE-ITEM"
 class TestPriceListComparison(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
+		cls.addClassCleanup(purge_test_residue)  # LIFO: runs after FrappeTestCase's rollback
 		super().setUpClass()
 		if not frappe.db.exists("Item", ITEM):
 			frappe.get_doc(

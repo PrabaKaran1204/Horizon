@@ -19,6 +19,7 @@ from horizon_erp.horizon_operations.test_fixtures import (
 	setup_common,
 	with_dimensions,
 )
+from horizon_erp.tests.cleanup import purge_test_residue
 
 
 def ensure_pricing_rule(title, item_code, discount_percentage, **extra):
@@ -51,6 +52,7 @@ def ensure_pricing_rule(title, item_code, discount_percentage, **extra):
 class TestSelling(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
+		cls.addClassCleanup(purge_test_residue)  # LIFO: runs after FrappeTestCase's rollback
 		super().setUpClass()
 		frappe.set_user("Administrator")
 		cls.wh = setup_common()

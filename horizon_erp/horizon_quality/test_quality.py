@@ -12,11 +12,13 @@ from horizon_erp.horizon_operations.test_fixtures import (
 	setup_common,
 )
 from horizon_erp.horizon_quality.production_audit_hooks import validate_stock_entry
+from horizon_erp.tests.cleanup import purge_test_residue
 
 
 class TestQuality(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
+		cls.addClassCleanup(purge_test_residue)  # LIFO: runs after FrappeTestCase's rollback
 		super().setUpClass()
 		frappe.set_user("Administrator")
 		cls.wh = setup_common()

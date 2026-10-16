@@ -14,11 +14,13 @@ from horizon_erp.horizon_operations.test_fixtures import (
 	setup_common,
 )
 from horizon_erp.horizon_quality.doctype.shipment_decision.shipment_decision import make_shipment_decision
+from horizon_erp.tests.cleanup import purge_test_residue
 
 
 class TestShipmentDecision(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
+		cls.addClassCleanup(purge_test_residue)  # LIFO: runs after FrappeTestCase's rollback
 		super().setUpClass()
 		frappe.set_user("Administrator")
 		cls.wh = setup_common()

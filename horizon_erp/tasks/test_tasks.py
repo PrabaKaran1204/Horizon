@@ -23,6 +23,7 @@ from horizon_erp.setup.notifications import get_notifications, setup_notificatio
 from horizon_erp.setup.print_formats import PRINT_FORMATS, setup_print_formats
 from horizon_erp.tasks import cache_delete, cache_get, daily, hourly, monthly
 from horizon_erp.tasks.daily import preview_daily_summary
+from horizon_erp.tests.cleanup import purge_test_residue
 
 PREFIX = "SCHTEST-"
 PREVIEW_DIR = (
@@ -176,6 +177,7 @@ def _consumption_history(item_code, company, warehouse, issues=(70, 40, 10), qty
 class TestHorizonTasks(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
+		cls.addClassCleanup(purge_test_residue)  # LIFO: runs after FrappeTestCase's rollback
 		super().setUpClass()
 		frappe.flags.mute_emails = True
 		frappe.set_user("Administrator")

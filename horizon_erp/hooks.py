@@ -170,6 +170,9 @@ required_apps = ["erpnext"]
 # -------
 
 # before_tests = "horizon_erp.install.before_tests"
+# Frappe v15's test runner fires only before_tests; every horizon_erp test class therefore also
+# registers horizon_erp.tests.cleanup.purge_test_residue as a class cleanup (see that module).
+after_tests = ["horizon_erp.tests.cleanup.after_tests"]
 
 # Overriding Methods
 # ------------------------------

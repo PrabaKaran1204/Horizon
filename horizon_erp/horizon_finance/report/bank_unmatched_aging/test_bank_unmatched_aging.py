@@ -9,6 +9,7 @@ from horizon_erp.horizon_finance.report.bank_unmatched_aging.bank_unmatched_agin
 	bucket_for,
 	execute,
 )
+from horizon_erp.tests.cleanup import purge_test_residue
 
 COMPANY = "Horizon Manufacturing Ltd"
 BANK = "GAPTEST Bank"
@@ -19,6 +20,7 @@ BANK_ACCOUNT_NAME = "GAPTEST Current"
 class TestBankUnmatchedAging(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
+		cls.addClassCleanup(purge_test_residue)  # LIFO: runs after FrappeTestCase's rollback
 		super().setUpClass()
 		frappe.set_user("Administrator")
 		cls.bank_account = cls._ensure_bank_account()

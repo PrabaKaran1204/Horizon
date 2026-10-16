@@ -33,6 +33,7 @@ from horizon_erp.setup.demo_hr_finance import (
 )
 from horizon_erp.setup.roles import ROLE_PERMISSIONS, setup_role_permissions
 from horizon_erp.tasks import safe_sendmail
+from horizon_erp.tests.cleanup import purge_test_residue
 
 USERS = {
 	"fixtest-stock@horizon.local": ("FIXTEST Stock User", ["Stock User"]),
@@ -81,6 +82,7 @@ def _employee_linked_to(user, first_name):
 class TestSetupFixes(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
+		cls.addClassCleanup(purge_test_residue)  # LIFO: runs after FrappeTestCase's rollback
 		super().setUpClass()
 		frappe.set_user("Administrator")
 		frappe.flags.mute_emails = True

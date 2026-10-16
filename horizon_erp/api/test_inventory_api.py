@@ -7,11 +7,16 @@ Run:
 	bench --site horizon.local run-tests --app horizon_erp \
 	    --module horizon_erp.api.test_inventory_api --skip-test-records
 
-Fixtures are created here (prefix ``APITEST-``) and committed in ``setUpClass`` so that the
-"log row survives a rollback" test can issue a real ``frappe.db.rollback()``. ``tearDownClass``
-deletes everything again. Stock is written straight into ``tabBin`` (``get_or_make_bin`` +
-``db.set_value``) instead of posting a Stock Entry: the API reads Bin only, and this keeps the
-test independent of the company's accounting setup and trivially cleanable.
+Fixtures are created here (prefix ``APITEST-``) and committed once in ``setUpClass`` because
+``test_permission_denied_log_survives_rollback`` issues a real ``frappe.db.rollback()`` (the API
+itself commits the 403 log row before re-raising, so the fixtures would be committed by that test
+anyway). Everything persisted is removed again by the class cleanups registered *before*
+``super().setUpClass()`` so that they run after ``FrappeTestCase``'s own rollback: ``_cleanup``
+drops the fixtures, their Users and the Contacts ``User.after_insert`` creates, then
+``purge_test_residue`` removes Error Log / Comment / Deleted Document rows mentioning the prefixes.
+Stock is written straight into ``tabBin`` (``get_or_make_bin`` + ``db.set_value``) instead of
+posting a Stock Entry: the API reads Bin only, and this keeps the test independent of the
+company's accounting setup and trivially cleanable.
 """
 
 import importlib.util
@@ -31,6 +36,7 @@ from horizon_erp.horizon_integration.doctype.inventory_api_log.inventory_api_log
 	STATUS_RATE_LIMITED,
 	STATUS_SUCCESS,
 )
+from horizon_erp.tests.cleanup import purge_test_residue
 
 COMPANY = "Horizon Manufacturing Ltd"
 ABBR = "HML"
@@ -53,6 +59,9 @@ def wh(name):
 class TestInventoryAPI(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
+		# LIFO: both run after FrappeTestCase._rollback_db -> _cleanup first, then the residue purge
+		cls.addClassCleanup(purge_test_residue, ("APITEST", "GAPTEST"))
+		cls.addClassCleanup(cls._cleanup)
 		super().setUpClass()
 		frappe.set_user("Administrator")
 		cls._cleanup()
@@ -61,8 +70,9 @@ class TestInventoryAPI(FrappeTestCase):
 		cls._make_warehouse_permission()
 		cls._make_items()
 		cls._make_bins()
-		frappe.db.commit()
-		cls.addClassCleanup(cls._cleanup)
+		# the only commit of test state: test_permission_denied_log_survives_rollback needs the
+		# fixtures to survive a real rollback (see module docstring)
+		frappe.db.commit()  # nosemgrep
 
 	def setUp(self):
 		# every API call in the tests runs as the dedicated test client so that cleanup never
@@ -220,22 +230,33 @@ class TestInventoryAPI(FrappeTestCase):
 
 	@classmethod
 	def _cleanup(cls):
+		"""Remove every persisted fixture; runs before setUpClass and again after the class rollback."""
 		frappe.set_user("Administrator")
-		frappe.db.delete("Inventory API Log", {"client": ["in", [API_USER, NOPERM_USER, WHPERM_USER]]})
+		users = [API_USER, NOPERM_USER, WHPERM_USER]
+		frappe.db.delete("Inventory API Log", {"client": ["in", users]})
 		frappe.db.delete("User Permission", {"user": WHPERM_USER})
 		frappe.db.delete("Bin", {"item_code": ["like", f"{PREFIX}%"]})
 		for code in (ITEM_A, ITEM_C, ITEM_DISABLED):
 			if frappe.db.exists("Item", code):
-				frappe.delete_doc("Item", code, force=True, ignore_permissions=True)
+				frappe.delete_doc("Item", code, force=True, ignore_permissions=True, delete_permanently=True)
 		for name in (LEAF_WH_1, LEAF_WH_2, GROUP_WH):
 			if frappe.db.exists("Warehouse", wh(name)):
-				frappe.delete_doc("Warehouse", wh(name), force=True, ignore_permissions=True)
-		for email in (API_USER, NOPERM_USER, WHPERM_USER):
+				frappe.delete_doc(
+					"Warehouse", wh(name), force=True, ignore_permissions=True, delete_permanently=True
+				)
+		# User.after_insert creates a Contact per user; User.on_trash does not remove it
+		for contact in frappe.get_all(
+			"Contact", filters=[["Contact", "email_id", "in", users]], pluck="name"
+		) + frappe.get_all("Contact", filters={"user": ["in", users]}, pluck="name"):
+			if frappe.db.exists("Contact", contact):
+				frappe.delete_doc(
+					"Contact", contact, force=True, ignore_permissions=True, delete_permanently=True
+				)
+		for email in users:
 			if frappe.db.exists("User", email):
-				frappe.delete_doc("User", email, force=True, ignore_permissions=True)
-		for user in (API_USER, NOPERM_USER, WHPERM_USER):
-			reset_rate_limit(user)
-		frappe.db.commit()
+				frappe.delete_doc("User", email, force=True, ignore_permissions=True, delete_permanently=True)
+			reset_rate_limit(email)
+		frappe.db.commit()  # nosemgrep: persisted fixtures must really be gone
 
 	# ------------------------------------------------------------------ helpers
 	def call(self, **kwargs):

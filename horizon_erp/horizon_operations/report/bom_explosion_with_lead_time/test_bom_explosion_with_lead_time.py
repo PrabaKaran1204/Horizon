@@ -7,6 +7,7 @@ from frappe.tests.utils import FrappeTestCase
 from horizon_erp.horizon_operations.report.bom_explosion_with_lead_time.bom_explosion_with_lead_time import (
 	execute,
 )
+from horizon_erp.tests.cleanup import purge_test_residue
 
 COMPANY = "Horizon Manufacturing Ltd"
 FG = "RPTTEST-BOM-FG"
@@ -32,6 +33,7 @@ def make_item(code, lead_time_days=0):
 class TestBOMExplosionWithLeadTime(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
+		cls.addClassCleanup(purge_test_residue)  # LIFO: runs after FrappeTestCase's rollback
 		super().setUpClass()
 		make_item(FG)
 		make_item(RM, lead_time_days=7)

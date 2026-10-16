@@ -6,11 +6,13 @@ from frappe.tests.utils import FrappeTestCase
 
 from horizon_erp.horizon_operations.projects import MILESTONE_ITEM_CODE
 from horizon_erp.horizon_operations.test_fixtures import COMPANY, ensure_customer, setup_common
+from horizon_erp.tests.cleanup import purge_test_residue
 
 
 class TestProjects(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
+		cls.addClassCleanup(purge_test_residue)  # LIFO: runs after FrappeTestCase's rollback
 		super().setUpClass()
 		frappe.set_user("Administrator")
 		setup_common()
