@@ -65,8 +65,8 @@ ROLE_PERMISSIONS = {
 	# a pure Quality Inspector must be able to record inspections (DEF-14)
 	"Quality Inspection": {"Quality Inspector": TRANSACT, "Stock User": READ},
 	# the draft invoice is created server-side on Delivery Note submit (ignore_permissions); the
-	# dispatcher only needs to see it
-	"Sales Invoice": {"Sales User": READ},
+	# dispatcher (Sales User or Warehouse Manager, QA OBS-R2-1) only needs to see it
+	"Sales Invoice": {"Sales User": READ, "Warehouse Manager": READ},
 	# a Warehouse Manager dispatches without holding Stock User
 	"Delivery Note": {"Warehouse Manager": TRANSACT},
 }

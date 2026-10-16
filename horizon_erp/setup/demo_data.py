@@ -1076,7 +1076,49 @@ def _ensure_item_price(item_code, price_list, rate, selling):
 # ---------------------------------------------------------------------------
 
 
+PAYMENT_TERMS_TEMPLATE = "Net 30"
+
+
+def setup_payment_terms():
+	"""Payment Terms Template "Net 30": one term, 100 % due 30 days after the invoice date.
+
+	Set as the Company default and on every demo customer (QA OBS-R2-2) so that a new Sales
+	Invoice gets ``due_date = posting_date + 30`` instead of falling back to the posting date.
+	"""
+	term_name = "Net 30 - 100%"
+	if not frappe.db.exists("Payment Term", term_name):
+		frappe.get_doc(
+			{
+				"doctype": "Payment Term",
+				"payment_term_name": term_name,
+				"invoice_portion": 100,
+				"due_date_based_on": "Day(s) after invoice date",
+				"credit_days": 30,
+				"description": "100% due 30 days after the invoice date",
+			}
+		).insert(ignore_permissions=True)
+	if not frappe.db.exists("Payment Terms Template", PAYMENT_TERMS_TEMPLATE):
+		frappe.get_doc(
+			{
+				"doctype": "Payment Terms Template",
+				"template_name": PAYMENT_TERMS_TEMPLATE,
+				"terms": [
+					{
+						"payment_term": term_name,
+						"invoice_portion": 100,
+						"due_date_based_on": "Day(s) after invoice date",
+						"credit_days": 30,
+						"description": "100% due 30 days after the invoice date",
+					}
+				],
+			}
+		).insert(ignore_permissions=True)
+	if _has_field("Company", "payment_terms"):
+		frappe.db.set_value("Company", COMPANY, "payment_terms", PAYMENT_TERMS_TEMPLATE)
+
+
 def setup_company_settings():
+	setup_payment_terms()
 	terms_title = "Horizon Standard Terms"
 	if not frappe.db.exists("Terms and Conditions", terms_title):
 		frappe.get_doc(
@@ -1679,6 +1721,7 @@ def setup_parties():
 			"territory": party["territory"],
 			"gstin": gstin,
 			"gst_category": "Registered Regular" if gstin else "Unregistered",
+			"payment_terms": PAYMENT_TERMS_TEMPLATE,
 		}
 		if party.get("default_price_list") and frappe.db.exists("Price List", party["default_price_list"]):
 			values["default_price_list"] = party["default_price_list"]
