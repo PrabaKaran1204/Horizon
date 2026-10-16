@@ -1,0 +1,37 @@
+{%- set cur = m.currency or "INR" -%}
+<div style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #222; max-width: 720px;">
+	<h2 style="margin: 0 0 4px 0;">Horizon Daily Summary</h2>
+	<div style="color: #666; margin-bottom: 14px;">{{ m.company or "" }} &middot; {{ frappe.format_date(m.date) }}</div>
+
+	<table cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1px solid #ddd;">
+		<thead>
+			<tr style="background: #f3f4f6;">
+				<th align="left" style="border-bottom: 1px solid #ddd;">Metric</th>
+				<th align="right" style="border-bottom: 1px solid #ddd;">Count</th>
+				<th align="right" style="border-bottom: 1px solid #ddd;">Value</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr><td>Sales Orders</td><td align="right">{{ m.sales_orders.count }}</td><td align="right">{{ frappe.format_value(m.sales_orders.total, {"fieldtype": "Currency", "options": cur}) }}</td></tr>
+			<tr><td>Quotations sent</td><td align="right">{{ m.quotations_sent.count }}</td><td align="right">{{ frappe.format_value(m.quotations_sent.total, {"fieldtype": "Currency", "options": cur}) }}</td></tr>
+			<tr><td>Delivery Notes</td><td align="right">{{ m.delivery_notes.count }}</td><td align="right">&mdash;</td></tr>
+			<tr><td>Sales Invoices</td><td align="right">{{ m.sales_invoices.count }}</td><td align="right">{{ frappe.format_value(m.sales_invoices.total, {"fieldtype": "Currency", "options": cur}) }}</td></tr>
+			<tr><td>Work Orders completed</td><td align="right">{{ m.work_orders_completed.count }}</td><td align="right">{{ m.work_orders_completed.produced_qty }} units</td></tr>
+			<tr><td>Purchase Orders pending approval</td><td align="right">{{ m.purchase_orders_pending_approval }}</td><td align="right">&mdash;</td></tr>
+			<tr{% if m.production_audits_below_70 %} style="background: #fdecea;"{% endif %}><td>Production Audits below 70</td><td align="right">{{ m.production_audits_below_70 }}</td><td align="right">&mdash;</td></tr>
+			<tr{% if m.low_stock.count %} style="background: #fff4e5;"{% endif %}><td>Items below reorder level</td><td align="right">{{ m.low_stock.count }}</td><td align="right">&mdash;</td></tr>
+		</tbody>
+	</table>
+
+	{% if m.low_stock["items"] %}
+	<h4 style="margin: 16px 0 6px 0;">Low stock (first {{ m.low_stock["items"] | length }})</h4>
+	<table cellpadding="4" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1px solid #ddd; font-size: 12px;">
+		<tr style="background: #f3f4f6;"><th align="left">Item</th><th align="left">Warehouse</th><th align="right">Actual</th><th align="right">Reorder level</th></tr>
+		{% for r in m.low_stock["items"] %}
+		<tr><td>{{ r.item_code }}</td><td>{{ r.warehouse }}</td><td align="right">{{ r.actual_qty }}</td><td align="right">{{ r.warehouse_reorder_level }}</td></tr>
+		{% endfor %}
+	</table>
+	{% endif %}
+
+	<p style="color: #888; font-size: 11px; margin-top: 18px;">Generated {{ m.generated_at }} by Horizon ERP scheduler.</p>
+</div>

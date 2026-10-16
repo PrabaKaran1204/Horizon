@@ -1,0 +1,187 @@
+{#- Horizon Sales Invoice - A4, inline CSS only, no external fonts / images.
+    Helpers come from horizon_erp.utils.jinja_methods (hooks.py jinja.methods). -#}
+{%- set cur = doc.currency or "INR" -%}
+{%- macro money(v) -%}{{ frappe.utils.fmt_money(v, currency=cur) }}{%- endmacro -%}
+{%- set gst = horizon_company_gst(doc.company, doc.company_address) -%}
+{%- set company_gstin = doc.get("company_gstin") or gst.gstin -%}
+{%- set pan = horizon_pan_from_gstin(company_gstin) -%}
+{%- set high_value_limit = 50000 -%}
+{%- set total_discount_pct = ((doc.total - doc.net_total) / doc.total * 100) if doc.total else 0 -%}
+{%- set outstanding = horizon_customer_outstanding(doc.customer, doc.company) -%}
+{%- set outstanding_before = outstanding - (doc.outstanding_amount if doc.docstatus == 1 else 0) -%}
+{%- set terms_html = doc.terms -%}
+{%- if not terms_html -%}
+	{%- set default_terms = frappe.db.get_value("Company", doc.company, "default_selling_terms") -%}
+	{%- if default_terms -%}{%- set terms_html = frappe.db.get_value("Terms and Conditions", default_terms, "terms") -%}{%- endif -%}
+{%- endif -%}
+<style>
+	.hz-inv { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #222; width: 100%; }
+	.hz-inv table { border-collapse: collapse; width: 100%; }
+	.hz-inv .hz-head td { vertical-align: top; padding: 2px 4px; }
+	.hz-inv .hz-title { font-size: 18px; font-weight: bold; letter-spacing: 1px; }
+	.hz-inv .hz-box { border: 1px solid #888; padding: 6px 8px; margin-top: 8px; }
+	.hz-inv .hz-box h4 { margin: 0 0 4px 0; font-size: 11px; text-transform: uppercase; color: #555; }
+	.hz-inv .hz-items th, .hz-inv .hz-items td { border: 1px solid #999; padding: 4px 5px; }
+	.hz-inv .hz-items th { background: #eee; font-size: 10px; text-transform: uppercase; }
+	.hz-inv .hz-items .hz-high { background: #fdecea; }
+	.hz-inv .hz-badge { display: inline-block; font-size: 9px; color: #b71c1c; border: 1px solid #b71c1c; padding: 0 3px; margin-left: 4px; border-radius: 2px; }
+	.hz-inv .r { text-align: right; } .hz-inv .c { text-align: center; }
+	.hz-inv .hz-totals td { padding: 3px 5px; }
+	.hz-inv .hz-totals .hz-grand td { font-weight: bold; font-size: 13px; border-top: 2px solid #333; border-bottom: 2px solid #333; }
+	.hz-inv .hz-muted { color: #666; font-size: 10px; }
+	.hz-inv .hz-footer { margin-top: 14px; border-top: 1px solid #888; padding-top: 6px; }
+	.hz-inv .hz-sign { height: 60px; vertical-align: bottom; }
+</style>
+<div class="hz-inv">
+	{% if letter_head and not no_letterhead %}<div class="letter-head">{{ letter_head }}</div>{% endif %}
+
+	<table class="hz-head">
+		<tr>
+			<td style="width: 55%;">
+				<div class="hz-title">{{ doc.company }}</div>
+				{% if gst.address_lines %}<div>{{ gst.address_lines | join(", ") }}</div>{% endif %}
+				<div><b>GSTIN:</b> {{ company_gstin or "—" }}{% if pan %} &nbsp; <b>PAN:</b> {{ pan }}{% endif %}</div>
+			</td>
+			<td style="width: 45%;" class="r">
+				<div class="hz-title">{{ _("TAX INVOICE") if company_gstin else _("INVOICE") }}</div>
+				<div><b>{{ _("Invoice No") }}:</b> {{ doc.name }}</div>
+				<div><b>{{ _("Date") }}:</b> {{ frappe.format_date(doc.posting_date) }}</div>
+				{% if doc.get("place_of_supply") %}<div><b>{{ _("Place of Supply") }}:</b> {{ doc.place_of_supply }}</div>{% endif %}
+				{% if doc.po_no %}<div><b>{{ _("Customer PO") }}:</b> {{ doc.po_no }}{% if doc.po_date %} ({{ frappe.format_date(doc.po_date) }}){% endif %}</div>{% endif %}
+				{% if doc.docstatus == 0 %}<div style="color: #b71c1c; font-weight: bold;">{{ _("DRAFT") }}</div>{% endif %}
+			</td>
+		</tr>
+	</table>
+
+	<table>
+		<tr>
+			<td style="width: 50%; padding-right: 6px; vertical-align: top;">
+				<div class="hz-box">
+					<h4>{{ _("Bill To") }}</h4>
+					<div><b>{{ doc.customer_name or doc.customer }}</b></div>
+					{% if doc.address_display %}<div>{{ doc.address_display }}</div>{% endif %}
+					<div><b>GSTIN:</b> {{ doc.get("billing_address_gstin") or doc.get("customer_gstin") or "—" }}</div>
+					{% if doc.contact_display %}<div class="hz-muted">{{ doc.contact_display }}{% if doc.contact_mobile %} · {{ doc.contact_mobile }}{% endif %}</div>{% endif %}
+				</div>
+			</td>
+			<td style="width: 50%; padding-left: 6px; vertical-align: top;">
+				<div class="hz-box">
+					<h4>{{ _("Ship To") }}</h4>
+					{% if doc.shipping_address %}<div>{{ doc.shipping_address }}</div>{% else %}<div class="hz-muted">{{ _("Same as billing address") }}</div>{% endif %}
+				</div>
+			</td>
+		</tr>
+	</table>
+
+	<table class="hz-items" style="margin-top: 10px;">
+		<thead>
+			<tr>
+				<th class="c" style="width: 4%;">#</th>
+				<th style="width: 30%;">{{ _("Item") }}</th>
+				<th class="c" style="width: 8%;">{{ _("HSN") }}</th>
+				<th class="r" style="width: 7%;">{{ _("Qty") }}</th>
+				<th class="c" style="width: 6%;">{{ _("UOM") }}</th>
+				<th class="r" style="width: 10%;">{{ _("Rate") }}</th>
+				<th class="r" style="width: 6%;">{{ _("Disc %") }}</th>
+				<th class="r" style="width: 11%;">{{ _("Taxable Amt") }}</th>
+				<th class="r" style="width: 6%;">{{ _("GST %") }}</th>
+				<th class="r" style="width: 12%;">{{ _("Amount") }}</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for row in doc.items %}
+			{%- set gst_rate = (row.get("igst_rate") or 0) + (row.get("cgst_rate") or 0) + (row.get("sgst_rate") or 0) + (row.get("cess_rate") or 0) -%}
+			{%- set gst_amount = (row.get("igst_amount") or 0) + (row.get("cgst_amount") or 0) + (row.get("sgst_amount") or 0) + (row.get("cess_amount") or 0) -%}
+			{%- set high = row.amount > high_value_limit -%}
+			<tr{% if high %} class="hz-high"{% endif %}>
+				<td class="c">{{ row.idx }}</td>
+				<td>
+					<b>{{ row.item_code }}</b>{% if row.item_name and row.item_name != row.item_code %} – {{ row.item_name }}{% endif %}
+					{% if high %}<span class="hz-badge">&#9888; {{ _("High value") }}</span>{% endif %}
+					{% if row.description and row.description != row.item_name %}<div class="hz-muted">{{ row.description | striptags | truncate(120) }}</div>{% endif %}
+				</td>
+				<td class="c">{{ row.get("gst_hsn_code") or "" }}</td>
+				<td class="r">{{ row.get_formatted("qty", doc) }}</td>
+				<td class="c">{{ row.uom or row.stock_uom }}</td>
+				<td class="r">{{ money(row.rate) }}</td>
+				<td class="r">{{ "%.1f" | format(row.discount_percentage or 0) }}</td>
+				<td class="r">{{ money(row.net_amount) }}</td>
+				<td class="r">{{ "%.1f" | format(gst_rate) }}</td>
+				<td class="r">{{ money(row.net_amount + gst_amount) }}</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+
+	<table style="margin-top: 8px;">
+		<tr>
+			<td style="width: 55%; vertical-align: top; padding-right: 8px;">
+				<div class="hz-box">
+					<h4>{{ _("Payment") }}</h4>
+					<div><b>{{ _("Terms") }}:</b> {{ doc.payment_terms_template or _("As agreed") }}</div>
+					<div><b>{{ _("Payment due date") }}:</b> {{ frappe.format_date(horizon_due_date(doc)) }}</div>
+					<div><b>{{ _("Customer outstanding (before this invoice)") }}:</b> {{ money(outstanding_before) }}
+						<span class="hz-muted">({{ _("as of print time") }} {{ frappe.utils.now_datetime().strftime("%d-%m-%Y %H:%M") }})</span></div>
+				</div>
+				{%- set cross_sell = [] -%}
+				{%- set invoiced_items = doc.items | map(attribute="item_code") | list -%}
+				{%- for row in doc.items[:2] -%}
+					{%- for s in horizon_similar_items_in_stock(row.item_code, 3) -%}
+						{%- if s.item_code not in invoiced_items and s.item_code not in (cross_sell | map(attribute="item_code") | list) -%}{%- set _ = cross_sell.append(s) -%}{%- endif -%}
+					{%- endfor -%}
+				{%- endfor -%}
+				{% if cross_sell %}
+				<div class="hz-box">
+					<h4>{{ _("You may also need") }}</h4>
+					<table>
+						{% for s in cross_sell[:6] %}
+						<tr><td>{{ s.item_name or s.item_code }}</td><td class="r hz-muted">{{ _("in stock") }}: {{ "%g" | format(s.actual_qty) }} {{ s.stock_uom or "" }}</td></tr>
+						{% endfor %}
+					</table>
+				</div>
+				{% endif %}
+			</td>
+			<td style="width: 45%; vertical-align: top;">
+				<table class="hz-totals">
+					<tr><td>{{ _("Total") }}</td><td class="r">{{ money(doc.total) }}</td></tr>
+					{% if doc.total and doc.total != doc.net_total %}
+					<tr><td>{{ _("Total discount") }} ({{ "%.1f" | format(total_discount_pct) }} %)</td><td class="r">- {{ money(doc.total - doc.net_total) }}</td></tr>
+					{% endif %}
+					{% if doc.discount_amount %}
+					<tr><td>{{ _("Additional discount") }}</td><td class="r">- {{ money(doc.discount_amount) }}</td></tr>
+					{% endif %}
+					<tr><td>{{ _("Net total") }}</td><td class="r">{{ money(doc.net_total) }}</td></tr>
+					{% for tax in doc.taxes %}{% if tax.tax_amount %}
+					<tr><td>{{ tax.description }}</td><td class="r">{{ money(tax.tax_amount) }}</td></tr>
+					{% endif %}{% endfor %}
+					{% if doc.rounding_adjustment %}<tr><td>{{ _("Rounding") }}</td><td class="r">{{ money(doc.rounding_adjustment) }}</td></tr>{% endif %}
+					<tr class="hz-grand"><td>{{ _("Grand Total") }}</td><td class="r">{{ money(doc.rounded_total or doc.grand_total) }}</td></tr>
+					<tr><td colspan="2" class="hz-muted"><b>{{ _("In words") }}:</b> {{ doc.in_words or frappe.utils.money_in_words(doc.rounded_total or doc.grand_total, cur) }}</td></tr>
+				</table>
+			</td>
+		</tr>
+	</table>
+
+	<div class="hz-footer">
+		<table>
+			<tr>
+				<td style="width: 50%; vertical-align: top; padding-right: 8px;">
+					<div><b>{{ doc.company }}</b></div>
+					<div><b>GSTIN:</b> {{ company_gstin or "—" }} &nbsp; <b>PAN:</b> {{ pan or "—" }} &nbsp; <b>CIN:</b> U00000MH0000PLC000000</div>
+					<div class="hz-muted">{{ _("Registered office") }}: {{ gst.address_display or "—" }}</div>
+					<div style="margin-top: 6px;"><b>{{ _("Bank details") }}</b><br>
+						<span class="hz-muted">{{ _("Bank") }}: ______________ &nbsp; {{ _("A/c No") }}: ______________ &nbsp; IFSC: ___________</span></div>
+					{% if terms_html %}
+					<div style="margin-top: 6px;"><b>{{ _("Terms & Conditions") }}</b><div class="hz-muted">{{ terms_html }}</div></div>
+					{% endif %}
+				</td>
+				<td style="width: 50%; vertical-align: top; text-align: right;">
+					<div>{{ _("For") }} <b>{{ doc.company }}</b></div>
+					<div class="hz-sign">&nbsp;</div>
+					<div style="border-top: 1px solid #333; display: inline-block; padding-top: 3px; min-width: 180px;">{{ _("Authorised Signatory") }}</div>
+				</td>
+			</tr>
+		</table>
+		<div class="hz-muted c" style="margin-top: 6px;">{{ _("This is a computer generated invoice.") }}</div>
+	</div>
+</div>

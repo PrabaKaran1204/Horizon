@@ -1,0 +1,66 @@
+{#- Horizon Packing Slip Thermal - Delivery Note on an 80 mm roll printer. No prices, offline only.
+    The "*NAME*" line is a Code 39 placeholder: install a Code 39 font (e.g. "Libre Barcode 39")
+    on the print station and style .hz-bar with it; without the font it prints as plain text. -#}
+{%- set total_qty = doc.items | sum(attribute="qty") -%}
+{%- set first_so = (doc.items | selectattr("against_sales_order") | map(attribute="against_sales_order") | list | first) -%}
+{#- wkhtmltopdf ignores @page size; Frappe reads page-width / page-height from the .print-format rule.
+    Roll printers cut to content, so the page height only has to be long enough: 95 mm + 12 mm per row. -#}
+{%- set page_height_mm = [120, 95 + (doc.items | length) * 12] | max -%}
+<style>
+	@page { size: 80mm auto; margin: 2mm; }
+	.print-format { page-width: 80mm; page-height: {{ page_height_mm }}mm; margin-top: 2mm; margin-bottom: 2mm; margin-left: 2mm; margin-right: 2mm; }
+	.print-format { padding: 0 !important; min-height: 0 !important; }
+	.hz-slip { width: 76mm; font-family: "Courier New", Courier, monospace; font-size: 10.5px; color: #000; line-height: 1.25; }
+	.hz-slip .c { text-align: center; } .hz-slip .r { text-align: right; }
+	.hz-slip .hz-big { font-size: 18px; font-weight: bold; letter-spacing: 1px; }
+	.hz-slip .hz-bar { font-size: 14px; letter-spacing: 2px; }
+	.hz-slip hr { border: 0; border-top: 1px dashed #000; margin: 3px 0; }
+	.hz-slip table { width: 100%; border-collapse: collapse; }
+	.hz-slip td, .hz-slip th { padding: 1px 2px; vertical-align: top; }
+	.hz-slip th { text-align: left; border-bottom: 1px solid #000; font-size: 10px; }
+	.hz-slip .hz-sub { font-size: 9.5px; padding-left: 10px; }
+	.hz-slip .hz-line { margin-top: 10px; }
+</style>
+<div class="hz-slip">
+	<div class="c"><b>{{ doc.company }}</b></div>
+	<div class="c">{{ _("PACKING SLIP") }}</div>
+	<hr>
+	<div class="c hz-big">{{ doc.name }}</div>
+	<div class="c hz-bar">*{{ doc.name }}*</div>
+	<hr>
+	<table>
+		<tr><td style="width: 30%;">{{ _("Date") }}</td><td>: {{ frappe.format_date(doc.posting_date) }} {{ doc.posting_time | string | truncate(5, True, "") }}</td></tr>
+		<tr><td>{{ _("Customer") }}</td><td>: {{ doc.customer_name or doc.customer }}</td></tr>
+		{% if first_so %}<tr><td>{{ _("SO Ref") }}</td><td>: {{ first_so }}</td></tr>{% endif %}
+		{% if doc.po_no %}<tr><td>{{ _("Cust PO") }}</td><td>: {{ doc.po_no }}</td></tr>{% endif %}
+		{% if doc.set_warehouse %}<tr><td>{{ _("From") }}</td><td>: {{ doc.set_warehouse }}</td></tr>{% endif %}
+		{% if doc.get("shipment_decision") %}<tr><td>{{ _("Ship Dec") }}</td><td>: {{ doc.shipment_decision }}</td></tr>{% endif %}
+	</table>
+	<hr>
+	<table>
+		<thead><tr><th style="width: 8%;">#</th><th>{{ _("Item") }}</th><th class="r" style="width: 28%;">{{ _("Qty") }}</th></tr></thead>
+		<tbody>
+		{% for row in doc.items %}
+			{%- set sb = horizon_dn_row_serials(row) -%}
+			<tr>
+				<td>{{ row.idx }}</td>
+				<td><b>{{ row.item_code }}</b>{% if row.item_name and row.item_name != row.item_code %}<br>{{ row.item_name | truncate(40) }}{% endif %}</td>
+				<td class="r"><b>{{ row.get_formatted("qty", doc) }}</b> {{ row.uom or row.stock_uom }}</td>
+			</tr>
+			{% if row.warehouse and not doc.set_warehouse %}<tr><td></td><td class="hz-sub" colspan="2">{{ _("WH") }}: {{ row.warehouse }}</td></tr>{% endif %}
+			{% for b in sb.batches %}<tr><td></td><td class="hz-sub" colspan="2">{{ _("Batch") }}: {{ b.batch_no }} ({{ "%g" | format(b.qty) }})</td></tr>{% endfor %}
+			{% if sb.serial_nos %}<tr><td></td><td class="hz-sub" colspan="2">{{ _("S/N") }}: {{ sb.serial_nos | join(", ") }}</td></tr>{% endif %}
+		{% endfor %}
+		</tbody>
+	</table>
+	<hr>
+	<table>
+		<tr><td>{{ _("Lines") }}: {{ doc.items | length }}</td><td class="r"><b>{{ _("Total qty") }}: {{ "%g" | format(total_qty) }}</b></td></tr>
+		<tr><td colspan="2">{{ _("Packs") }}: ____ {{ _("of") }} ____</td></tr>
+	</table>
+	{% if doc.get("deviation_notes") %}<hr><div><b>{{ _("Deviation") }}:</b> {{ doc.deviation_notes }}</div>{% endif %}
+	<div class="hz-line">{{ _("Picked by") }}: ______________________</div>
+	<div class="hz-line">{{ _("Checked by") }}: _____________________</div>
+	<hr>
+	<div class="c">{{ frappe.utils.now_datetime().strftime("%d-%m-%Y %H:%M") }}</div>
+</div>
