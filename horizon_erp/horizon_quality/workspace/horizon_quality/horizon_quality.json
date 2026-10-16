@@ -1,0 +1,206 @@
+{
+ "charts": [
+  {
+   "chart_name": "Horizon Audit Score Trend",
+   "label": "Horizon Audit Score Trend"
+  }
+ ],
+ "content": "[{\"id\": \"tSQhS6ATcL\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Dashboard</b></span>\", \"col\": 12}}, {\"id\": \"amGmSHQz0q\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Horizon Audit Score Trend\", \"col\": 12}}, {\"id\": \"Oi3v1dNuWZ\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Audits Today\", \"col\": 3}}, {\"id\": \"SyUknwYH43\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Audits Below 70 (30d)\", \"col\": 3}}, {\"id\": \"TQWcwfwUHh\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Open Corrective Actions\", \"col\": 3}}, {\"id\": \"tdJj0DErVk\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon QI Rejected (30d)\", \"col\": 3}}, {\"id\": \"iQ72QGXLw8\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"mYmScQK0u2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"QugZzAMDcu\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"New Production Audit\", \"col\": 3}}, {\"id\": \"VMEAu8Oqxk\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Today's Audits\", \"col\": 3}}, {\"id\": \"wiB7mSK5hP\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Quality Inspection\", \"col\": 3}}, {\"id\": \"vVgefUUZHq\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Non Conformance\", \"col\": 3}}, {\"id\": \"LsLgkD5iy5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Quality Action\", \"col\": 3}}, {\"id\": \"ynMgAbBw3T\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Shipment Decision\", \"col\": 3}}, {\"id\": \"8Dsb1ZiUQO\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"NMCvgzGReY\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\", \"col\": 12}}, {\"id\": \"a5Gtt3ajUD\", \"type\": \"card\", \"data\": {\"card_name\": \"Quality Reports\", \"col\": 4}}, {\"id\": \"x5OmJ2gnN8\", \"type\": \"card\", \"data\": {\"card_name\": \"Quality Masters\", \"col\": 4}}]",
+ "creation": "2026-10-16 13:50:55.748880",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "quality",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Horizon Quality",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quality Reports",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Audit Findings Dashboard",
+   "link_count": 0,
+   "link_to": "Audit Findings Dashboard",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Supplier Quality Scorecard",
+   "link_count": 0,
+   "link_to": "Supplier Quality Scorecard",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Quality vs Deadline Conflicts",
+   "link_count": 0,
+   "link_to": "Quality vs Deadline Conflicts",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quality Masters",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Production Audit",
+   "link_count": 0,
+   "link_to": "Production Audit",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Shipment Decision",
+   "link_count": 0,
+   "link_to": "Shipment Decision",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quality Inspection",
+   "link_count": 0,
+   "link_to": "Quality Inspection",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quality Inspection Template",
+   "link_count": 0,
+   "link_to": "Quality Inspection Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Non Conformance",
+   "link_count": 0,
+   "link_to": "Non Conformance",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quality Action",
+   "link_count": 0,
+   "link_to": "Quality Action",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-16 13:50:55.748880",
+ "modified_by": "Administrator",
+ "module": "Horizon Quality",
+ "name": "Horizon Quality",
+ "number_cards": [
+  {
+   "label": "Horizon Audits Today",
+   "number_card_name": "Horizon Audits Today"
+  },
+  {
+   "label": "Horizon Audits Below 70 (30d)",
+   "number_card_name": "Horizon Audits Below 70 (30d)"
+  },
+  {
+   "label": "Horizon Open Corrective Actions",
+   "number_card_name": "Horizon Open Corrective Actions"
+  },
+  {
+   "label": "Horizon QI Rejected (30d)",
+   "number_card_name": "Horizon QI Rejected (30d)"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 30.1,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "New",
+   "label": "New Production Audit",
+   "link_to": "Production Audit",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Today's Audits",
+   "link_to": "Production Audit",
+   "stats_filter": "{\"audit_date\": [\"=\", \"Today\"]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Quality Inspection",
+   "link_to": "Quality Inspection",
+   "stats_filter": "{\"docstatus\": [\"=\", 0]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Non Conformance",
+   "link_to": "Non Conformance",
+   "stats_filter": "{\"status\": [\"=\", \"Open\"]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Quality Action",
+   "link_to": "Quality Action",
+   "stats_filter": "{\"status\": [\"=\", \"Open\"]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Shipment Decision",
+   "link_to": "Shipment Decision",
+   "stats_filter": "{\"status\": [\"=\", \"Open\"]}",
+   "type": "DocType"
+  }
+ ],
+ "title": "Horizon Quality"
+}
