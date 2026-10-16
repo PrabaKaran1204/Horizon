@@ -295,8 +295,26 @@ scheduler_events = {
 	},
 }
 
+# Form scripts (public/js, built by ``bench build --app horizon_erp``)
+doctype_js = {
+	"Quotation": "public/js/quotation.js",
+	"Sales Order": "public/js/sales_order.js",
+	"Purchase Order": "public/js/purchase_order.js",
+	"Delivery Note": "public/js/delivery_note.js",
+	"Work Order": "public/js/work_order.js",
+}
+
 # Jinja
+# ``horizon_erp.utils`` is a package; ``utils/jinja_methods.py`` re-exports every helper so that
+# frappe.utils.jinja.get_jinja_hooks registers each function as a Jinja global.
 jinja = {"methods": ["horizon_erp.utils.jinja_methods"]}
+
+# Overriding Methods
+# Short alias so the integration contract ``POST /api/method/get_inventory_snapshot`` resolves to
+# the whitelisted endpoint (also reachable by its full dotted path).
+override_whitelisted_methods = {
+	"get_inventory_snapshot": "horizon_erp.api.inventory.get_inventory_snapshot",
+}
 
 # Fixtures
 # Custom Fields are NOT fixtures: they are created in code by
@@ -317,30 +335,33 @@ horizon_roles = [
 horizon_workflows = [
 	"Horizon PO Approval",
 	"Horizon Discount Approval",
+	"Horizon Discount Approval - Sales Order",
 	"Horizon Production Audit",
 	"Horizon Payment Approval",
 ]
 
 horizon_workflow_states = [
-	"Pending Level 1 Approval",
-	"Pending Level 2 Approval",
-	"Pending Level 3 Approval",
+	"Draft",
+	"Pending Dept Head",
+	"Pending Procurement Manager",
+	"Pending Finance Director",
 	"Pending Discount Approval",
-	"Pending Finance Approval",
-	"Pending Payment Approval",
-	"Pending Review",
+	"Approved",
+	"Rejected",
+	"Submitted",
 	"Reviewed",
 	"Action Closed",
-	"Escalated",
-	"Override Requested",
 ]
 
 horizon_workflow_actions = [
-	"Escalate",
-	"Request Override",
-	"Mark Reviewed",
+	"Submit for Approval",
+	"Approve",
+	"Reject",
+	"Revise",
+	"Submit",
+	"Submit for Discount Approval",
+	"Review",
 	"Close Action",
-	"Release Payment",
 ]
 
 horizon_modules = ["Horizon Quality", "Horizon Integration", "Horizon Operations", "Horizon Finance"]
