@@ -78,6 +78,7 @@ Frappe wraps the return value of a whitelisted method in `message`:
     "timestamp": "2026-10-16T10:30:00+05:30",
     "warehouse": "Delhi DC - HML",
     "warehouses_included": ["DEL Finished Goods - HML", "DEL Raw Materials - HML"],
+    "warehouses_excluded": [],
     "generated_in_ms": 42.3,
     "items": [
       {
@@ -110,6 +111,7 @@ Field semantics:
 | `timestamp` | server time in the site timezone, ISO-8601 with offset |
 | `warehouse` | resolved Warehouse ID |
 | `warehouses_included` | leaf warehouses that were aggregated (the warehouse itself when it is a leaf) |
+| `warehouses_excluded` | leaves under the requested warehouse that the caller's Warehouse User Permissions do not allow (see *Permissions* in section 4) |
 | `actual_qty`, `reserved_qty`, `projected_qty` | `SUM` over `tabBin` for the included warehouses |
 | `available_qty` | `actual_qty - reserved_qty` |
 | `reorder_point`, `reorder_qty` | `Item Reorder` row for one of the included warehouses; else any reorder row of the item; else `0` |
@@ -130,6 +132,7 @@ All application errors return a JSON body (wrapped in `message`) with the HTTP s
 | 400 | `missing_warehouse` | `warehouse` missing/blank | `{"error": "missing_warehouse", "message": "Parameter 'warehouse' is required", "timestamp": "..."}` |
 | 404 | `invalid_warehouse` | no Warehouse matches | `{"error": "invalid_warehouse", "message": "Warehouse 'X' not found", "hint": "Pass the Warehouse ID (e.g. 'Delhi DC - HML') or its Warehouse Name (e.g. 'Delhi DC')", "timestamp": "..."}` |
 | 429 | `rate_limited` | hourly quota exceeded | `{"error": "rate_limited", "message": "Rate limit of 100 requests per 3600 seconds exceeded for client ...", "retry_after_seconds": 1834, "limit": 100, "remaining": 0, "reset_seconds": 1834, "window_seconds": 3600, "timestamp": "..."}` + `Retry-After` header |
+| 403 | `warehouse_not_permitted` | the caller's Warehouse User Permissions exclude every leaf of the requested warehouse | `{"error": "warehouse_not_permitted", "message": "You are not permitted to read stock for warehouse 'HQ Raw Materials - HML'", "warehouse": "HQ Raw Materials - HML", "hint": "Ask a System Manager to extend your Warehouse User Permissions", "timestamp": "..."}` |
 | 503 | `temporary_failure` | the stock query raised (DB down, lock timeout ...) | `{"error": "temporary_failure", "message": "Inventory data is temporarily unavailable, please retry", "retry_after_seconds": 30, "timestamp": "..."}` |
 
 Framework-level failures use Frappe's standard exception body (`{"exception": "...", "exc_type": "..."}`), not the shape above:
@@ -140,6 +143,25 @@ Framework-level failures use Frappe's standard exception body (`{"exception": ".
 | 403 | `PermissionError` | anonymous (Guest) call, or the key owner has no read permission on `Bin` |
 
 Clients should retry 429 and 5xx; never retry other 4xx.
+
+### Permissions
+
+The endpoint honours **Warehouse User Permissions** (`inventory.get_permitted_warehouses`):
+
+- Administrator, System Managers and users without any User Permission on Warehouse see every leaf
+  under the requested warehouse (`warehouses_excluded` is `[]`).
+- For every other user the resolved leaf list is intersected with the warehouses allowed by their
+  User Permissions. A permission on a group warehouse (e.g. `Delhi DC - HML`) covers all leaves
+  below it; `hide_descendants` limits it to the record itself; permissions whose *Applicable For*
+  is a DocType other than Bin are ignored.
+- Leaves removed by the intersection are listed in `warehouses_excluded`; `warehouses_included`,
+  `items`, `low_stock_alerts` and `summary` only cover the permitted subset.
+- When nothing remains the call returns **HTTP 403** `warehouse_not_permitted` (table above) and
+  the Inventory API Log row is written with status *Error*.
+
+Example: `wh.delhi@horizon.local` holds a Warehouse permission for `Delhi DC - HML`. Requesting
+`All Warehouses - HML` returns only the Delhi leaves with the HQ leaves in `warehouses_excluded`;
+requesting `HQ Raw Materials` returns 403.
 
 ## 5. Rate limiting
 

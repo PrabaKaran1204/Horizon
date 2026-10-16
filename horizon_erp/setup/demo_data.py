@@ -776,10 +776,25 @@ OPERATIONS = [
 		"workstation": "Line B",
 		"description": "Plasma / shear cutting of plate and channel",
 	},
-	{"name": "Welding", "workstation": "Line A", "description": "MIG / arc welding of frames and housings"},
-	{"name": "Painting", "workstation": "Line A", "description": "Primer + industrial grey top coat"},
+	{
+		"name": "Welding",
+		"workstation": "Line A",
+		"description": "MIG / arc welding of frames and housings",
+		"qi_template": "Weld Inspection",
+	},
+	{
+		"name": "Painting",
+		"workstation": "Line A",
+		"description": "Primer + industrial grey top coat",
+		"qi_template": "Paint Inspection",
+	},
 	{"name": "Machining", "workstation": "Line B", "description": "Turning / boring of castings and shafts"},
-	{"name": "Assembly", "workstation": "Line A", "description": "Mechanical assembly and fastening"},
+	{
+		"name": "Assembly",
+		"workstation": "Line A",
+		"description": "Mechanical assembly and fastening",
+		"qi_template": "Assembly Inspection",
+	},
 	{"name": "Wiring", "workstation": "Line B", "description": "Control panel wiring and termination"},
 	{"name": "Testing", "workstation": "Line A", "description": "Functional / load test before release"},
 ]
@@ -1474,7 +1489,8 @@ def _sync_item_children(doc, row):
 		reorder.warehouse_group = reorder_wh
 		reorder.warehouse_reorder_level = row["reorder_level"]
 		reorder.warehouse_reorder_qty = row["reorder_qty"]
-		reorder.material_request_type = "Purchase"
+		# spares are make-to-stock (ADR-4): the reorder must raise a production request, not a PO
+		reorder.material_request_type = "Manufacture" if row["kind"] == "spare" else "Purchase"
 
 
 def setup_items():
@@ -1798,6 +1814,23 @@ def _ensure_qi_templates():
 			frappe.db.set_value("Item", row["item_code"], updates)
 
 
+def _assign_operation_qi_templates():
+	"""Operation.quality_inspection_template (fetched onto Job Cards) for the in-process steps.
+	Runs after ``_ensure_qi_templates`` so the templates exist on a fresh site."""
+	if not _has_field("Operation", "quality_inspection_template"):
+		_warn("Operation has no quality_inspection_template field; set the template on BOM operations")
+		return
+	for row in OPERATIONS:
+		template = row.get("qi_template")
+		if not template or not frappe.db.exists("Operation", row["name"]):
+			continue
+		if not frappe.db.exists("Quality Inspection Template", template):
+			_warn(f"Quality Inspection Template {template} missing; {row['name']} left without template")
+			continue
+		if frappe.db.get_value("Operation", row["name"], "quality_inspection_template") != template:
+			frappe.db.set_value("Operation", row["name"], "quality_inspection_template", template)
+
+
 def _ensure_boms():
 	created = {}
 	for spec in BOMS:
@@ -1845,6 +1878,7 @@ def _ensure_boms():
 def setup_manufacturing_masters():
 	_ensure_workstations_and_operations()
 	_ensure_qi_templates()
+	_assign_operation_qi_templates()
 	frappe.db.commit()
 	_ensure_boms()
 

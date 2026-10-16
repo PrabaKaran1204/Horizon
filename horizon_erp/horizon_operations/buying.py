@@ -234,6 +234,68 @@ def set_pending_since(doc):
 # ---------------------------------------------------------------------------------------------
 # Purchase Receipt
 # ---------------------------------------------------------------------------------------------
+def validate_purchase_receipt(doc, method=None):
+	"""Purchase Receipt ``validate`` hook: enforce the QC Hold routing decided in ADR-2.
+
+	Every row whose Item has ``inspection_required_before_purchase`` must be received into the QC
+	Hold warehouse of the company; the row's ``rejected_warehouse`` defaults to the Rejected
+	warehouse. Rows for items without inspection keep their own warehouse. Returns are untouched.
+	``on_submit_purchase_receipt`` later releases accepted stock from QC Hold (it keys on the row
+	warehouse being QC Hold, so the two handlers stay in step).
+	"""
+	if doc.get("is_return") or not doc.get("company"):
+		return
+	rerouted = route_inspection_rows_to_qc_hold(doc)
+	if rerouted:
+		frappe.msgprint(
+			_("Rows {0} routed to {1} pending inspection").format(
+				", ".join(str(idx) for idx in rerouted), frappe.bold(rerouted_warehouse(doc))
+			),
+			alert=True,
+			indicator="blue",
+		)
+
+
+def rerouted_warehouse(doc):
+	return config.get_warehouse(config.QC_HOLD_WAREHOUSE_NAME, doc.company)
+
+
+def get_inspection_items(item_codes):
+	"""Subset of ``item_codes`` flagged ``inspection_required_before_purchase`` (one query)."""
+	codes = [c for c in set(item_codes) if c]
+	if not codes:
+		return set()
+	return set(
+		frappe.get_all(
+			"Item",
+			filters={"name": ["in", codes], "inspection_required_before_purchase": 1},
+			pluck="name",
+		)
+	)
+
+
+def route_inspection_rows_to_qc_hold(doc):
+	"""Set ``warehouse`` = QC Hold (and a default ``rejected_warehouse``) on inspection rows.
+
+	Returns the ``idx`` list of rows whose warehouse was changed.
+	"""
+	qc_hold = rerouted_warehouse(doc)
+	if not qc_hold:
+		return []
+	rejected = config.get_warehouse(config.REJECTED_WAREHOUSE_NAME, doc.company)
+	inspection_items = get_inspection_items([row.item_code for row in doc.items])
+	rerouted = []
+	for row in doc.items:
+		if row.item_code not in inspection_items:
+			continue
+		if row.warehouse != qc_hold:
+			row.warehouse = qc_hold
+			rerouted.append(row.idx)
+		if rejected and not row.get("rejected_warehouse"):
+			row.rejected_warehouse = rejected
+	return rerouted
+
+
 def on_submit_purchase_receipt(doc, method=None):
 	"""Purchase Receipt ``on_submit`` hook: move QC-accepted stock out of QC Hold and raise the
 	paperwork for rejected quantities.

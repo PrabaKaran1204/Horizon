@@ -3,7 +3,7 @@
 {%- macro colour(flag) -%}{% if flag == "red" %}#c0392b{% elif flag == "green" %}#1e8449{% else %}#222{% endif %}{%- endmacro -%}
 <div style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #222; max-width: 900px;">
 	<h2 style="margin: 0 0 4px 0;">Budget vs Actual &mdash; {{ d.month_label }}</h2>
-	<div style="color: #666; margin-bottom: 14px;">{{ d.company or "" }} &middot; Fiscal Year {{ d.fiscal_year }} &middot; red = overage above 10 %, green = savings</div>
+	<div style="color: #666; margin-bottom: 14px;">{{ d.company or "" }} &middot; Fiscal Year {{ d.fiscal_year }} &middot; red = overage above 10 %, green = savings &middot; Forecast FY = YTD actual / {{ d.ytd_months_elapsed or 0 }} months elapsed &times; 12 (red when it exceeds the annual budget by more than 10 %)</div>
 
 	{% for cc_name, cc in d.cost_centers.items() %}
 	<h3 style="margin: 18px 0 6px 0; border-bottom: 2px solid #333;">{{ cc_name }}</h3>
@@ -18,6 +18,10 @@
 				<th align="right">YTD Budget</th>
 				<th align="right">YTD Actual</th>
 				<th align="right">YTD Var</th>
+				<th align="right">Annual Budget</th>
+				<th align="right">Forecast FY</th>
+				<th align="right">Fcst Var</th>
+				<th align="right">Fcst Var %</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -31,6 +35,10 @@
 				<td align="right">{{ money(r.ytd_budget) }}</td>
 				<td align="right">{{ money(r.ytd_actual) }}</td>
 				<td align="right">{{ money(r.ytd_variance) }}</td>
+				<td align="right">{{ money(r.annual_budget) }}</td>
+				<td align="right"{% if r.forecast_flag == 'red' %} style="color: #c0392b; font-weight: bold; background: #fdecea;"{% endif %}>{{ money(r.run_rate_forecast) }}{% if r.forecast_flag == 'red' %} &#9650;{% endif %}</td>
+				<td align="right"{% if r.forecast_flag == 'red' %} style="color: #c0392b; font-weight: bold;"{% endif %}>{{ money(r.forecast_variance) }}</td>
+				<td align="right"{% if r.forecast_flag == 'red' %} style="color: #c0392b; font-weight: bold;"{% endif %}>{{ r.forecast_variance_pct }} %</td>
 			</tr>
 			{% endfor %}
 			<tr style="font-weight: bold; background: #f9fafb;">
@@ -42,6 +50,10 @@
 				<td align="right">{{ money(cc.totals.ytd_budget) }}</td>
 				<td align="right">{{ money(cc.totals.ytd_actual) }}</td>
 				<td align="right">{{ money(cc.totals.ytd_actual - cc.totals.ytd_budget) }}</td>
+				<td align="right">{{ money(cc.totals.annual_budget) }}</td>
+				<td align="right">{{ money(cc.totals.run_rate_forecast) }}</td>
+				<td align="right">{{ money(cc.totals.forecast_variance) }}</td>
+				<td></td>
 			</tr>
 		</tbody>
 	</table>

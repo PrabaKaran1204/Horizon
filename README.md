@@ -9,14 +9,17 @@ Horizon ERP packages the Horizon Manufacturing implementation as code so it can 
 any bench: 7 custom DocTypes (Production Audit, Shipment Decision, Supplier Exception Log,
 Quarterly Purchase Plan, Inventory API Log, Budget Override Request, Bank Reconciliation Sign-off,
 plus two child tables), 4 approval workflows (PO approval, discount approval for Quotation and
-Sales Order, production audit review, payment approval - 5 Workflow records), 17 tested Script
-Reports (+ the API Usage Report), 5 workspaces backed by 18 number cards and 7 dashboard charts,
+Sales Order, production audit review, payment approval - 5 Workflow records), 19 tested Script
+Reports (+ the API Usage Report = 20), 6 workspaces backed by 22 number cards and 8 dashboard charts,
 2 Jinja print formats, 4 notifications, 7 scheduler jobs, 1 REST API
 (`get_inventory_snapshot`, rate limited and logged) and 5 form client scripts loaded through
 `doctype_js`. Business rules (PO approval limits, blacklisted suppliers, discount caps, Delivery
 Note before Invoice, Work Order capacity, quality gates, timesheet / task rules) live in
-`doc_events` hooks and are covered by the test suite. Design documents and the full API contract
-are in `docs/` (`docs/api.md` for the endpoint).
+`doc_events` hooks and are covered by the test suite. The inventory API honours Warehouse User
+Permissions (`warehouses_excluded` / 403 `warehouse_not_permitted`), Purchase Receipt rows for
+inspection items are forced into QC Hold on save, and the monthly budget email carries the year-end
+forecast columns (the standard *Budget Variance Report* stays untouched). Design documents and the
+full API contract are in `docs/` (`docs/api.md` for the endpoint).
 
 ## Setup
 
@@ -76,7 +79,7 @@ bench --site horizon.local run-tests --app horizon_erp --skip-test-records
 `test_records` for every dependency DocType (Company `_Test Company`, items, warehouses, ...),
 which collide with the Horizon demo masters and the India Compliance validations on this site.
 Every Horizon test module builds its own fixtures (prefixes `BRTEST-`, `APITEST-`, `SCHTEST-`,
-`RPTTEST-`) inside the test transaction, so nothing else is needed.
+`RPTTEST-`, `GAPTEST-`) inside the test transaction, so nothing else is needed.
 
 Development checks (run from `apps/horizon_erp`):
 
@@ -128,10 +131,10 @@ docs/                           design documents (business rules, API contract, 
 
 | Module | DocTypes | Hooks / code | Reports |
 | --- | --- | --- | --- |
-| Horizon Quality | Production Audit (+ Photo), Shipment Decision | `horizon_quality.inspection`, `horizon_quality.production_audit_hooks` | Audit Findings Dashboard, Quality vs Deadline Conflicts, Supplier Quality Scorecard |
+| Horizon Quality | Production Audit (+ Photo), Shipment Decision | `horizon_quality.inspection`, `horizon_quality.production_audit_hooks` | Audit Findings Dashboard, Quality Metrics (first-pass yield, rework cost %, defect reasons, 4 h inspection SLA), Quality vs Deadline Conflicts, Supplier Quality Scorecard |
 | Horizon Operations | Supplier Exception Log, Quarterly Purchase Plan (+ Item) | `horizon_operations.buying / selling / manufacturing / projects / scrap`, `public/js/*.js` | Approval Audit, BOM Explosion with Lead Time, Capacity Utilisation and Sequence, Forecast vs Actual Demand, Inventory Obsolescence Analysis, Order Status, Price List Comparison, Project Profitability |
 | Horizon Integration | Inventory API Log | `api.inventory`, `api.rate_limit`, `client.inventory_sync_client` | API Usage Report |
-| Horizon Finance | Budget Override Request, Bank Reconciliation Sign-off | `tasks.daily.budget_threshold_alerts`, `tasks.budget`, `tasks.monthly.send_budget_report` | Asset Register with Maintenance, Cost Center-wise P&L, Data Validation, Leave Balance with Carry Forward Expiry, Net Party Position, Salary Cost Analysis |
+| Horizon Finance | Budget Override Request, Bank Reconciliation Sign-off | `tasks.daily.budget_threshold_alerts`, `tasks.budget`, `tasks.monthly.send_budget_report` (budget vs actual with the year-end run-rate forecast: YTD actual / months elapsed x 12, variance to annual budget, rows forecast > budget + 10 % flagged red) | Asset Register with Maintenance, Bank Unmatched Aging, Cost Center-wise P&L, Data Validation, Leave Balance with Carry Forward Expiry, Net Party Position, Salary Cost Analysis |
 
 Shared helpers: `utils/` (Jinja globals `horizon_customer_outstanding`, `horizon_similar_items_in_stock`,
 `horizon_due_date`, `horizon_company_gst`, `horizon_dn_row_serials`, `horizon_pan_from_gstin`).

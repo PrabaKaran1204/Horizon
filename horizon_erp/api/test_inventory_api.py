@@ -43,6 +43,7 @@ ITEM_C = f"{PREFIX}ITEM-C"
 ITEM_DISABLED = f"{PREFIX}ITEM-DISABLED"
 API_USER = "apitest-sync@example.com"
 NOPERM_USER = "apitest-noperm@example.com"
+WHPERM_USER = "gaptest-whperm@example.com"  # Stock User limited to LEAF_WH_1 by a User Permission
 
 
 def wh(name):
@@ -57,6 +58,7 @@ class TestInventoryAPI(FrappeTestCase):
 		cls._cleanup()
 		cls._make_users()
 		cls._make_warehouses()
+		cls._make_warehouse_permission()
 		cls._make_items()
 		cls._make_bins()
 		frappe.db.commit()
@@ -68,18 +70,22 @@ class TestInventoryAPI(FrappeTestCase):
 		frappe.set_user(API_USER)
 		frappe.local.response = frappe._dict()
 		frappe.local.flags.commit = False
-		for user in (API_USER, NOPERM_USER):
+		for user in (API_USER, NOPERM_USER, WHPERM_USER):
 			reset_rate_limit(user)
 
 	def tearDown(self):
 		frappe.set_user("Administrator")
-		for user in (API_USER, NOPERM_USER):
+		for user in (API_USER, NOPERM_USER, WHPERM_USER):
 			reset_rate_limit(user)
 
 	# ------------------------------------------------------------------ fixtures
 	@classmethod
 	def _make_users(cls):
-		for email, roles in ((API_USER, ["System Manager", "Stock User"]), (NOPERM_USER, [])):
+		for email, roles in (
+			(API_USER, ["System Manager", "Stock User"]),
+			(NOPERM_USER, []),
+			(WHPERM_USER, ["Stock User"]),
+		):
 			if frappe.db.exists("User", email):
 				continue
 			user = frappe.get_doc(
@@ -92,6 +98,20 @@ class TestInventoryAPI(FrappeTestCase):
 				}
 			)
 			user.insert(ignore_permissions=True)
+
+	@classmethod
+	def _make_warehouse_permission(cls):
+		if frappe.db.exists("User Permission", {"user": WHPERM_USER, "allow": "Warehouse"}):
+			return
+		frappe.get_doc(
+			{
+				"doctype": "User Permission",
+				"user": WHPERM_USER,
+				"allow": "Warehouse",
+				"for_value": wh(LEAF_WH_1),
+				"apply_to_all_doctypes": 1,
+			}
+		).insert(ignore_permissions=True)
 
 	@classmethod
 	def _make_warehouses(cls):
@@ -201,7 +221,8 @@ class TestInventoryAPI(FrappeTestCase):
 	@classmethod
 	def _cleanup(cls):
 		frappe.set_user("Administrator")
-		frappe.db.delete("Inventory API Log", {"client": ["in", [API_USER, NOPERM_USER]]})
+		frappe.db.delete("Inventory API Log", {"client": ["in", [API_USER, NOPERM_USER, WHPERM_USER]]})
+		frappe.db.delete("User Permission", {"user": WHPERM_USER})
 		frappe.db.delete("Bin", {"item_code": ["like", f"{PREFIX}%"]})
 		for code in (ITEM_A, ITEM_C, ITEM_DISABLED):
 			if frappe.db.exists("Item", code):
@@ -209,10 +230,10 @@ class TestInventoryAPI(FrappeTestCase):
 		for name in (LEAF_WH_1, LEAF_WH_2, GROUP_WH):
 			if frappe.db.exists("Warehouse", wh(name)):
 				frappe.delete_doc("Warehouse", wh(name), force=True, ignore_permissions=True)
-		for email in (API_USER, NOPERM_USER):
+		for email in (API_USER, NOPERM_USER, WHPERM_USER):
 			if frappe.db.exists("User", email):
 				frappe.delete_doc("User", email, force=True, ignore_permissions=True)
-		for user in (API_USER, NOPERM_USER):
+		for user in (API_USER, NOPERM_USER, WHPERM_USER):
 			reset_rate_limit(user)
 		frappe.db.commit()
 
@@ -353,6 +374,36 @@ class TestInventoryAPI(FrappeTestCase):
 		log = self.last_log(client=NOPERM_USER)
 		self.assertIsNotNone(log, "403 log row must be committed before the exception is raised")
 		self.assertEqual((log.status, log.http_status), (STATUS_ERROR, 403))
+
+	def test_unrestricted_user_sees_every_leaf(self):
+		self.assertIsNone(inventory.get_permitted_warehouses(API_USER))  # System Manager
+		body = self.call(warehouse=GROUP_WH)
+		self.assertEqual(body["warehouses_excluded"], [])
+
+	def test_warehouse_user_permission_trims_group(self):
+		frappe.set_user(WHPERM_USER)
+		self.assertEqual(inventory.get_permitted_warehouses(), {wh(LEAF_WH_1)})
+		body = self.call(warehouse=GROUP_WH)
+		self.assertEqual(self.status_code(), 200)
+		self.assertEqual(body["warehouses_included"], [wh(LEAF_WH_1)])
+		self.assertEqual(body["warehouses_excluded"], [wh(LEAF_WH_2)])
+		a = self.by_code(body)[ITEM_A]
+		self.assertAlmostEqual(a["actual_qty"], 15, msg="stock of the excluded leaf must not be counted")
+		frappe.set_user("Administrator")
+		log = self.last_log(client=WHPERM_USER)
+		self.assertEqual((log.status, log.http_status), (STATUS_SUCCESS, 200))
+
+	def test_warehouse_user_permission_denies_other_leaf(self):
+		frappe.set_user(WHPERM_USER)
+		body = self.call(warehouse=LEAF_WH_2)
+		self.assertEqual(self.status_code(), 403)
+		self.assertEqual(body["error"], "warehouse_not_permitted")
+		self.assertEqual(body["warehouse"], wh(LEAF_WH_2))
+		self.assertIn("timestamp", body)
+		frappe.set_user("Administrator")
+		log = self.last_log(client=WHPERM_USER)
+		self.assertEqual((log.status, log.http_status), (STATUS_ERROR, 403))
+		self.assertIn("not permitted", log.error)
 
 	def test_rate_limit_returns_429_and_logs(self):
 		frappe.db.delete("Inventory API Log", {"client": API_USER})  # count only this test's rows

@@ -297,6 +297,28 @@ def make_purchase_order(supplier, item_code, qty, rate, warehouse=None, **extra)
 	return with_dimensions(po)
 
 
+def make_purchase_receipt(supplier, item_code, qty, rate, warehouse=None, **extra):
+	pr = frappe.get_doc(
+		{
+			"doctype": "Purchase Receipt",
+			"supplier": supplier,
+			"company": COMPANY,
+			"posting_date": nowdate(),
+			"items": [
+				{
+					"item_code": item_code,
+					"qty": qty,
+					"received_qty": qty,
+					"rate": rate,
+					"warehouse": warehouse or ensure_warehouse("BRTEST Stores"),
+				}
+			],
+			**extra,
+		}
+	)
+	return with_dimensions(pr)
+
+
 def make_quotation(customer, item_code, qty, rate, **extra):
 	return with_dimensions(
 		frappe.get_doc(

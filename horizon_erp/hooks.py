@@ -261,7 +261,10 @@ after_migrate = "horizon_erp.setup.install.after_migrate"
 # Document Events
 doc_events = {
 	"Purchase Order": {"validate": "horizon_erp.horizon_operations.buying.validate_purchase_order"},
-	"Purchase Receipt": {"on_submit": "horizon_erp.horizon_operations.buying.on_submit_purchase_receipt"},
+	"Purchase Receipt": {
+		"validate": "horizon_erp.horizon_operations.buying.validate_purchase_receipt",
+		"on_submit": "horizon_erp.horizon_operations.buying.on_submit_purchase_receipt",
+	},
 	"Quality Inspection": {
 		"on_submit": "horizon_erp.horizon_quality.inspection.on_submit_quality_inspection"
 	},

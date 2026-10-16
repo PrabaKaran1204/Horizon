@@ -16,7 +16,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import CustomFunction
 from frappe.query_builder.functions import Coalesce, Count, Sum
-from frappe.utils import add_days, cint, flt, now_datetime, nowdate
+from frappe.utils import add_days, cint, flt, getdate, now_datetime, nowdate
 
 DateDiff = CustomFunction("DATEDIFF", ["end", "start"])
 AGING_DAYS = 90
@@ -161,6 +161,50 @@ def get_avg_days_quote_to_so(filters=None):
 	rows = sub.run(as_dict=True)
 	days = [flt(r.days) for r in rows]
 	return {"value": flt(sum(days) / len(days), 1) if days else 0, "fieldtype": "Float"}
+
+
+@frappe.whitelist()
+def get_work_orders_overdue(filters=None):
+	"""Open Work Orders (not Completed / Stopped / Cancelled / Closed) whose planned end date has passed."""
+	frappe.has_permission("Work Order", throw=True)
+	wo = frappe.qb.DocType("Work Order")
+	q = (
+		frappe.qb.from_(wo)
+		.select(Count(wo.name))
+		.where(
+			(wo.docstatus == 1)
+			& (wo.status.notin(["Completed", "Stopped", "Cancelled", "Closed"]))
+			& (wo.planned_end_date.isnotnull())
+			& (wo.planned_end_date < nowdate())
+		)
+	)
+	company = _company(filters)
+	if company:
+		q = q.where(wo.company == company)
+	return {"value": cint(q.run()[0][0]), "fieldtype": "Int"}
+
+
+@frappe.whitelist()
+def get_line_utilisation_today(filters=None):
+	"""Booked machine hours of open Work Orders today across every line, as a % of line capacity
+	(same booking / capacity logic as the Capacity Utilisation and Sequence report)."""
+	frappe.has_permission("Work Order", throw=True)
+	from horizon_erp.horizon_operations.report.capacity_utilisation_and_sequence.capacity_utilisation_and_sequence import (
+		get_capacity_rows,
+		get_open_work_orders,
+		get_workstations,
+	)
+
+	company = _company(filters)
+	if not company:
+		return {"value": 0, "fieldtype": "Percent"}
+	today = getdate(nowdate())
+	report_filters = frappe._dict(company=company, from_date=today, to_date=today, workstation=None)
+	workstations = get_workstations(report_filters)
+	rows = get_capacity_rows(report_filters, workstations, get_open_work_orders(report_filters))
+	capacity = sum(flt(r.capacity_hours) for r in rows)
+	booked = sum(flt(r.booked_hours) for r in rows)
+	return {"value": flt(booked / capacity * 100, 1) if capacity else 0, "fieldtype": "Percent"}
 
 
 def setup_dashboards():

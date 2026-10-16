@@ -349,8 +349,46 @@ class TestHorizonTasks(FrappeTestCase):
 		self.assertNotIn("error", out, out.get("error"))
 		for key in ("month", "rows", "cost_centers"):
 			self.assertIn(key, out)
+		if out["rows"]:
+			self.assertGreaterEqual(out["ytd_months_elapsed"], 1)
+			for row in out["rows"]:
+				for key in (
+					"ytd_months_elapsed",
+					"run_rate_forecast",
+					"forecast_variance",
+					"forecast_variance_pct",
+					"forecast_flag",
+				):
+					self.assertIn(key, row)
+				self.assertAlmostEqual(
+					row["run_rate_forecast"], row["ytd_actual"] / row["ytd_months_elapsed"] * 12, places=1
+				)
+				self.assertAlmostEqual(
+					row["forecast_variance"], row["annual_budget"] - row["run_rate_forecast"], places=1
+				)
+			totals = next(iter(out["cost_centers"].values()))["totals"]
+			for key in ("annual_budget", "run_rate_forecast", "forecast_variance"):
+				self.assertIn(key, totals)
 		html = monthly.preview_budget_report()
 		self.assertIn("Budget vs Actual", html)
+		self.assertIn("Forecast FY", html)
+
+	def test_budget_forecast_formula(self):
+		# 5 months elapsed, 500 spent of a 1,200 budget -> on track
+		on_track = monthly.compute_forecast(1200, 500, 5)
+		self.assertAlmostEqual(on_track["run_rate_forecast"], 1200)
+		self.assertAlmostEqual(on_track["forecast_variance"], 0)
+		self.assertEqual(on_track["forecast_flag"], "")
+		# 600 spent in 5 months -> 1,440 forecast, 20 % over budget -> flagged
+		over = monthly.compute_forecast(1200, 600, 5)
+		self.assertAlmostEqual(over["run_rate_forecast"], 1440)
+		self.assertAlmostEqual(over["forecast_variance"], -240)
+		self.assertAlmostEqual(over["forecast_variance_pct"], -20.0)
+		self.assertEqual(over["forecast_flag"], "red")
+		# 9 % over is not flagged
+		self.assertEqual(monthly.compute_forecast(1200, 545, 5)["forecast_flag"], "")
+		self.assertEqual(monthly.months_elapsed("2026-04-01", "2026-09-01"), 6)
+		self.assertEqual(monthly.months_elapsed("2026-04-01", "2027-03-01"), 12)
 
 	# ------------------------------------------------------------ job wrapper
 	def test_horizon_job_wrapper_logs_and_sets_retry_marker(self):

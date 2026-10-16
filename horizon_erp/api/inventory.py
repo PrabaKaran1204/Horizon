@@ -15,6 +15,7 @@ import time
 import traceback
 
 import frappe
+import frappe.permissions
 from frappe import _
 from frappe.query_builder.functions import Max, Sum
 from frappe.utils import cint, flt
@@ -117,6 +118,25 @@ def get_inventory_snapshot(warehouse=None, filter_by_criticality=False, _simulat
 	only_critical = parse_bool(filter_by_criticality)
 	leaves = get_leaf_warehouses(resolved)
 
+	# -- warehouse user permissions ----------------------------------------
+	allowed = get_permitted_warehouses()
+	excluded = []
+	if allowed is not None:
+		excluded = [w for w in leaves if w not in allowed]
+		leaves = [w for w in leaves if w in allowed]
+		if not leaves:
+			return finish(
+				STATUS_ERROR,
+				403,
+				_error_body(
+					"warehouse_not_permitted",
+					_("You are not permitted to read stock for warehouse '{0}'").format(resolved),
+					warehouse=resolved,
+					hint=_("Ask a System Manager to extend your Warehouse User Permissions"),
+				),
+				error=f"warehouse '{resolved}' not permitted for {frappe.session.user}",
+			)
+
 	# -- data -------------------------------------------------------------
 	savepoint = "horizon_inventory_snapshot"
 	frappe.db.savepoint(savepoint)
@@ -141,6 +161,7 @@ def get_inventory_snapshot(warehouse=None, filter_by_criticality=False, _simulat
 		)
 
 	body = build_snapshot(resolved, leaves, items)
+	body["warehouses_excluded"] = excluded
 	body["generated_in_ms"] = round((time.perf_counter() - started) * 1000, 2)
 	return finish(STATUS_SUCCESS, 200, body)
 
@@ -211,6 +232,30 @@ def get_leaf_warehouses(warehouse: str) -> list[str]:
 		pluck="name",
 		order_by="lft asc",
 	)
+
+
+def get_permitted_warehouses(user: str | None = None) -> set[str] | None:
+	"""Leaf warehouses the user may read, or ``None`` when the user is unrestricted.
+
+	Unrestricted: Administrator, System Manager, or no User Permission on Warehouse at all. A
+	permission on a group warehouse covers every leaf below it (``hide_descendants`` limits it to
+	the record itself); permissions restricted via ``applicable_for`` to a DocType other than Bin do
+	not apply to this endpoint.
+	"""
+	user = user or frappe.session.user
+	if not user or user == "Administrator" or "System Manager" in frappe.get_roles(user):
+		return None
+	entries = frappe.permissions.get_user_permissions(user).get("Warehouse") or []
+	entries = [e for e in entries if not e.get("applicable_for") or e.get("applicable_for") == "Bin"]
+	if not entries:
+		return None
+	allowed: set[str] = set()
+	for entry in entries:
+		if entry.get("hide_descendants"):
+			allowed.add(entry.doc)
+		else:
+			allowed.update(get_leaf_warehouses(entry.doc))
+	return allowed
 
 
 def fetch_snapshot_rows(leaves: list[str], only_critical: bool = False) -> list[dict]:

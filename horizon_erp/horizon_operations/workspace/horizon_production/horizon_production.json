@@ -1,0 +1,239 @@
+{
+ "charts": [
+  {
+   "chart_name": "Horizon Work Orders by Status",
+   "label": "Horizon Work Orders by Status"
+  }
+ ],
+ "content": "[{\"id\": \"iIPzskR7GG\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Dashboard</b></span>\", \"col\": 12}}, {\"id\": \"dTYMVNda3D\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Horizon Work Orders by Status\", \"col\": 12}}, {\"id\": \"IP7wyhNvFo\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Work Orders In Progress\", \"col\": 3}}, {\"id\": \"RDItVVp1HW\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Work Orders Overdue\", \"col\": 3}}, {\"id\": \"3VyDrihVNM\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Line Utilisation Today Pct\", \"col\": 3}}, {\"id\": \"CLM2ufd7eS\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Open Low-Score Audits\", \"col\": 3}}, {\"id\": \"QXh5hlMtBh\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"TLLmDObEdW\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"c4Qt794D5z\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Work Order\", \"col\": 3}}, {\"id\": \"8OtU0p08vb\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Job Card\", \"col\": 3}}, {\"id\": \"d1GocJolP6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Production Plan\", \"col\": 3}}, {\"id\": \"mfQmaplRI5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"BOM\", \"col\": 3}}, {\"id\": \"BeLi5ZR1mg\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Production Audit\", \"col\": 3}}, {\"id\": \"Amyg0kOPWO\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"kkqwIxNJHt\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\", \"col\": 12}}, {\"id\": \"DMpN4zjb6H\", \"type\": \"card\", \"data\": {\"card_name\": \"Production Reports\", \"col\": 4}}, {\"id\": \"vECgF7AKs4\", \"type\": \"card\", \"data\": {\"card_name\": \"Production Documents\", \"col\": 4}}]",
+ "creation": "2026-10-16 18:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "tool",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Horizon Production",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Production Reports",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Capacity Utilisation and Sequence",
+   "link_count": 0,
+   "link_to": "Capacity Utilisation and Sequence",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Quality Metrics",
+   "link_count": 0,
+   "link_to": "Quality Metrics",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "BOM Explosion with Lead Time",
+   "link_count": 0,
+   "link_to": "BOM Explosion with Lead Time",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Audit Findings Dashboard",
+   "link_count": 0,
+   "link_to": "Audit Findings Dashboard",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Work Order Summary",
+   "link_count": 0,
+   "link_to": "Work Order Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Job Card Summary",
+   "link_count": 0,
+   "link_to": "Job Card Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Production Documents",
+   "link_count": 7,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Work Order",
+   "link_count": 0,
+   "link_to": "Work Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Job Card",
+   "link_count": 0,
+   "link_to": "Job Card",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Production Plan",
+   "link_count": 0,
+   "link_to": "Production Plan",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "BOM",
+   "link_count": 0,
+   "link_to": "BOM",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Production Audit",
+   "link_count": 0,
+   "link_to": "Production Audit",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Workstation",
+   "link_count": 0,
+   "link_to": "Workstation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Operation",
+   "link_count": 0,
+   "link_to": "Operation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-16 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Horizon Operations",
+ "name": "Horizon Production",
+ "number_cards": [
+  {
+   "label": "Horizon Work Orders In Progress",
+   "number_card_name": "Horizon Work Orders In Progress"
+  },
+  {
+   "label": "Horizon Work Orders Overdue",
+   "number_card_name": "Horizon Work Orders Overdue"
+  },
+  {
+   "label": "Horizon Line Utilisation Today Pct",
+   "number_card_name": "Horizon Line Utilisation Today Pct"
+  },
+  {
+   "label": "Horizon Open Low-Score Audits",
+   "number_card_name": "Horizon Open Low-Score Audits"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 30.6,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Work Order",
+   "link_to": "Work Order",
+   "stats_filter": "{\"status\": [\"in\", [\"Not Started\", \"In Process\"]], \"docstatus\": [\"=\", 1]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Job Card",
+   "link_to": "Job Card",
+   "stats_filter": "{\"status\": [\"in\", [\"Open\", \"Work In Progress\"]]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Production Plan",
+   "link_to": "Production Plan",
+   "stats_filter": "{\"docstatus\": [\"=\", 0]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "BOM",
+   "link_to": "BOM",
+   "stats_filter": "{\"is_active\": [\"=\", 1], \"docstatus\": [\"=\", 1]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Production Audit",
+   "link_to": "Production Audit",
+   "stats_filter": "{\"audit_score\": [\"<\", 70], \"status\": [\"!=\", \"Action Closed\"], \"docstatus\": [\"=\", 1]}",
+   "type": "DocType"
+  }
+ ],
+ "title": "Horizon Production"
+}

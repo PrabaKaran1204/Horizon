@@ -21,7 +21,36 @@ from horizon_erp.tasks.budget import (
 )
 
 OVERAGE_FLAG_PCT = 10.0  # variance % above which a row is flagged red
+FORECAST_FLAG_PCT = 10.0  # run-rate forecast above annual budget by more than this -> flagged
 TOP_DRIVERS = 3
+MONTHS_PER_YEAR = 12
+
+
+def months_elapsed(fy_start, month_start):
+	"""Months of the fiscal year elapsed up to and including the month starting ``month_start``."""
+	fy_start, month_start = getdate(fy_start), getdate(month_start)
+	return max((month_start.year - fy_start.year) * 12 + month_start.month - fy_start.month + 1, 1)
+
+
+def compute_forecast(annual_budget, ytd_actual, elapsed):
+	"""Straight run-rate year-end forecast: YTD actual / months elapsed x 12.
+
+	Returns ``run_rate_forecast``, ``forecast_variance`` (annual budget - forecast; negative =
+	overspend), ``forecast_variance_pct`` and ``forecast_flag`` ("red" when the forecast exceeds the
+	budget by more than ``FORECAST_FLAG_PCT`` %).
+	"""
+	annual_budget, ytd_actual = flt(annual_budget), flt(ytd_actual)
+	elapsed = max(int(elapsed or 0), 1)
+	forecast = ytd_actual / elapsed * MONTHS_PER_YEAR
+	variance = annual_budget - forecast
+	variance_pct = (variance / annual_budget * 100) if annual_budget else (-100.0 if forecast else 0.0)
+	over_pct = -variance_pct
+	return {
+		"run_rate_forecast": round(forecast, 2),
+		"forecast_variance": round(variance, 2),
+		"forecast_variance_pct": round(variance_pct, 1),
+		"forecast_flag": "red" if over_pct > FORECAST_FLAG_PCT else "",
+	}
 
 
 def get_budget_report_data(month_date=None, company=None):
@@ -31,7 +60,9 @@ def get_budget_report_data(month_date=None, company=None):
 	"cost_centers": {cc: {"rows": [...], "drivers": [...], "totals": {...}}}}``.
 	Each row: budget (monthly share via Monthly Distribution else 1/12), actual (GL), variance,
 	variance_pct, flag ("red" overage > 10 %, "green" savings, ""), ytd_budget, ytd_actual,
-	ytd_variance.
+	ytd_variance, plus the year-end forecast: ytd_months_elapsed, run_rate_forecast
+	(YTD actual / months elapsed x 12), forecast_variance (annual budget - forecast),
+	forecast_variance_pct and forecast_flag ("red" when the forecast exceeds budget by > 10 %).
 	"""
 	company = company or horizon_company()
 	month_start = get_first_day(month_date or add_months(today(), -1))
@@ -50,6 +81,8 @@ def get_budget_report_data(month_date=None, company=None):
 		data["skipped"] = "no fiscal year for previous month"
 		return data
 	fy_start = fy[1]
+	elapsed = months_elapsed(fy_start, month_start)
+	data["ytd_months_elapsed"] = elapsed
 
 	pct_cache = {}
 	for b in get_cost_center_budgets(fy[0], company):
@@ -76,6 +109,8 @@ def get_budget_report_data(month_date=None, company=None):
 			"ytd_budget": round(ytd_budget, 2),
 			"ytd_actual": round(ytd_actual, 2),
 			"ytd_variance": round(ytd_actual - ytd_budget, 2),
+			"ytd_months_elapsed": elapsed,
+			**compute_forecast(b.budget_amount, ytd_actual, elapsed),
 		}
 		data["rows"].append(row)
 		cc = data["cost_centers"].setdefault(
@@ -83,12 +118,30 @@ def get_budget_report_data(month_date=None, company=None):
 			{
 				"rows": [],
 				"drivers": [],
-				"totals": {"budget": 0, "actual": 0, "variance": 0, "ytd_budget": 0, "ytd_actual": 0},
+				"totals": {
+					"budget": 0,
+					"actual": 0,
+					"variance": 0,
+					"ytd_budget": 0,
+					"ytd_actual": 0,
+					"annual_budget": 0,
+					"run_rate_forecast": 0,
+					"forecast_variance": 0,
+				},
 			},
 		)
 		cc["rows"].append(row)
-		for key in ("budget", "actual", "variance", "ytd_budget", "ytd_actual"):
-			cc["totals"][key] = round(cc["totals"][key] + row[key], 2)
+		for key in (
+			"budget",
+			"actual",
+			"variance",
+			"ytd_budget",
+			"ytd_actual",
+			"annual_budget",
+			"run_rate_forecast",
+			"forecast_variance",
+		):
+			cc["totals"][key] = round(cc["totals"][key] + flt(row[key]), 2)
 
 	for cc in data["cost_centers"].values():
 		cc["drivers"] = sorted(cc["rows"], key=lambda r: abs(flt(r["variance"])), reverse=True)[:TOP_DRIVERS]
@@ -102,8 +155,8 @@ def render_budget_report(data):
 @horizon_job("send_budget_report")
 def send_budget_report():
 	"""1st of month 09:00 (cron). Email the previous month's budget vs actual (per cost centre and
-	account, with YTD and the top 3 variance drivers per cost centre) to Department Heads and the
-	Finance Director. Returns the report data (+ ``recipients``)."""
+	account, with YTD, the run-rate year-end forecast and the top 3 variance drivers per cost
+	centre) to Department Heads and the Finance Director. Returns the report data (+ ``recipients``)."""
 	data = get_budget_report_data()
 	recipients = users_with_roles("Department Head", "Finance Director")
 	data["recipients"] = recipients
