@@ -11,7 +11,7 @@ is deliberately *not* part of this routine: it is run explicitly with ``bench ex
 import frappe
 
 from horizon_erp.setup.custom_fields import setup_custom_fields
-from horizon_erp.setup.roles import setup_roles
+from horizon_erp.setup.roles import setup_role_permissions, setup_roles
 
 
 def after_install():
@@ -45,6 +45,7 @@ def _run(label, fn, raise_on_error):
 def _setup_roles_and_fields():
 	setup_roles()
 	setup_custom_fields()
+	setup_role_permissions()
 
 
 def _setup_workflows():

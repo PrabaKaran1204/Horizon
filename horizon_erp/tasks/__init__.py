@@ -130,18 +130,32 @@ def notify_users(users, subject, message, doctype=None, docname=None, email=True
 	enqueue_create_notification(users, log)
 
 	if email:
-		try:
-			frappe.sendmail(
-				recipients=users,
-				subject=subject,
-				message=message,
-				reference_doctype=doctype if docname else None,
-				reference_name=docname,
-				attachments=attachments,
-			)
-		except Exception:
-			frappe.log_error(title=f"Horizon notify: email failed for '{subject}'")
+		safe_sendmail(
+			f"Horizon notify: email failed for '{subject}'",
+			recipients=users,
+			subject=subject,
+			message=message,
+			reference_doctype=doctype if docname else None,
+			reference_name=docname,
+			attachments=attachments,
+		)
 	return users
+
+
+def safe_sendmail(error_title, **sendmail_kwargs):
+	"""``frappe.sendmail`` that never raises.
+
+	Any failure (no default outgoing Email Account -> ``OutgoingEmailError``; a placeholder account
+	with ``mute_emails`` on -> ``AttributeError`` deep in the queue builder; SMTP errors) is written
+	to Error Log once under ``error_title`` and ``False`` is returned, so a business transaction or
+	a scheduler job never fails because of e-mail. Returns ``True`` when the mail was queued.
+	"""
+	try:
+		frappe.sendmail(**sendmail_kwargs)
+		return True
+	except Exception:
+		frappe.log_error(title=error_title, message=frappe.get_traceback())
+		return False
 
 
 def users_with_roles(*roles):

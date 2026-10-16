@@ -115,14 +115,15 @@ def _apply_dimensions(doc, company):
 	return doc
 
 
-def _stock_entry(purpose, item_code, qty, company, warehouse, rate=100):
+def _stock_entry(purpose, item_code, qty, company, warehouse, rate=100, posting_date=None):
 	se = frappe.get_doc(
 		{
 			"doctype": "Stock Entry",
 			"purpose": purpose,
 			"stock_entry_type": purpose,
 			"company": company,
-			"posting_date": today(),
+			"set_posting_time": 1 if posting_date else 0,
+			"posting_date": posting_date or today(),
 			"items": [
 				{
 					"item_code": item_code,
@@ -139,6 +140,37 @@ def _stock_entry(purpose, item_code, qty, company, warehouse, rate=100):
 	se.insert()
 	se.submit()
 	return se
+
+
+def _stock_reconciliation(item_code, qty, company, warehouse, rate=100):
+	"""Opening-stock reconciliation: its SLE carries actual_qty 0 and only qty_after_transaction."""
+	temporary = frappe.db.get_value("Account", {"company": company, "account_type": "Temporary"}, "name")
+	sr = frappe.get_doc(
+		{
+			"doctype": "Stock Reconciliation",
+			"company": company,
+			"purpose": "Opening Stock" if temporary else "Stock Reconciliation",
+			"posting_date": today(),
+			"expense_account": temporary
+			or frappe.get_cached_value("Company", company, "stock_adjustment_account"),
+			"cost_center": frappe.get_cached_value("Company", company, "cost_center"),
+			"items": [{"item_code": item_code, "warehouse": warehouse, "qty": qty, "valuation_rate": rate}],
+		}
+	)
+	_apply_dimensions(sr, company)
+	sr.flags.ignore_permissions = True
+	sr.insert()
+	sr.submit()
+	return sr
+
+
+def _consumption_history(item_code, company, warehouse, issues=(70, 40, 10), qty=10):
+	"""Receipt 75 days ago, one Material Issue of ``qty`` per entry of ``issues`` (days ago)."""
+	_stock_entry("Material Receipt", item_code, 100, company, warehouse, posting_date=add_days(today(), -75))
+	for days_ago in issues:
+		_stock_entry(
+			"Material Issue", item_code, qty, company, warehouse, posting_date=add_days(today(), -days_ago)
+		)
 
 
 class TestHorizonTasks(FrappeTestCase):
@@ -279,17 +311,27 @@ class TestHorizonTasks(FrappeTestCase):
 		frappe.clear_cache(doctype="Purchase Order")
 
 	# ------------------------------------------------------------------- daily
-	def test_recompute_reorder_levels_inserts_row(self):
+	def _reorder_item(self, suffix, **props):
 		# dedicated item so consumption from other tests (Delivery Notes) cannot skew the numbers
-		rl_item = _ensure_item(
-			f"{PREFIX}ITEM-RL-{frappe.generate_hash(length=6)}", self.company, self.warehouse
+		item = _ensure_item(
+			f"{PREFIX}ITEM-{suffix}-{frappe.generate_hash(length=6)}", self.company, self.warehouse, **props
 		)
-		_stock_entry("Material Receipt", rl_item.name, 100, self.company, self.warehouse)
-		_stock_entry("Material Issue", rl_item.name, 30, self.company, self.warehouse)
-		frappe.db.delete("Item Reorder", {"parent": rl_item.name})
+		frappe.db.delete("Item Reorder", {"parent": item.name})
+		return item
+
+	def test_recompute_reorder_levels_inserts_row(self):
+		rl_item = self._reorder_item("RL")
+		_consumption_history(rl_item.name, self.company, self.warehouse)  # 3 issues, first 70 d ago
 		out = daily.recompute_reorder_levels()
 		self.assertNotIn("error", out, out.get("error"))
-		for key in ("updated", "inserted", "skipped_no_usage", "samples"):
+		for key in (
+			"updated",
+			"inserted",
+			"skipped_no_usage",
+			"skipped_insufficient_history",
+			"skipped_not_purchasable",
+			"samples",
+		):
 			self.assertIn(key, out)
 		row = frappe.db.get_value(
 			"Item Reorder",
@@ -310,6 +352,106 @@ class TestHorizonTasks(FrappeTestCase):
 		)
 		# zero-usage item keeps no row (manual level untouched)
 		self.assertFalse(frappe.db.exists("Item Reorder", {"parent": self.item2.name}))
+
+	def test_recompute_reorder_levels_needs_sixty_days_and_three_movements(self):
+		young = self._reorder_item("YOUNG")  # one issue today: the DEF-09 case
+		_stock_entry("Material Receipt", young.name, 100, self.company, self.warehouse)
+		_stock_entry("Material Issue", young.name, 30, self.company, self.warehouse)
+		manual = frappe.get_doc(
+			{
+				"doctype": "Item Reorder",
+				"parenttype": "Item",
+				"parentfield": "reorder_levels",
+				"parent": young.name,
+				"warehouse": self.warehouse,
+				"warehouse_group": self.warehouse,
+				"warehouse_reorder_level": 400,
+				"warehouse_reorder_qty": 1000,
+				"material_request_type": "Purchase",
+			}
+		).insert(ignore_permissions=True)
+		few = self._reorder_item("FEW")  # old enough but only two movements
+		_consumption_history(few.name, self.company, self.warehouse, issues=(70, 10))
+
+		out = daily.recompute_reorder_levels()
+		self.assertNotIn("error", out, out.get("error"))
+		self.assertGreaterEqual(out["skipped_insufficient_history"], 2)
+		manual.reload()
+		self.assertEqual(manual.warehouse_reorder_level, 400)  # manual level survives
+		self.assertEqual(manual.warehouse_reorder_qty, 1000)
+		self.assertFalse(frappe.db.exists("Item Reorder", {"parent": few.name}))
+
+	def test_recompute_reorder_levels_keeps_manufacture_row_and_safety_stock_floor(self):
+		spare = self._reorder_item("SPARE", safety_stock=50)
+		_consumption_history(spare.name, self.company, self.warehouse)
+		frappe.get_doc(
+			{
+				"doctype": "Item Reorder",
+				"parenttype": "Item",
+				"parentfield": "reorder_levels",
+				"parent": spare.name,
+				"warehouse": self.warehouse,
+				"warehouse_group": self.warehouse,
+				"warehouse_reorder_level": 20,
+				"warehouse_reorder_qty": 50,
+				"material_request_type": "Manufacture",
+			}
+		).insert(ignore_permissions=True)
+
+		out = daily.recompute_reorder_levels()
+		self.assertNotIn("error", out, out.get("error"))
+		rows = frappe.get_all(
+			"Item Reorder",
+			filters={"parent": spare.name},
+			fields=["warehouse", "material_request_type", "warehouse_reorder_level", "warehouse_reorder_qty"],
+		)
+		self.assertEqual(len(rows), 1, "never a second row for the same warehouse")
+		self.assertEqual(rows[0].material_request_type, "Manufacture")  # type of the existing row kept
+		self.assertEqual(rows[0].warehouse_reorder_level, 50)  # computed 4, floored at safety_stock
+		self.assertEqual(rows[0].warehouse_reorder_qty, 50)  # never lowered
+
+		made_not_bought = self._reorder_item("MTO", is_purchase_item=0)
+		_consumption_history(made_not_bought.name, self.company, self.warehouse)
+		out = daily.recompute_reorder_levels()
+		self.assertGreaterEqual(out["skipped_not_purchasable"], 1)
+		self.assertFalse(frappe.db.exists("Item Reorder", {"parent": made_not_bought.name}))
+
+	# ------------------------------------------------------------- hourly / accuracy
+	def test_bin_mismatch_compares_with_latest_sle_qty_after_transaction(self):
+		item = _ensure_item(
+			f"{PREFIX}ITEM-RECO-{frappe.generate_hash(length=6)}", self.company, self.warehouse
+		)
+		_stock_reconciliation(item.name, 50, self.company, self.warehouse)
+		sle = frappe.db.get_value(
+			"Stock Ledger Entry",
+			{"item_code": item.name, "warehouse": self.warehouse, "is_cancelled": 0},
+			["actual_qty", "qty_after_transaction"],
+			as_dict=True,
+		)
+		self.assertEqual(sle.actual_qty, 0)  # the reason SUM(actual_qty) was a false positive
+		self.assertEqual(sle.qty_after_transaction, 50)
+
+		def flagged():
+			return [r for r in hourly._flag_bin_mismatches() if r["item_code"] == item.name]
+
+		self.assertEqual(flagged(), [])
+		_stock_entry("Material Issue", item.name, 10, self.company, self.warehouse)
+		self.assertEqual(flagged(), [])
+		bin_name = frappe.db.get_value("Bin", {"item_code": item.name, "warehouse": self.warehouse}, "name")
+		frappe.db.set_value("Bin", bin_name, "actual_qty", 45, update_modified=False)
+		rows = flagged()
+		self.assertEqual(len(rows), 1)
+		self.assertEqual((rows[0]["bin_qty"], rows[0]["sle_qty"]), (45.0, 40.0))
+		self.assertTrue(
+			frappe.db.exists(
+				"Comment",
+				{
+					"reference_doctype": "Item",
+					"reference_name": item.name,
+					"content": ["like", "Stock accuracy flag%"],
+				},
+			)
+		)
 
 	def test_detect_quality_deadline_conflicts(self):
 		out = daily.detect_quality_deadline_conflicts()
@@ -369,6 +511,7 @@ class TestHorizonTasks(FrappeTestCase):
 			totals = next(iter(out["cost_centers"].values()))["totals"]
 			for key in ("annual_budget", "run_rate_forecast", "forecast_variance"):
 				self.assertIn(key, totals)
+			self.assertNotIn("pdf_error", out, out.get("pdf_error"))  # attached as PDF like the daily summary
 		html = monthly.preview_budget_report()
 		self.assertIn("Budget vs Actual", html)
 		self.assertIn("Forecast FY", html)

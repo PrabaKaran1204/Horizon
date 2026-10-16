@@ -156,7 +156,8 @@ def render_budget_report(data):
 def send_budget_report():
 	"""1st of month 09:00 (cron). Email the previous month's budget vs actual (per cost centre and
 	account, with YTD, the run-rate year-end forecast and the top 3 variance drivers per cost
-	centre) to Department Heads and the Finance Director. Returns the report data (+ ``recipients``)."""
+	centre) to Department Heads and the Finance Director, with the report attached as PDF (HTML
+	only when wkhtmltopdf is unavailable). Returns the report data (+ ``recipients``)."""
 	data = get_budget_report_data()
 	recipients = users_with_roles("Department Head", "Finance Director")
 	data["recipients"] = recipients
@@ -165,8 +166,20 @@ def send_budget_report():
 		return data
 
 	html = render_budget_report(data)
+	attachments = None
+	try:
+		from frappe.utils.pdf import get_pdf
+
+		attachments = [{"fname": f"budget-report-{data['month']}.pdf", "fcontent": get_pdf(html)}]
+	except Exception as exc:
+		# same fallback as the daily summary: send the HTML body alone when wkhtmltopdf is missing
+		data["pdf_error"] = str(exc)[:200]
+		frappe.logger("horizon_jobs").warning(f"send_budget_report: PDF skipped ({exc!r})")
+
 	subject = _("Horizon Budget vs Actual - {0}").format(data["month_label"])
-	notify_users(recipients, subject, html, doctype="Budget", docname=None, email=True)
+	notify_users(
+		recipients, subject, html, doctype="Budget", docname=None, email=True, attachments=attachments
+	)
 	return data
 
 

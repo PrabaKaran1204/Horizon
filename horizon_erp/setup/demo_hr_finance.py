@@ -56,6 +56,20 @@ ASSET_ITEM = "FA-CNC-LATHE"
 BANK_NAME = "HDFC Bank"
 BANK_ACCOUNT_NAME = "Horizon Current Account - HDFC"
 MONTHLY_DISTRIBUTION = "Manufacturing Seasonal"
+LEAVE_BLOCK_LIST = "Diwali Peak Production Block"
+# working days around Diwali (20-21 Oct 2026 are holidays); block dates must not be holidays, HRMS
+# rejects an application on a holiday before the block list is even consulted (QA DEF-18)
+LEAVE_BLOCK_DATES = ("2026-10-19", "2026-10-22", "2026-10-23")
+LEGACY_LEAVE_BLOCK_LISTS = ("Plant Shutdown Dec 2026",)  # dates were holidays; superseded
+# DocTypes an Employee's own User Permission applies to (ADR-13). ERPNext creates the permission
+# with "apply to all document types", which would hide every record linking *another* employee
+# (Production Audit inspector, Employee Checkin, Leave Application...) from managers/approvers.
+EMPLOYEE_SELF_SERVICE_DOCTYPES = (
+	"Employee",
+	"Salary Slip",
+	"Expense Claim",
+	"Employee Tax Exemption Declaration",
+)
 
 LOCK_ERRORS = ("Deadlock", "Lock wait timeout", "1205", "1213")
 
@@ -497,8 +511,49 @@ def step_employees():
 			emp_doc = frappe.get_doc("Employee", name)
 			emp_doc.update(updates)
 			emp_doc.save()
+	scoped = scope_employee_user_permissions()
 	total = frappe.db.count("Employee", {"company": COMPANY, "status": "Active"})
-	print(f"    employees created={created}, active HML employees={total}")
+	print(f"    employees created={created}, active HML employees={total}, user permissions scoped={scoped}")
+
+
+def scope_employee_user_permissions(company=COMPANY):
+	"""Replace the catch-all Employee User Permission ERPNext creates for every Employee with a
+	``user_id`` by one row per self-service DocType (``EMPLOYEE_SELF_SERVICE_DOCTYPES``).
+
+	Frappe stores "applies to these DocTypes only" as one User Permission row per
+	``applicable_for`` DocType with ``apply_to_all_doctypes = 0``. The catch-all row is deleted so
+	a manager (Operations Head reviewing a Production Audit, HR Manager creating an Employee
+	Checkin, a Leave Approver) can see records that link other employees. Idempotent; returns the
+	number of employees whose permissions were (re)scoped.
+	"""
+	from frappe.permissions import add_user_permission
+
+	doctypes = [dt for dt in EMPLOYEE_SELF_SERVICE_DOCTYPES if frappe.db.exists("DocType", dt)]
+	scoped = 0
+	employees = frappe.get_all(
+		"Employee", filters={"company": company, "user_id": ["is", "set"]}, fields=["name", "user_id"]
+	)
+	for emp in employees:
+		catch_all = frappe.get_all(
+			"User Permission",
+			filters={
+				"user": emp.user_id,
+				"allow": "Employee",
+				"for_value": emp.name,
+				"apply_to_all_doctypes": 1,
+			},
+			pluck="name",
+		)
+		for name in catch_all:
+			frappe.delete_doc("User Permission", name, ignore_permissions=True, force=True)
+		for doctype in doctypes:
+			add_user_permission(
+				"Employee", emp.name, emp.user_id, ignore_permissions=True, applicable_for=doctype
+			)
+		if catch_all:
+			scoped += 1
+		frappe.cache.hdel("user_permissions", emp.user_id)
+	return scoped
 
 
 def step_shift_assignments():
@@ -610,25 +665,49 @@ def step_leave():
 	alloc = frappe.db.count("Leave Allocation", {"company": COMPANY, "docstatus": 1})
 	print(f"    leave policy assignments created={len(pending)}; leave allocations={alloc}")
 
-	block_name = "Plant Shutdown Dec 2026"
-	if not frappe.db.exists("Leave Block List", block_name):
-		frappe.get_doc(
-			{
-				"doctype": "Leave Block List",
-				"leave_block_list_name": block_name,
-				"company": COMPANY,
-				"applies_to_all_departments": 1,
-				"leave_block_list_dates": [
-					{"block_date": add_days("2026-12-28", i), "reason": "Annual plant shutdown"}
-					for i in range(4)
-				],
-			}
-		).insert()
+	ensure_leave_block_list()
 
 	hr_settings = frappe.get_doc("HR Settings")
 	if not cint(hr_settings.leave_approver_mandatory_in_leave_application):
 		hr_settings.leave_approver_mandatory_in_leave_application = 1
 		hr_settings.save()
+
+
+def ensure_leave_block_list():
+	"""Company-wide Leave Block List ``LEAVE_BLOCK_LIST`` on the working days around Diwali.
+
+	The December plant shutdown stays in the Holiday List only: a block list on holidays is dead
+	configuration because HRMS refuses leave on a holiday first. The legacy list is removed when
+	nothing links to it. Idempotent; returns the block list name.
+	"""
+	for legacy in LEGACY_LEAVE_BLOCK_LISTS:
+		if frappe.db.exists("Leave Block List", legacy):
+			try:
+				frappe.delete_doc("Leave Block List", legacy, ignore_permissions=True)
+			except frappe.LinkExistsError:
+				print(f"    legacy leave block list {legacy} is linked (Department?) and was kept")
+
+	if frappe.db.exists("Leave Block List", LEAVE_BLOCK_LIST):
+		doc = frappe.get_doc("Leave Block List", LEAVE_BLOCK_LIST)
+	else:
+		doc = frappe.get_doc(
+			{
+				"doctype": "Leave Block List",
+				"leave_block_list_name": LEAVE_BLOCK_LIST,
+				"company": COMPANY,
+				"applies_to_all_departments": 1,
+			}
+		)
+	existing = {getdate(d.block_date) for d in doc.get("leave_block_list_dates")}
+	for date in LEAVE_BLOCK_DATES:
+		if getdate(date) not in existing:
+			doc.append(
+				"leave_block_list_dates",
+				{"block_date": date, "reason": "Diwali peak production - no planned leave"},
+			)
+	doc.flags.ignore_permissions = True
+	doc.save()
+	return doc.name
 
 
 def step_attendance():
@@ -1504,6 +1583,8 @@ def step_assets():
 			frappe.db.rollback()
 			print(f"    asset maintenance for {asset} already exists (created concurrently)")
 
+	complete_first_maintenance_log(asset)
+
 	failure = "2026-09-10 09:30:00"
 	if not _exists("Asset Repair", {"asset": asset, "failure_date": failure, "docstatus": ["<", 2]}):
 		repair = frappe.get_doc(
@@ -1524,6 +1605,32 @@ def step_assets():
 			repair.branch = branch
 		repair.insert()
 		repair.submit()
+
+
+def complete_first_maintenance_log(asset, completion_date="2026-10-10"):
+	"""Mark the earliest open Asset Maintenance Log of ``asset`` as Completed (and submit it) so
+	the Asset Register shows a last maintenance date; HRMS/ERPNext then schedules the next log.
+	Idempotent: nothing happens once a Completed log exists. Returns the log name or None."""
+	if frappe.db.exists(
+		"Asset Maintenance Log", {"asset_name": asset, "maintenance_status": "Completed", "docstatus": 1}
+	):
+		return None
+	log_name = frappe.db.get_value(
+		"Asset Maintenance Log",
+		{"asset_name": asset, "docstatus": 0, "maintenance_status": ["in", ["Planned", "Overdue"]]},
+		"name",
+		order_by="due_date asc",
+	)
+	if not log_name:
+		return None
+	log = frappe.get_doc("Asset Maintenance Log", log_name)
+	log.maintenance_status = "Completed"
+	log.completion_date = completion_date
+	log.actions_performed = "Lubricated spindle and guideways; checked belt tension"
+	log.flags.ignore_permissions = True
+	log.save()
+	log.submit()
+	return log.name
 
 
 # ---------------------------------------------------------------------------

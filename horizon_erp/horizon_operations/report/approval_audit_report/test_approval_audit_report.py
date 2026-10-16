@@ -5,9 +5,12 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from horizon_erp.horizon_operations.report.approval_audit_report.approval_audit_report import (
+	AUTO_ESCALATION_PREFIX,
 	execute,
 	get_age_bucket,
 )
+from horizon_erp.horizon_operations.test_fixtures import make_purchase_order, setup_common
+from horizon_erp.tasks import add_info_comment
 
 COMPANY = "Horizon Manufacturing Ltd"
 
@@ -28,3 +31,21 @@ class TestApprovalAuditReport(FrappeTestCase):
 		self.assertEqual(get_age_bucket(3), "< 24h")
 		self.assertEqual(get_age_bucket(30), "24-48h")
 		self.assertEqual(get_age_bucket(72), "> 48h")
+
+	def test_auto_escalation_comments_are_transition_rows(self):
+		frappe.set_user("Administrator")
+		setup_common()
+		po = make_purchase_order("BRTEST Clean", "BRTEST-RM", 1, 100).insert()
+		add_info_comment(
+			"Purchase Order",
+			po.name,
+			"Auto-escalated after 48h without action: Pending Dept Head → Pending Procurement Manager",
+		)
+		add_info_comment("Purchase Order", po.name, "Some other Info comment that is not a transition")
+
+		_c, data, *_rest = execute({"company": COMPANY})
+		rows = [r for r in data if r.purchase_order == po.name and r.transition]
+		self.assertEqual(len(rows), 1)
+		self.assertTrue(rows[0].transition.startswith(AUTO_ESCALATION_PREFIX))
+		self.assertIn("Pending Procurement Manager", rows[0].transition)
+		self.assertIsNotNone(rows[0].hours_in_previous_state)

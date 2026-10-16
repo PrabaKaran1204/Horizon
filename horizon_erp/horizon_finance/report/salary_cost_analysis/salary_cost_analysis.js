@@ -29,7 +29,7 @@ frappe.query_reports["Salary Cost Analysis"] = {
 			fieldname: "group_by",
 			label: __("Group By"),
 			fieldtype: "Select",
-			options: ["Department", "Employee Grade", "Employment Type"],
+			options: ["Department", "Branch", "Employee Grade", "Employment Type"],
 			default: "Department",
 			reqd: 1,
 		},

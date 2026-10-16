@@ -11,6 +11,7 @@ from frappe import _
 from frappe.utils import cstr, flt, get_link_to_form, now_datetime, nowdate, nowtime
 
 from horizon_erp.horizon_operations import config
+from horizon_erp.tasks import safe_sendmail
 
 PENDING_STATE_PREFIX = "Pending"
 RESET_STATES = ("Draft", "Approved", "Rejected", "")
@@ -207,16 +208,14 @@ def notify_finance_directors_of_override(doc, log):
 		).insert(ignore_permissions=True)
 
 	if recipients:
-		try:
-			frappe.sendmail(
-				recipients=recipients,
-				subject=subject,
-				message=message,
-				reference_doctype="Purchase Order",
-				reference_name=doc.name,
-			)
-		except Exception:
-			frappe.log_error(title="Blacklist override email failed", message=frappe.get_traceback())
+		safe_sendmail(
+			"Blacklist override email failed",
+			recipients=recipients,
+			subject=subject,
+			message=message,
+			reference_doctype="Purchase Order",
+			reference_name=doc.name,
+		)
 
 
 def set_pending_since(doc):

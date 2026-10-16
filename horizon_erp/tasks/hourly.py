@@ -8,7 +8,7 @@ See ``horizon_erp.tasks`` for the logging / alerting conventions shared by every
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Abs, IfNull, Sum
+from frappe.query_builder.functions import Max
 from frappe.utils import (
 	add_to_date,
 	cint,
@@ -60,7 +60,7 @@ try:  # the business-rule developer may centralise thresholds; use theirs when p
 except ImportError:
 	pass
 
-STOCK_ACCURACY_TOLERANCE = 0.001  # qty units; Bin vs SLE sum
+STOCK_ACCURACY_TOLERANCE = 0.001  # qty units; Bin vs latest SLE qty_after_transaction
 COUNT_VARIANCE_PCT = 2.0  # Stock Reconciliation qty vs current_qty
 
 
@@ -74,8 +74,9 @@ def reorder_and_accuracy_check():
 	(a) Run ERPNext's own reorder logic (``erpnext.stock.reorder_item.reorder_item``), which
 	    respects Stock Settings ``auto_indent`` and the ``Item Reorder`` rows maintained by
 	    ``daily.recompute_reorder_levels``; report Material Requests created in the last hour.
-	(b) Stock accuracy: every Bin whose ``actual_qty`` differs from the sum of its non-cancelled
-	    Stock Ledger Entries is flagged with an Info comment on the Item (once per day), and so is
+	(b) Stock accuracy: every Bin whose ``actual_qty`` differs from the ``qty_after_transaction`` of
+	    its latest non-cancelled Stock Ledger Entry is flagged with an Info comment on the Item
+	    (once per day), and so is
 	    every item on a Stock Reconciliation submitted today whose counted qty deviates more than
 	    ``COUNT_VARIANCE_PCT`` from the system qty ("physical count variance").
 
@@ -102,38 +103,70 @@ def reorder_and_accuracy_check():
 
 
 def _flag_bin_mismatches():
-	bin_ = frappe.qb.DocType("Bin")
-	sle = frappe.qb.DocType("Stock Ledger Entry")
-	sle_sum = IfNull(Sum(sle.actual_qty), 0)
-	rows = (
-		frappe.qb.from_(bin_)
-		.left_join(sle)
-		.on((sle.item_code == bin_.item_code) & (sle.warehouse == bin_.warehouse) & (sle.is_cancelled == 0))
-		.select(bin_.item_code, bin_.warehouse, bin_.actual_qty.as_("bin_qty"), sle_sum.as_("sle_qty"))
-		.groupby(bin_.item_code, bin_.warehouse, bin_.actual_qty)
-		.having(Abs(bin_.actual_qty - sle_sum) > STOCK_ACCURACY_TOLERANCE)
-		.limit(500)
-	).run(as_dict=True)
+	"""Bins whose ``actual_qty`` differs from the latest non-cancelled Stock Ledger Entry's
+	``qty_after_transaction`` for the same item / warehouse.
 
+	Comparing with ``SUM(actual_qty)`` is wrong: Stock Reconciliation entries (opening stock,
+	counts) carry ``actual_qty`` 0 and only set ``qty_after_transaction``, so every reconciled bin
+	would be a false positive. "Latest" = highest ``posting_datetime``, ties broken by ``creation``
+	(the order ERPNext itself uses for the ledger).
+	"""
+	latest = _latest_sle_qty_by_bin()
+	bins = frappe.get_all(
+		"Bin",
+		fields=["item_code", "warehouse", "actual_qty"],
+		filters={"actual_qty": ["!=", 0]} if not latest else {},
+		limit=5000,
+	)
 	flagged = []
-	for row in rows:
+	for b in bins:
+		sle_qty = flt(latest.get((b.item_code, b.warehouse)))
+		if abs(flt(b.actual_qty) - sle_qty) <= STOCK_ACCURACY_TOLERANCE:
+			continue
 		flagged.append(
 			{
-				"item_code": row.item_code,
-				"warehouse": row.warehouse,
-				"bin_qty": flt(row.bin_qty),
-				"sle_qty": flt(row.sle_qty),
+				"item_code": b.item_code,
+				"warehouse": b.warehouse,
+				"bin_qty": flt(b.actual_qty),
+				"sle_qty": sle_qty,
 			}
 		)
 		add_info_comment(
 			"Item",
-			row.item_code,
+			b.item_code,
 			_("Stock accuracy flag: Bin {0} vs SLE {1} in {2}").format(
-				flt(row.bin_qty), flt(row.sle_qty), row.warehouse
+				flt(b.actual_qty), sle_qty, b.warehouse
 			),
 			dedupe_prefix="Stock accuracy flag",
 		)
+		if len(flagged) >= 500:
+			break
 	return flagged
+
+
+def _latest_sle_qty_by_bin():
+	"""``{(item_code, warehouse): qty_after_transaction}`` of the latest non-cancelled SLE."""
+	sle = frappe.qb.DocType("Stock Ledger Entry")
+	last = (
+		frappe.qb.from_(sle)
+		.select(sle.item_code, sle.warehouse, Max(sle.posting_datetime).as_("posting_datetime"))
+		.where(sle.is_cancelled == 0)
+		.groupby(sle.item_code, sle.warehouse)
+	).as_("last")
+	rows = (
+		frappe.qb.from_(sle)
+		.join(last)
+		.on(
+			(last.item_code == sle.item_code)
+			& (last.warehouse == sle.warehouse)
+			& (last.posting_datetime == sle.posting_datetime)
+		)
+		.select(sle.item_code, sle.warehouse, sle.qty_after_transaction)
+		.where(sle.is_cancelled == 0)
+		.orderby(sle.creation)
+	).run(as_dict=True)
+	# several entries can share a posting_datetime; the last created wins
+	return {(r.item_code, r.warehouse): flt(r.qty_after_transaction) for r in rows}
 
 
 def _flag_count_variances():

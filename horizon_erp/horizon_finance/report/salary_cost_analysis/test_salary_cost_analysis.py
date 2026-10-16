@@ -19,6 +19,7 @@ class TestSalaryCostAnalysis(FrappeTestCase):
 
 	def test_group_by_variants(self):
 		for group_by, options in (
+			("Branch", "Branch"),
 			("Employee Grade", "Employee Grade"),
 			("Employment Type", "Employment Type"),
 		):

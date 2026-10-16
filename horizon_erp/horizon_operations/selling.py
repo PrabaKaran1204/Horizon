@@ -14,6 +14,20 @@ from frappe.utils import add_days, cint, cstr, flt, get_link_to_form, getdate
 
 from horizon_erp.horizon_operations import config
 
+DEFAULT_VALID_TILL_DAYS = 30
+MAX_BOM_DEPTH = 5  # sub-assembly levels explored by get_mfg_lead_days
+MAX_MFG_LEAD_DAYS = 365
+# Pricing fields copied from the Sales Order row onto Delivery Note / Sales Invoice rows (price
+# locked at order time; see lock_rates_to_sales_order)
+SO_LOCKED_RATE_FIELDS = (
+	"price_list_rate",
+	"discount_percentage",
+	"discount_amount",
+	"margin_type",
+	"margin_rate_or_amount",
+	"rate",
+)
+
 
 # ---------------------------------------------------------------------------------------------
 # Quotation / Sales Order: discount governance + availability
@@ -78,19 +92,38 @@ def validate_discounts(doc, method=None):
 		doc.discount_reason = None
 
 	if doc.doctype == "Quotation":
+		set_quotation_valid_till(doc)
 		set_quotation_availability(doc)
+
+
+def set_quotation_valid_till(doc):
+	"""Server-created / mapped quotations never pass through the form script that applies CRM
+	Settings ``default_valid_till``; without a date the "Quotation Expiring" notification can never
+	fire. Blank ``valid_till`` -> transaction date + default (30 days when the setting is empty)."""
+	if doc.get("valid_till"):
+		return
+	days = cint(frappe.db.get_single_value("CRM Settings", "default_valid_till")) or DEFAULT_VALID_TILL_DAYS
+	doc.valid_till = add_days(getdate(doc.get("transaction_date") or frappe.utils.nowdate()), days)
 
 
 def get_rule_rate(row, rule_cache=None):
 	"""Price list rate after the pricing rules applied on the row (``pricing_rules`` JSON list).
-	Without rules the rule rate is simply the price list rate."""
+	Without rules the rule rate is simply the price list rate.
+
+	Mirrors ERPNext's ``apply_price_discount_rule`` with ``apply_multiple_pricing_rules``: discount
+	percentages (and amounts) of stacked rules are **added** (5 + 8 + 10 = 23 %), not compounded; a
+	rule with ``apply_discount_on_rate`` is applied on the already discounted rate; a "Rate" rule
+	replaces the price list rate and resets earlier discounts.
+	"""
 	from erpnext.accounts.doctype.pricing_rule.utils import get_applied_pricing_rules
 
 	price_list_rate = flt(row.get("price_list_rate"))
 	if not price_list_rate:
 		return 0.0
 
-	rule_rate = price_list_rate
+	base_rate = price_list_rate
+	discount_pct = 0.0
+	discount_amount = 0.0
 	rule_cache = rule_cache if rule_cache is not None else {}
 	for rule_name in get_applied_pricing_rules(row.get("pricing_rules")) or []:
 		if rule_name not in rule_cache:
@@ -103,6 +136,7 @@ def get_rule_rate(row, rule_cache=None):
 					"rate",
 					"discount_percentage",
 					"discount_amount",
+					"apply_discount_on_rate",
 				],
 				as_dict=True,
 			)
@@ -110,13 +144,20 @@ def get_rule_rate(row, rule_cache=None):
 		if not rule or rule.price_or_product_discount != "Price":
 			continue
 		if rule.rate_or_discount == "Rate" and flt(rule.rate):
-			rule_rate = flt(rule.rate)
+			base_rate = flt(rule.rate)
+			discount_pct = 0.0
+			discount_amount = 0.0
 		elif rule.rate_or_discount == "Discount Percentage":
-			rule_rate = rule_rate * (1 - flt(rule.discount_percentage) / 100)
+			if cint(rule.apply_discount_on_rate) and discount_pct:
+				discount_pct += (100 - discount_pct) * flt(rule.discount_percentage) / 100
+			else:
+				discount_pct += flt(rule.discount_percentage)
 		elif rule.rate_or_discount == "Discount Amount":
-			rule_rate = rule_rate - flt(rule.discount_amount)
+			discount_amount += flt(rule.discount_amount)
 
-	return flt(rule_rate, row.precision("rule_rate") if hasattr(row, "precision") else 2)
+	rule_rate = base_rate * (1 - discount_pct / 100) - discount_amount
+	precision_fn = getattr(row, "precision", None)  # child-table row; plain dicts have none
+	return flt(rule_rate, precision_fn("rule_rate") if callable(precision_fn) else 2)
 
 
 def get_discount_over_rule_pct(rule_rate, rate):
@@ -234,30 +275,103 @@ def get_item_availability(item_code, qty=1, company=None):
 	}
 
 
-def get_mfg_lead_days(item_code):
-	"""Lead days = ceil(BOM operation hours / working hours per day) + longest raw-material
-	``lead_time_days``; items without a default BOM use their own ``lead_time_days``."""
+def get_mfg_lead_days(item_code, _depth=0, _cache=None):
+	"""Manufacturing lead days of an item, exploded through its default BOM.
+
+	For an item without a default BOM the lead time is its own ``lead_time_days`` (purchase lead).
+	For a BOM item: ceil(operation minutes / 60 / working hours per day) **plus** the longest lead
+	of its components, where sub-assemblies are themselves exploded the same way (up to
+	``MAX_BOM_DEPTH`` levels; deeper levels fall back to the item's own lead time). The result is
+	capped at ``MAX_MFG_LEAD_DAYS``. Items whose BOMs all finish on stock components therefore get
+	the critical path of the whole tree, not just the first level.
+	"""
+	cache = _cache if _cache is not None else {}
+	if item_code in cache:
+		return cache[item_code]
+
 	item = frappe.db.get_value("Item", item_code, ["default_bom", "lead_time_days"], as_dict=True)
 	if not item:
 		return 0
-	if not item.default_bom:
-		return cint(item.lead_time_days)
+	if not item.default_bom or _depth >= MAX_BOM_DEPTH:
+		cache[item_code] = cint(item.lead_time_days)
+		return cache[item_code]
 
 	op_minutes = flt(
 		frappe.db.get_value("BOM Operation", {"parent": item.default_bom}, "sum(time_in_mins)") or 0
 	)
 	op_days = math.ceil(op_minutes / 60 / config.WORKING_HOURS_PER_DAY) if op_minutes else 0
 
-	rm_items = frappe.get_all("BOM Item", filters={"parent": item.default_bom}, pluck="item_code")
-	rm_lead = 0
-	if rm_items:
-		rm_lead = cint(frappe.db.get_value("Item", {"name": ["in", rm_items]}, "max(lead_time_days)") or 0)
-	return cint(op_days + rm_lead)
+	components = frappe.get_all(
+		"BOM Item", filters={"parent": item.default_bom}, pluck="item_code", distinct=True
+	)
+	component_lead = 0
+	for component in components:
+		if component == item_code:
+			continue  # defensive: a BOM must not contain its own item
+		component_lead = max(component_lead, get_mfg_lead_days(component, _depth + 1, cache))
+
+	cache[item_code] = min(cint(op_days + component_lead), MAX_MFG_LEAD_DAYS)
+	return cache[item_code]
 
 
 # ---------------------------------------------------------------------------------------------
 # Delivery Note
 # ---------------------------------------------------------------------------------------------
+def lock_rates_to_sales_order(doc, method=None):
+	"""Delivery Note / Sales Invoice ``before_validate`` hook: the price agreed on the Sales Order
+	is the price delivered and invoiced.
+
+	ERPNext re-runs the pricing engine on every mapped document at the *document's* quantity, so a
+	partial delivery of a volume-discounted line (60 ordered at -8 % volume discount, 30 shipped)
+	is re-priced without the volume rule and the invoice then fails "Cannot overbill". Rows that
+	reference a Sales Order row (``so_detail``) copy ``SO_LOCKED_RATE_FIELDS`` from it; Sales
+	Invoice rows that only reference a Delivery Note row (``dn_detail``) copy from that row, whose
+	rates were locked the same way. ``pricing_rules`` is cleared on the copy and
+	``ignore_pricing_rule`` is set so the engine neither re-evaluates nor "removes" the rules on a
+	later save (``remove_pricing_rule_for_item`` would reset the rate to list price) - the Sales
+	Order row keeps the record of the rules that produced the price. Runs before the controller's
+	validate, so Selling Settings "Maintain Same Rate Throughout Sales Cycle" sees equal rates.
+	Returns and documents without any order / delivery reference are untouched.
+	"""
+	if doc.get("is_return"):
+		return
+	items = doc.get("items") or []
+	so_details = {row.so_detail for row in items if row.get("so_detail")}
+	dn_details = {row.dn_detail for row in items if row.get("dn_detail") and not row.get("so_detail")}
+	if not so_details and not dn_details:
+		return
+
+	source_rows = {}
+	if so_details:
+		for src in frappe.get_all(
+			"Sales Order Item",
+			filters={"name": ["in", list(so_details)]},
+			fields=["name", *SO_LOCKED_RATE_FIELDS],
+		):
+			source_rows[src.name] = src
+	if dn_details:
+		for src in frappe.get_all(
+			"Delivery Note Item",
+			filters={"name": ["in", list(dn_details)]},
+			fields=["name", *SO_LOCKED_RATE_FIELDS],
+		):
+			source_rows[src.name] = src
+
+	locked = 0
+	for row in items:
+		src = source_rows.get(row.get("so_detail")) or source_rows.get(row.get("dn_detail"))
+		if not src or not flt(src.rate):
+			continue
+		for fieldname in SO_LOCKED_RATE_FIELDS:
+			if row.meta.has_field(fieldname):
+				row.set(fieldname, src.get(fieldname))
+		if row.meta.has_field("pricing_rules"):
+			row.pricing_rules = None
+		locked += 1
+	if locked and doc.meta.has_field("ignore_pricing_rule"):
+		doc.ignore_pricing_rule = 1
+
+
 def validate_delivery_note(doc, method=None):
 	"""Delivery Note ``validate`` hook.
 
@@ -438,12 +552,16 @@ def on_submit_delivery_note(doc, method=None):
 	from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 
 	try:
-		si = make_sales_invoice(doc.name)
+		# The dispatcher (Sales User / Warehouse Manager) has no Sales Invoice create permission;
+		# get_mapped_doc checks it on the target document, so the target carries the ignore flag.
+		target = frappe.new_doc("Sales Invoice")
+		target.flags.ignore_permissions = True
+		si = make_sales_invoice(doc.name, target_doc=target)
 		if not si.get("items"):
 			return
 		config.apply_default_dimensions(si)
 		si.flags.ignore_permissions = True
-		si.insert()
+		si.insert(ignore_permissions=True)
 	except Exception:
 		frappe.log_error(title=f"Auto Sales Invoice failed for {doc.name}", message=frappe.get_traceback())
 		frappe.msgprint(

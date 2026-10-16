@@ -7,6 +7,7 @@ from frappe.model.document import Document
 from frappe.utils import cint, get_link_to_form
 
 from horizon_erp.horizon_operations import config
+from horizon_erp.tasks import safe_sendmail
 
 CLOSED_WORK_ORDER_STATUSES = ("Completed", "Cancelled", "Stopped")
 LOW_SCORE_THRESHOLD = config.AUDIT_FAIL_SCORE
@@ -108,18 +109,14 @@ class ProductionAudit(Document):
 			).insert(ignore_permissions=True)
 
 		if recipients:
-			try:
-				frappe.sendmail(
-					recipients=recipients,
-					subject=subject,
-					message=message,
-					reference_doctype=self.doctype,
-					reference_name=self.name,
-				)
-			except Exception:
-				frappe.log_error(
-					title="Production Audit escalation email failed", message=frappe.get_traceback()
-				)
+			safe_sendmail(
+				"Production Audit escalation email failed",
+				recipients=recipients,
+				subject=subject,
+				message=message,
+				reference_doctype=self.doctype,
+				reference_name=self.name,
+			)
 
 		frappe.msgprint(
 			_("Audit escalated to Operations Head; Quality Action {0} opened").format(

@@ -1,7 +1,8 @@
 # Copyright (c) 2026, Horizon Manufacturing Ltd and contributors
 # For license information, please see license.txt
 
-"""Salary Cost Analysis: submitted Salary Slips grouped by department / grade / employment type."""
+"""Salary Cost Analysis: submitted Salary Slips grouped by department / branch / grade / employment
+type."""
 
 import frappe
 from erpnext.accounts.utils import get_fiscal_year
@@ -9,11 +10,15 @@ from frappe import _
 from frappe.query_builder.functions import Count, Sum
 from frappe.utils import add_months, flt, nowdate
 
+# group label -> (fieldname, link doctype). Department and Branch are read from the Salary Slip
+# itself (they are stamped on the slip at payroll time); grade / employment type from the Employee.
 GROUP_FIELDS = {
 	"Department": ("department", "Department"),
+	"Branch": ("branch", "Branch"),
 	"Employee Grade": ("grade", "Employee Grade"),
 	"Employment Type": ("employment_type", "Employment Type"),
 }
+SALARY_SLIP_GROUP_FIELDS = ("department", "branch")
 EMPLOYER_PF_COMPONENT = "Employer PF"
 
 
@@ -63,7 +68,7 @@ def get_data(filters):
 	fieldname, _options = GROUP_FIELDS[filters.group_by]
 	ss = frappe.qb.DocType("Salary Slip")
 	emp = frappe.qb.DocType("Employee")
-	group_field = ss.department if fieldname == "department" else emp[fieldname]
+	group_field = ss[fieldname] if fieldname in SALARY_SLIP_GROUP_FIELDS else emp[fieldname]
 
 	base = (
 		frappe.qb.from_(ss)

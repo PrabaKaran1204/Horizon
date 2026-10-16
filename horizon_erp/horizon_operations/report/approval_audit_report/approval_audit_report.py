@@ -1,7 +1,9 @@
 # Copyright (c) 2026, Horizon Manufacturing Ltd and contributors
 # For license information, please see license.txt
 
-"""Approval Audit Report: Purchase Order workflow transitions (Comment type "Workflow")."""
+"""Approval Audit Report: Purchase Order workflow transitions (Comment type "Workflow") plus the
+auto-escalations written by ``tasks.hourly.po_approval_reminders`` (Info comments starting with
+``AUTO_ESCALATION_PREFIX``), so the hours a skipped approver sat on a PO are not lost."""
 
 import frappe
 from frappe import _
@@ -9,6 +11,7 @@ from frappe.utils import cint, flt, get_datetime, now_datetime, time_diff_in_hou
 
 PENDING_LIKE = "Pending%"
 AGE_BUCKETS = ("< 24h", "24-48h", "> 48h")
+AUTO_ESCALATION_PREFIX = "Auto-escalated"
 
 
 def execute(filters=None):
@@ -124,13 +127,16 @@ def get_data(filters):
 		filters={
 			"reference_doctype": "Purchase Order",
 			"reference_name": ["in", names],
-			"comment_type": "Workflow",
+			"comment_type": ["in", ["Workflow", "Info"]],
 		},
-		fields=["reference_name", "content", "owner", "creation"],
+		fields=["reference_name", "content", "owner", "creation", "comment_type"],
 		order_by="creation asc",
 	)
 	by_po = {}
 	for c in comments:
+		c.transition = get_transition_label(c)
+		if c.transition is None:
+			continue  # Info comments other than auto-escalations (stock flags etc.)
 		by_po.setdefault(c.reference_name, []).append(c)
 
 	logs = frappe.get_all(
@@ -162,13 +168,29 @@ def get_data(filters):
 		previous = get_datetime(p.creation)
 		for c in transitions:
 			row = frappe._dict(base)
-			row.transition = frappe.utils.strip_html(c.content or "")
+			row.transition = c.transition
 			row.transition_by = c.owner
 			row.transition_at = c.creation
 			row.hours_in_previous_state = flt(time_diff_in_hours(c.creation, previous), 2)
 			previous = get_datetime(c.creation)
 			data.append(row)
 	return data, pos
+
+
+def get_transition_label(comment):
+	"""Transition text for a comment row, or ``None`` when the comment is not a transition.
+
+	Workflow comments are used verbatim; an Info comment counts only when it is an
+	auto-escalation and is labelled ``"Auto-escalated -> <new state>"``.
+	"""
+	content = frappe.utils.strip_html(comment.content or "").strip()
+	if comment.comment_type == "Workflow":
+		return content
+	if not content.startswith(AUTO_ESCALATION_PREFIX):
+		return None
+	# "Auto-escalated after 48h without action: Pending Dept Head → Pending Procurement Manager"
+	new_state = content.rsplit("→", 1)[-1].strip() if "→" in content else ""
+	return f"{AUTO_ESCALATION_PREFIX} → {new_state}" if new_state else AUTO_ESCALATION_PREFIX
 
 
 def get_age_bucket(hours):

@@ -425,6 +425,9 @@ def setup_common():
 
 	frappe.db.set_single_value("Selling Settings", "so_required", "No")
 	frappe.db.set_single_value("Selling Settings", "dn_required", "No")
+	# as configured by demo_data: rates must stay equal through SO -> DN -> SI (DEF-05)
+	frappe.db.set_single_value("Selling Settings", "maintain_same_sales_rate", 1)
+	frappe.db.set_single_value("Selling Settings", "maintain_same_rate_action", "Stop")
 	ensure_dimension_defaults()
 	for workflow in setup_workflows():
 		# Workflow Action e-mails attach a PDF print; wkhtmltopdf is not usable inside the test runner

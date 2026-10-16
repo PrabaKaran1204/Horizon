@@ -1071,10 +1071,6 @@ def _ensure_item_price(item_code, price_list, rate, selling):
 	).insert(ignore_permissions=True)
 
 
-def _stock_qty(item_code, warehouse):
-	return flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "actual_qty"))
-
-
 # ---------------------------------------------------------------------------
 # 1. Company / global settings
 # ---------------------------------------------------------------------------
@@ -1110,7 +1106,19 @@ def setup_company_settings():
 	# milestone / service invoices that legitimately have no Delivery Note. The Horizon rule
 	# "Delivery Note before Invoice for stock items" is enforced instead by
 	# horizon_erp.horizon_operations.selling.validate_sales_invoice (Sales Invoice validate hook).
-	_set_single("Selling Settings", {"so_required": "No", "dn_required": "No"})
+	# "Maintain Same Rate Throughout Sales Cycle" (Stop): the price agreed on the Sales Order is the
+	# price delivered and invoiced. selling.lock_rates_to_sales_order copies the SO row rates onto
+	# Delivery Note / Sales Invoice rows before this check runs, so partial deliveries of
+	# volume-discounted lines pass it instead of being re-priced (QA DEF-05).
+	_set_single(
+		"Selling Settings",
+		{
+			"so_required": "No",
+			"dn_required": "No",
+			"maintain_same_sales_rate": 1,
+			"maintain_same_rate_action": "Stop",
+		},
+	)
 	# Quotation validity lives in CRM Settings in v15 (not Selling Settings)
 	_set_single("CRM Settings", {"default_valid_till": 30})
 	_set_single("Buying Settings", {"po_required": "Yes", "pr_required": "Yes"})
@@ -1140,6 +1148,69 @@ def setup_company_settings():
 			"credit_controller": "Finance Director",
 		},
 	)
+
+
+# ---------------------------------------------------------------------------
+# 1b. Outgoing e-mail account
+# ---------------------------------------------------------------------------
+
+EMAIL_ACCOUNT_NAME = "Horizon Notifications"
+EMAIL_ACCOUNT_ID = "notifications@horizon.local"
+
+
+def setup_email_account():
+	"""Default outgoing Email Account so workflow / notification / scheduler e-mails can be queued.
+
+	PLACEHOLDER: ``localhost:25`` without authentication. Replace ``smtp_server`` / ``smtp_port`` /
+	``use_tls`` / login with the client's SMTP relay before go-live (or edit the record in the UI;
+	this step never overwrites an existing account's connection settings). Without any default
+	outgoing account every ``frappe.sendmail`` raises ``OutgoingEmailError`` and ERPNext logs one
+	Error Log per notification (QA DEF-01). Idempotent; makes this account the single default
+	outgoing one (Frappe allows exactly one) and leaves other accounts otherwise untouched.
+	"""
+	if frappe.db.exists("Email Account", EMAIL_ACCOUNT_NAME):
+		account = frappe.get_doc("Email Account", EMAIL_ACCOUNT_NAME)
+		if not account.default_outgoing or not account.enable_outgoing:
+			for other in frappe.get_all("Email Account", filters={"default_outgoing": 1}, pluck="name"):
+				frappe.db.set_value("Email Account", other, "default_outgoing", 0, update_modified=False)
+			account.default_outgoing = 1
+			account.enable_outgoing = 1
+			account.flags.ignore_permissions = True
+			account.flags.ignore_validate = True  # no SMTP round-trip during setup
+			account.save()
+		return account.name
+
+	account = frappe.get_doc(
+		{
+			"doctype": "Email Account",
+			"email_account_name": EMAIL_ACCOUNT_NAME,
+			"email_id": EMAIL_ACCOUNT_ID,
+			"service": "",
+			"enable_outgoing": 1,
+			"default_outgoing": 1,
+			"enable_incoming": 0,
+			"smtp_server": "localhost",
+			"smtp_port": 25,
+			"use_tls": 0,
+			"use_ssl_for_outgoing": 0,
+			"no_smtp_authentication": 1,
+			"always_use_account_email_id_as_sender": 1,
+			"always_use_account_name_as_sender_name": 1,
+			"send_unsubscribe_message": 0,
+			"track_email_status": 0,
+		}
+	)
+	# Frappe allows one default outgoing account: un-default the others directly (on_update would
+	# otherwise re-save them with full validation, i.e. an SMTP round-trip on *their* server).
+	for other in frappe.get_all("Email Account", filters={"default_outgoing": 1}, pluck="name"):
+		frappe.db.set_value("Email Account", other, "default_outgoing", 0, update_modified=False)
+	account.flags.ignore_permissions = True
+	# Email Account.validate opens an SMTP connection for localhost accounts; there is no relay
+	# on a demo bench.
+	account.flags.ignore_validate = True
+	account.insert()
+	_log(f"email account {account.name} created as default outgoing (placeholder SMTP localhost:25)")
+	return account.name
 
 
 # ---------------------------------------------------------------------------
@@ -1482,7 +1553,22 @@ def _sync_item_children(doc, row):
 	if row.get("default_supplier") and frappe.db.exists("Supplier", row["default_supplier"]):
 		defaults.default_supplier = row["default_supplier"]
 
-	if reorder_wh and row.get("reorder_level"):
+	if not reorder_wh:
+		# equipment / sub-assemblies are make-to-order (ADR-4): no reorder rows, ever - this also
+		# removes rows a planner or an old version of the daily recompute job may have added
+		if doc.get("reorder_levels"):
+			doc.set("reorder_levels", [])
+	elif row.get("reorder_level"):
+		# ERPNext forbids two reorder rows for one warehouse: keep the first row per warehouse
+		seen = set()
+		rows = []
+		for d in doc.reorder_levels:
+			if d.warehouse in seen:
+				continue
+			seen.add(d.warehouse)
+			rows.append(d)
+		if len(rows) != len(doc.reorder_levels):
+			doc.set("reorder_levels", rows)
 		reorder = next((d for d in doc.reorder_levels if d.warehouse == reorder_wh), None)
 		if not reorder:
 			reorder = doc.append("reorder_levels", {"warehouse": reorder_wh})
@@ -1903,8 +1989,25 @@ def _ensure_batch(item_code):
 	return doc.name
 
 
+def _has_opening_entry(item_code, warehouse):
+	"""True once an opening ledger entry exists for the bin - the current qty is no guide: stock
+	consumed by later transactions must not trigger a second opening posting (which ERPNext would
+	reject anyway as "no change in quantity" at the opening date)."""
+	return bool(
+		frappe.db.exists(
+			"Stock Ledger Entry",
+			{
+				"item_code": item_code,
+				"warehouse": warehouse,
+				"posting_date": OPENING_DATE,
+				"is_cancelled": 0,
+			},
+		)
+	)
+
+
 def _submit_opening_reconciliation(label, branch, rows):
-	rows = [r for r in rows if _stock_qty(r["item_code"], r["warehouse"]) <= 0]
+	rows = [r for r in rows if not _has_opening_entry(r["item_code"], r["warehouse"])]
 	if not rows:
 		_log(f"opening stock {label}: already present, skipped")
 		return
@@ -1927,7 +2030,7 @@ def _submit_opening_reconciliation(label, branch, rows):
 
 
 def _receive_serialised_opening(item_code, qty, warehouse, rate, serial_prefix, branch):
-	if _stock_qty(item_code, warehouse) > 0:
+	if _has_opening_entry(item_code, warehouse):
 		return
 	serial_nos = [f"{serial_prefix}{i:04d}" for i in range(1, qty + 1)]
 	entry = frappe.new_doc("Stock Entry")
@@ -2392,6 +2495,7 @@ def export_csvs():
 
 STEPS = [
 	("company_settings", setup_company_settings),
+	("email_account", setup_email_account),
 	("branches_and_dimension", setup_branches_and_dimension),
 	("addresses", setup_addresses),
 	("cost_centers", setup_cost_centers),

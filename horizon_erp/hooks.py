@@ -270,11 +270,17 @@ doc_events = {
 	},
 	"Quotation": {"validate": "horizon_erp.horizon_operations.selling.validate_discounts"},
 	"Sales Order": {"validate": "horizon_erp.horizon_operations.selling.validate_discounts"},
+	# before_validate runs ahead of the ERPNext controller's validate (pricing engine, totals,
+	# "maintain same rate" check): rates of rows mapped from a Sales Order are locked there
 	"Delivery Note": {
+		"before_validate": "horizon_erp.horizon_operations.selling.lock_rates_to_sales_order",
 		"validate": "horizon_erp.horizon_operations.selling.validate_delivery_note",
 		"on_submit": "horizon_erp.horizon_operations.selling.on_submit_delivery_note",
 	},
-	"Sales Invoice": {"validate": "horizon_erp.horizon_operations.selling.validate_sales_invoice"},
+	"Sales Invoice": {
+		"before_validate": "horizon_erp.horizon_operations.selling.lock_rates_to_sales_order",
+		"validate": "horizon_erp.horizon_operations.selling.validate_sales_invoice",
+	},
 	"Work Order": {"validate": "horizon_erp.horizon_operations.manufacturing.validate_work_order"},
 	"Stock Entry": {"validate": "horizon_erp.horizon_quality.production_audit_hooks.validate_stock_entry"},
 	"Timesheet": {"validate": "horizon_erp.horizon_operations.projects.validate_timesheet"},
@@ -368,6 +374,30 @@ horizon_workflow_actions = [
 ]
 
 horizon_modules = ["Horizon Quality", "Horizon Integration", "Horizon Operations", "Horizon Finance"]
+# Custom DocPerm rows written by setup/roles.py::setup_role_permissions (keep both lists in sync
+# with ROLE_PERMISSIONS there). setup_role_permissions also mirrors the standard rules into Custom
+# DocPerm on the target site, so importing only these rows can never strip a standard role.
+horizon_permission_roles = [
+	"Manufacturing User",
+	"Purchase User",
+	"Quality Inspector",
+	"Sales User",
+	"Stock Manager",
+	"Stock User",
+	"Warehouse Manager",
+]
+horizon_permission_doctypes = [
+	"Address",
+	"Batch",
+	"Contact",
+	"Customer",
+	"Delivery Note",
+	"Quality Inspection",
+	"Sales Invoice",
+	"Serial No",
+	"Serial and Batch Bundle",
+	"Supplier",
+]
 
 fixtures = [
 	{"dt": "Role", "filters": [["role_name", "in", horizon_roles]]},
@@ -375,6 +405,13 @@ fixtures = [
 	{"dt": "Workflow State", "filters": [["name", "in", horizon_workflow_states]]},
 	{"dt": "Workflow Action Master", "filters": [["name", "in", horizon_workflow_actions]]},
 	{"dt": "Property Setter", "filters": [["module", "in", horizon_modules]]},
+	{
+		"dt": "Custom DocPerm",
+		"filters": [
+			["role", "in", horizon_permission_roles],
+			["parent", "in", horizon_permission_doctypes],
+		],
+	},
 	{"dt": "Print Format", "filters": [["name", "like", "Horizon%"]]},
 	{"dt": "Notification", "filters": [["name", "like", "Horizon%"]]},
 	{"dt": "Workspace", "filters": [["name", "like", "Horizon%"]]},

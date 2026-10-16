@@ -10,7 +10,7 @@ import math
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Sum
+from frappe.query_builder.functions import Count, Min, Sum
 from frappe.utils import (
 	add_days,
 	cint,
@@ -30,6 +30,7 @@ from horizon_erp.tasks import (
 	horizon_job,
 	notify_users,
 	once_per_day,
+	safe_sendmail,
 	users_with_roles,
 )
 from horizon_erp.tasks.budget import get_actual_expense, get_cost_center_budgets, get_fiscal_year_for
@@ -38,6 +39,8 @@ from horizon_erp.tasks.budget import get_actual_expense, get_cost_center_budgets
 # Reorder level parameters
 # ---------------------------------------------------------------------------
 USAGE_WINDOW_DAYS = 90
+MIN_HISTORY_DAYS = 60  # first outgoing movement must be at least this old before levels are touched
+MIN_OUTGOING_MOVEMENTS = 3  # and at least this many outgoing movements must exist
 DEFAULT_LEAD_TIME_DAYS = 7
 SAFETY_FACTOR_BY_CRITICALITY = {"A": 0.5, "B": 0.3, "C": 0.1}
 DEFAULT_SAFETY_FACTOR = 0.3
@@ -68,22 +71,43 @@ except ImportError:
 # ---------------------------------------------------------------------------
 @horizon_job("recompute_reorder_levels")
 def recompute_reorder_levels():
-	"""Daily recompute of ``Item Reorder`` (material_request_type "Purchase") per stock item.
+	"""Daily recompute of ``Item Reorder`` levels per stock item.
 
 	avg_daily_usage = outgoing qty (SLE actual_qty < 0, Stock Reconciliations excluded) over the
-	last ``USAGE_WINDOW_DAYS`` / window. Items with zero usage keep their manual level.
-	lead = Item.lead_time_days or 7. factor = criticality A 0.5 / B 0.3 / C 0.1 (written back to
-	``Item.safety_stock_factor``). Seasonal Q4 items get usage x ``SEASONAL_Q4_INDEX`` in Oct-Dec.
+	last ``USAGE_WINDOW_DAYS`` / window. lead = Item.lead_time_days or 7. factor = criticality
+	A 0.5 / B 0.3 / C 0.1 (written back to ``Item.safety_stock_factor``). Seasonal Q4 items get
+	usage x ``SEASONAL_Q4_INDEX`` in Oct-Dec.
 
-	reorder_level = ceil(usage x lead x (1 + factor))
+	reorder_level = max(ceil(usage x lead x (1 + factor)), Item.safety_stock)
 	reorder_qty   = max(existing reorder_qty, ceil(usage x lead x 2))
+
+	Guard rails (QA DEF-08 / DEF-09):
+
+	* An item is recomputed only with enough history: its first outgoing movement is at least
+	  ``MIN_HISTORY_DAYS`` old **and** it has at least ``MIN_OUTGOING_MOVEMENTS`` outgoing
+	  movements. Otherwise the manually maintained level stays (``skipped_insufficient_history``).
+	* Rows are upserted **per warehouse**: an existing row keeps its ``material_request_type``
+	  (a "Manufacture" row of a make-to-stock spare stays a Manufacture row) and a second row for
+	  the same warehouse is never added (ERPNext's Item validation forbids it).
+	* New rows are only inserted for purchase items (``is_purchase_item``), as "Purchase". Items
+	  that are made, not bought, get a reorder row only when a planner creates it by hand
+	  (make-to-order vs make-to-stock is a planning decision, ADR-4) - ``skipped_not_purchasable``.
+	* Items with zero usage in the window keep their manual level (``skipped_no_usage``).
 
 	Warehouse = Item Default.default_warehouse for the Horizon company, falling back to
 	"HQ Raw Materials - HML" when that exists. Rows are written with ``frappe.db.set_value`` /
 	child-row ``insert`` instead of saving every Item (hundreds of Item saves would re-run every
 	Item validation and take minutes); the Item document cache is cleared afterwards.
 	"""
-	out = {"updated": 0, "inserted": 0, "skipped_no_usage": 0, "skipped_no_warehouse": 0, "samples": []}
+	out = {
+		"updated": 0,
+		"inserted": 0,
+		"skipped_no_usage": 0,
+		"skipped_no_warehouse": 0,
+		"skipped_insufficient_history": 0,
+		"skipped_not_purchasable": 0,
+		"samples": [],
+	}
 	company = horizon_company()
 	if not company:
 		out["skipped"] = "no company"
@@ -92,7 +116,15 @@ def recompute_reorder_levels():
 	items = frappe.get_all(
 		"Item",
 		filters={"is_stock_item": 1, "disabled": 0, "has_variants": 0, "is_fixed_asset": 0},
-		fields=["name", "lead_time_days", "criticality", "demand_pattern", "safety_stock_factor"],
+		fields=[
+			"name",
+			"lead_time_days",
+			"criticality",
+			"demand_pattern",
+			"safety_stock_factor",
+			"safety_stock",
+			"is_purchase_item",
+		],
 	)
 	if not items:
 		return out
@@ -109,15 +141,25 @@ def recompute_reorder_levels():
 	}
 	fallback_wh = first_existing_warehouse(*FALLBACK_PURCHASE_WAREHOUSES)
 	usage = _outgoing_qty_by_item(item_names, company)
+	history = _outgoing_history_by_item(item_names, company)
 	seasonal_now = getdate(today()).month in SEASONAL_Q4_MONTHS
+	history_cutoff = getdate(add_days(today(), -MIN_HISTORY_DAYS))
 
 	existing = {}
 	for row in frappe.get_all(
 		"Item Reorder",
-		filters={"parent": ["in", item_names], "parenttype": "Item", "material_request_type": "Purchase"},
-		fields=["name", "parent", "warehouse", "warehouse_reorder_level", "warehouse_reorder_qty"],
+		filters={"parent": ["in", item_names], "parenttype": "Item"},
+		fields=[
+			"name",
+			"parent",
+			"warehouse",
+			"warehouse_reorder_level",
+			"warehouse_reorder_qty",
+			"material_request_type",
+		],
+		order_by="idx asc",
 	):
-		existing[(row.parent, row.warehouse)] = row
+		existing.setdefault((row.parent, row.warehouse), row)  # first row per warehouse wins
 
 	for item in items:
 		warehouse = defaults.get(item.name) or fallback_wh
@@ -133,11 +175,21 @@ def recompute_reorder_levels():
 		if daily_usage <= 0:
 			out["skipped_no_usage"] += 1
 			continue
+		hist = history.get(item.name)
+		if (
+			not hist
+			or cint(hist.movements) < MIN_OUTGOING_MOVEMENTS
+			or getdate(hist.first_date) > history_cutoff
+		):
+			out["skipped_insufficient_history"] += 1
+			continue
 		if item.demand_pattern == "Seasonal Q4" and seasonal_now:
 			daily_usage *= SEASONAL_Q4_INDEX
 
 		lead = cint(item.lead_time_days) or DEFAULT_LEAD_TIME_DAYS
 		level = math.ceil(daily_usage * lead + daily_usage * lead * factor)
+		if flt(item.safety_stock) > 0:
+			level = max(level, math.ceil(flt(item.safety_stock)))
 		row = existing.get((item.name, warehouse))
 		qty = max(flt(row.warehouse_reorder_qty) if row else 0, math.ceil(daily_usage * lead * 2))
 
@@ -149,6 +201,9 @@ def recompute_reorder_levels():
 				update_modified=False,
 			)
 			out["updated"] += 1
+		elif not cint(item.is_purchase_item):
+			out["skipped_not_purchasable"] += 1
+			continue
 		else:
 			frappe.get_doc(
 				{
@@ -171,6 +226,7 @@ def recompute_reorder_levels():
 				{
 					"item_code": item.name,
 					"warehouse": warehouse,
+					"material_request_type": row.material_request_type if row else "Purchase",
 					"avg_daily_usage": round(daily_usage, 3),
 					"lead_days": lead,
 					"factor": factor,
@@ -181,23 +237,39 @@ def recompute_reorder_levels():
 	return out
 
 
-def _outgoing_qty_by_item(item_names, company):
+def _outgoing_sle_query(item_names, company):
 	sle = frappe.qb.DocType("Stock Ledger Entry")
 	wh = frappe.qb.DocType("Warehouse")
-	rows = (
+	return (
 		frappe.qb.from_(sle)
 		.join(wh)
 		.on(wh.name == sle.warehouse)
-		.select(sle.item_code, Sum(sle.actual_qty).as_("qty"))
 		.where(sle.item_code.isin(item_names))
 		.where(sle.is_cancelled == 0)
 		.where(sle.actual_qty < 0)
 		.where(sle.voucher_type != "Stock Reconciliation")
-		.where(sle.posting_date > add_days(today(), -USAGE_WINDOW_DAYS))
 		.where(wh.company == company)
 		.groupby(sle.item_code)
+	), sle
+
+
+def _outgoing_qty_by_item(item_names, company):
+	query, sle = _outgoing_sle_query(item_names, company)
+	rows = (
+		query.select(sle.item_code, Sum(sle.actual_qty).as_("qty")).where(
+			sle.posting_date > add_days(today(), -USAGE_WINDOW_DAYS)
+		)
 	).run(as_dict=True)
 	return {r.item_code: abs(flt(r.qty)) for r in rows}
+
+
+def _outgoing_history_by_item(item_names, company):
+	"""``{item_code: {"first_date", "movements"}}`` over the whole ledger (not just the window)."""
+	query, sle = _outgoing_sle_query(item_names, company)
+	rows = query.select(
+		sle.item_code, Min(sle.posting_date).as_("first_date"), Count(sle.name).as_("movements")
+	).run(as_dict=True)
+	return {r.item_code: r for r in rows}
 
 
 # ---------------------------------------------------------------------------
@@ -472,17 +544,14 @@ def send_daily_summary():
 
 	recipients = users_with_roles("Finance Director", "Operations Head")
 	metrics["recipients"] = recipients
-	if recipients:
-		try:
-			frappe.sendmail(
-				recipients=recipients,
-				subject=_("Horizon Daily Summary {0}").format(metrics["date"]),
-				message=html,
-				attachments=attachments,
-			)
-		except Exception:
-			frappe.log_error(title="Horizon daily summary: email failed")
-			metrics["email_error"] = True
+	if recipients and not safe_sendmail(
+		"Horizon daily summary: email failed",
+		recipients=recipients,
+		subject=_("Horizon Daily Summary {0}").format(metrics["date"]),
+		message=html,
+		attachments=attachments,
+	):
+		metrics["email_error"] = True
 	return metrics
 
 
