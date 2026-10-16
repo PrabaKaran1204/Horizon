@@ -12,6 +12,7 @@
 | Not restarted / not changed | No product code was changed. Two environment changes were made and are declared: (1) Email Account **Horizon Notifications (QA outgoing)** created (default outgoing, `localhost`, no auth) because the site had none and every notification failed (DEF-01); (2) `Shift Type Morning Shift.last_sync_of_checkin` advanced to now while processing auto attendance. |
 | Fix round (16-Oct-2026, after QA) | Defects fixed in commit `fix: QA defects - permissions, price lock at SO, auto invoice, stock accuracy, reorder recompute, email account`; per-defect status in section 4 ("Fix status"). The QA e-mail account was kept but is no longer the default: `demo_data.setup_email_account` created **Horizon Notifications** (`notifications@horizon.local`, placeholder SMTP `localhost:25`) as the single default outgoing account. |
 | Regression | `bench --site horizon.local run-tests --app horizon_erp --skip-test-records` → **Ran 120 tests in 55.676s — OK** (after all live changes) |
+| Retest round 2 (16-Oct-2026, after the fix round) | Independent QA re-run of every defect as the real users (section 8); **Ran 134 tests in 112.830s — OK**. Sign-off recommendation in section 8.6. |
 
 ## 2. Summary
 
@@ -220,6 +221,99 @@ Bank Transactions reference invoices/payments (HML-SINV-0001, PINV-0007…) that
 
 UI/list-view visibility for wh.delhi (PERM-1 UI part), Production Plan from SO (D1 optional), PO-11 (last-level never escalates), QI-3 (Fail → Non Conformance), SJ-6 (job failure wrapper), OB-1 (Mark for Scrap), Production/Inventory/Warehouse workspace cards, print of the thermal packing slip, the QI-driven DN gate with a Rejected inspection (only the audit path was exercised), `auto_reconcile_vouchers` with matching references, PF for an employee with B+DA 12,000 (no such employee), today's auto attendance materialisation (shift allowance window not yet reached).
 
-## 7. Recommendation
+## 7. Recommendation (round 1)
+
+Superseded by section 8.6 after the retest.
 
 Do not sign off for go-live until DEF-01 … DEF-06 are fixed: three of them are role-matrix gaps that make the receiving and dispatch flows impossible for the people who own them, and two make the "invoice follows every delivery" promise fail silently (Error Log only). DEF-07/08/09 should be fixed before the scheduler is enabled in production (they write to masters every hour/day). The remaining items are documentation or demo-data corrections. After fixes, re-run scripts B4, E5, E7, D4 as the intended users (procure@, wh.delhi@, amit@, priya@) and the regression suite.
+
+## 8. Retest (round 2) – 16-Oct-2026
+
+### 8.1 Method
+
+Independent re-execution (not a review of the developer's evidence) of every defect on `horizon.local` after commits `d4bac37` (fix) and `a8c6bb0` (docs). Scripts `qa/retest/R1_receipt.py`, `R2_delivery.py`, `R3_audit_hr.py` (+ `R3C_redo.py`), `R4_volume_order.py`, `R5_jobs_misc.py` (+ `R5b`/`R5c`), `R6_regression.py` in the QA scratchpad; `frappe.set_user(<demo user>)` for every business step (Administrator only for read-only snapshots and the final leftover count), `frappe.flags.mute_emails = True` except for the DEF-01 check, failures rolled back with savepoints, passes committed and kept as sample data (8.3). Dev server not restarted. Regression suite: `bench --site horizon.local run-tests --app horizon_erp --skip-test-records` → **Ran 134 tests in 112.830s — OK**.
+
+### 8.2 Result per defect
+
+Result values: **Fixed-verified** (reproduced the original failure path as the intended user and it now passes), **Still failing** (with repro), **Not retestable** (design decision / out of scope / no live path).
+
+| Defect | Sev. | Retest result | Evidence (user → document) |
+| --- | --- | --- | --- |
+| DEF-01 default outgoing e-mail | High | **Fixed-verified** | Default outgoing = *Horizon Notifications* (`notifications@horizon.local`, localhost, enable_outgoing 1). `frappe.sendmail(recipients=['rajesh@horizon.local'], subject='QA retest DEF-01', message='x')` with `mute_emails` **off** → Email Queue v9iusdj318 (and vn2gucchrk on the second call), status Not Sent (scheduler off), sender `Horizon Notifications <notifications@horizon.local>`, Error Log +0. Blacklist override (R6-A) and audit escalation (R3-C) during the retest wrote no 'email failed' Error Logs. |
+| DEF-02 batch/serial receipt | High | **Fixed-verified** | dept.head: PUR-ORD-2026-00010 (Mumbai Steel Traders, RM-PAINT-GREY 30 L @350 = ₹10,500, Level 1) approved → **procure**: PR-26-00007 inserted + submitted, Batch **PG-0003** auto-created, bundle f71c28bf402d6bab3370, HQ RM paint 99 → 129, GL 10,500 balanced. dept.head: PUR-ORD-2026-00011 (Pune Electricals, CMP-MOTOR-5HP 2 × 18,000 = ₹36,000) → **procure**: PR-26-00008 with `serial_no` MOT-0013/MOT-0014, row routed to HQ QC Hold, submit without QI refused (`QualityInspectionRequiredError`), **qc** QI MAT-QA-2026-00006 Accepted, procure submitted → Serial Nos **MOT-0013 / MOT-0014** Active in HQ Raw Materials (`purchase_document_no` PR-26-00008), QC release **MAT-STE-00010** (owner procure), motor bin 10 → 12, QC Hold 0, Error Log +0. `has_permission` Batch/Serial No/Serial and Batch Bundle create = True for procure; Address/Supplier/Customer read = True for priya, wh.delhi, procure. |
+| DEF-03 Employee user-permission leak | High | **Fixed-verified** | **priya**: `get_doc('Production Audit','PA-2026-00002').check_permission('read')` OK (inspector HR-EMP-00010), list shows both audits (qc too). **priya** WO MFG-WO-2026-00004 (SP-IMPELLER ×5, transfer MAT-STE-00012, In Process) → **qc** PA-2026-00003 score 72 Submit → **priya** workflow action *Review* → **Reviewed** (modified_by priya). **neha**: Employee Checkin **EMP-CKIN-10-2026-000063** (Suresh Patil HR-EMP-00002, 06:05 IN, Morning Shift) created and kept. Employee User Permissions of rajesh/priya/amit/neha/qc now `applicable_for` Employee / Salary Slip / Expense Claim / Employee Tax Exemption Declaration only. |
+| DEF-04 dispatch roles | High | **Fixed-verified** | **amit** SAL-ORD-2026-00007 (Delhi Metro, SP-SEAL-SET ×3 @2,472 −10 % = 2,224.80, IGST, ₹7,475.33, DEL Finished Goods); **priya** MAT-STE-00011 (6 × SP-SEAL-SET HQ FG → DEL FG, DEL 2 → 8); **wh.delhi**: same SO mapped to HQ Finished Goods → `PermissionError` on insert; from DEL Finished Goods **DN-26-00006** inserted and submitted (owner/modified_by wh.delhi, GL COGS 3,300 / Stock in Hand). **amit** SAL-ORD-2026-00008 (Tata, SP-SEAL-SET ×2 @2,040 = 15 %, ₹4,569.60) → **DN-26-00007** from HQ FG submitted. Serialised pump: no HZ-PUMP-100 serial in stock (PMP-0001/0002 Delivered), so only `has_permission('Serial and Batch Bundle','create')` = True for amit/wh.delhi was checked – the serial dispatch path itself was not re-run live. |
+| DEF-05 partial delivery of volume-priced line | High | **Fixed-verified** | **amit** SAL-ORD-2026-00009 Tata SP-IMPELLER ×60: 6,500 −23 % (PRLE-0001 + 0003 + 0004) = **5,005**, `rule_rate` 5,005, `discount_over_rule_pct` 0, `needs_discount_approval` 0, net 3,00,300 + GST 36,036 = **₹3,36,336**. DN for 25 without notes blocked (regression), **DN-26-00008** (25, deviation notes) rate 5,005, `ignore_pricing_rule` 1, `pricing_rules` cleared → auto **SINV-26-00009** ₹1,40,140 (rate 5,005, `so_detail`/`delivery_note` set) → **rajesh** submit OK (GL Sales 1,25,125 / CGST 7,507.50 / SGST 7,507.50 / Debtors 1,40,140), no over-billing error, Error Log +0. **DN-26-00009** (35, mapped pending qty) → **SINV-26-00010** ₹1,96,196 submitted. SO **Completed**, 100 % delivered / 100 % billed; SI net 1,25,125 + 1,75,175 = SO net 3,00,300; grand totals equal. Also: **SINV-26-00006** (Tata ₹5,37,243) exists, docstatus 1, Unpaid; DN-26-00001 Completed, `per_billed` 100. Extra: **rajesh** `make_sales_invoice('DN-26-00002')` → **SINV-26-00011** ₹24,752 (rate 5,525 with the 20 % document discount carried, = DN total) submitted; DN-26-00002 100 % billed, SAL-ORD-2026-00003 billed 50 %. |
+| DEF-06 auto invoice for non-accounts submitters | High | **Fixed-verified** | **wh.delhi** (Sales Invoice create False, read False) → draft SINV-26-00007 owner wh.delhi; **amit** (create False, read True) → drafts SINV-26-00008 / 00009 / 00010 owner amit; DN comment "Draft Sales Invoice … created automatically" on each; Error Log +0 across the four submits. See OBS-R2-1 (wh.delhi cannot open the linked invoice). |
+| DEF-07 stock-accuracy false positives | High | **Fixed-verified** | `reorder_and_accuracy_check()` → `bin_mismatches` **[]**, `count_variances` 0, `reorder_error` None, `material_requests` 1 (**MAT-MR-2026-00003** Manufacture SP-IMPELLER – genuine: HQ FG 5 after the deliveries < level 20). Independent SQL (Bin.actual_qty vs latest non-cancelled SLE `qty_after_transaction`, 31 bins) → 0 differences. 'Stock accuracy flag' comments 0 before and after. |
+| DEF-08 duplicate reorder rows | Medium | **Fixed-verified** | Item Reorder before: RM-STEEL-PLATE HQ RM 400/1000 Purchase; RM-BOLT-M10 500/2000 Purchase; SP-IMPELLER one row HQ FG 20/50 Manufacture; HZ-PUMP-100 none. `recompute_reorder_levels()` twice → `updated 0, inserted 0, skipped_no_usage 11, skipped_insufficient_history 13, skipped_not_purchasable 0` both runs; row set identical before/after; no (item, warehouse) duplicates. |
+| DEF-09 levels collapsed from one day's history | Medium | **Fixed-verified** | Same runs: every item with usage returned `skipped_insufficient_history` (13); manual levels untouched. The ≥ 60 days / ≥ 3 movements gate itself is unit-tested only (no demo item has that history yet). |
+| DEF-10 rule_rate compounding | Medium | **Fixed-verified** | **amit** `frappe.new_doc('Quotation')` → **SAL-QTN-2026-00003** (Tata, SP-IMPELLER ×60 + HZ-PUMP-100 ×1, ₹5,20,873.50): impeller `rule_rate` 5,005.00 = 6,500 × (1 − 0.23), `discount_over_rule_pct` 0, rate 5,005; pump 175,750 (−5 %), over-rule 0; `needs_discount_approval` 0. |
+| DEF-11 valid_till / price list | Medium | **Fixed-verified** (valid_till) · price-list part **Not retestable** (declared design) | Same quotation inserted with `valid_till` empty → **2026-11-15** = transaction date + 30 (CRM Settings). Customer default price list on server-created orders still not applied (standard ERPNext; SAL-ORD-2026-00007 was created with `selling_price_list` set explicitly). |
+| DEF-12 one-level lead time | Medium | **Fixed-verified** | `get_item_availability('HZ-PUMP-100', 1)` → `mfg_lead_days` **30** (≥ 21), `available_qty` 0; quotation row lead 30, `expected_delivery_date` 2026-11-15; impeller row lead 29 (available −30 → mfg lead used). |
+| DEF-13 row-level discount reverted | Low | **Not retestable** (design, not fixed) | Unchanged; documented path is `additional_discount_percentage`. |
+| DEF-14 Quality Inspector permission | Low | **Fixed – unit evidence only** | Custom DocPerm present (`setup/roles.py`), `test_role_permissions_close_receiving_and_dispatch_gaps` in the green suite; no pure-inspector demo user exists, not re-run live. |
+| DEF-15 auto-escalation missing in report | Low | **Fixed-verified** | Approval Audit Report (14–16 Oct) row for PUR-ORD-2026-00004: transition **'Auto-escalated → Pending Procurement Manager'**, transition_by Administrator, 14:35:41, after the Draft → Pending Dept Head row. |
+| DEF-16 GST rows on server-created POs | Low | **Not retestable** (documented behaviour) | PUR-ORD-2026-00010/00011 still carry the template name with ex-GST totals, as documented. |
+| DEF-17 bank statement without GL | Low | **Not retested** (out of scope of the fix round) | – |
+| DEF-18 leave block list on holidays | Low | **Fixed-verified** | Block list *Diwali Peak Production Block* 19/22/23 Oct (working days). **neha** CL 22-10-2026 → saved Open with warning 'Leave application contains following block dates: 22-10-2026'; **rajesh** approve → `LeaveDayBlockedError` 'You are not authorized to approve leaves on Block Dates'; control 29-10-2026 approved (docstatus 1). Both rolled back. |
+| DEF-19 budget mail without PDF | Low | **Fixed-verified** | `send_budget_report()` → recipients dept.head + rajesh, Email Queue **vvhqjn1hne** 'Horizon Budget vs Actual - September 2026', MIME part `application/pdf` `budget-report-2026-09-01.pdf`, decoded 34,726 bytes starting `%PDF-1.4`, no `pdf_error`. (The `Email Queue.attachments` column is `[]`: frappe stores only file-id / print-format attachments there and embeds `fcontent` in the message – not a defect.) |
+| DEF-20 asset last maintenance | Low | **Not retested live** | ACC-AML-2026-00001 Completed per the fix round; `test_completed_maintenance_log_feeds_asset_register` in the green suite. |
+| DEF-21 salary by branch | Low | **Fixed-verified** | Salary Cost Analysis Sep 2026, group_by **Branch** → Mumbai HQ 14 employees / 14 slips gross 4,47,300 net 4,22,157.50; Delhi DC 2 / 2 gross 82,500 net 78,500 (sum equals the Department grouping 5,29,800). |
+
+(The task sheet's "DEF-17 leave block / DEF-18 budget PDF" correspond to DEF-18 / DEF-19 in this report's numbering.)
+
+Spot regressions of flows touched by the fixes – all **PASS**: blacklisted supplier without override blocked; ABC Supplies ₹10,000 with override by procure → Level 3, SEL-00002 Pending, Pending Dept Head → Pending Procurement Manager → **Pending Finance Director** → rajesh Approve → submitted, SEL Approved (rolled back); DN short-ship without deviation notes blocked; Accounts User (`qa.accounts`, enabled for the check and disabled again) SI without DN → `PermissionError` 'Delivery Note Required', rajesh allowed with the audit comment (rolled back); Work Order 100 × HZ-PUMP-100 due in 2 days → 'needs 600.75 machine hours on Line A but only 43.2 h are free' with split options; Manufacture Stock Entry on MFG-WO-2026-00004 inserts with the Reviewed 72 audit (control) and is blocked by a submitted 60-score audit (PA-2026-00004, escalated, QA-ACT-00015 – rolled back, Job Card PO-JOB00010 back to Open); QC-Hold routing on the motor receipt (above).
+
+### 8.3 Sample data added by the retest (kept)
+
+| Document | Owner | Content |
+| --- | --- | --- |
+| PUR-ORD-2026-00010 | dept.head | Mumbai Steel Traders, RM-PAINT-GREY 30 L @350 = ₹10,500, Level 1, Approved, fully received |
+| PR-26-00007 | procure | 30 L paint, Batch **PG-0003**, HQ Raw Materials 99 → 129 L |
+| PUR-ORD-2026-00011 | dept.head | Pune Electricals, CMP-MOTOR-5HP 2 × 18,000 = ₹36,000, Level 1, Approved, fully received |
+| PR-26-00008 / MAT-QA-2026-00006 / MAT-STE-00010 | procure / qc / procure | serials **MOT-0013, MOT-0014** via QC Hold → HQ Raw Materials (motor bin 12) |
+| SAL-ORD-2026-00007 | amit | Delhi Metro Fabricators, SP-SEAL-SET ×3 @2,224.80 (North −10 % Q4), IGST, ₹7,475.33, To Bill |
+| MAT-STE-00011 | priya | Material Transfer 6 × SP-SEAL-SET HQ FG → DEL FG |
+| DN-26-00006 → SINV-26-00007 (draft) | wh.delhi | from DEL Finished Goods, ₹7,475.33; DEL FG seal sets now 5 |
+| SAL-ORD-2026-00008 | amit | Tata, SP-SEAL-SET ×2 @2,040 (Premium 5 % + Q4 10 %), ₹4,569.60, To Bill |
+| DN-26-00007 → SINV-26-00008 (draft) | amit | from HQ Finished Goods, ₹4,569.60 |
+| MFG-WO-2026-00004 / MAT-STE-00012 | priya | SP-IMPELLER ×5, materials transferred, In Process (Job Card PO-JOB00010 open) |
+| PA-2026-00003 | qc → priya | score 72 on MFG-WO-2026-00004, **Reviewed** |
+| EMP-CKIN-10-2026-000063 | neha | Suresh Patil IN 06:05 today, Morning Shift |
+| MAT-STE-00013 | priya | Material Receipt 60 × SP-IMPELLER @3,200 into HQ FG – **test stock top-up**, declared (needed because only 5 impellers were free) |
+| SAL-ORD-2026-00009 | amit | Tata, SP-IMPELLER ×60 @5,005 (5 + 8 + 10 %), ₹3,36,336, **Completed** 100 % / 100 % |
+| DN-26-00008 → SINV-26-00009 | amit → rajesh | 25 impellers, ₹1,40,140, Unpaid |
+| DN-26-00009 → SINV-26-00010 | amit → rajesh | 35 impellers, ₹1,96,196, Unpaid |
+| SINV-26-00011 | rajesh | invoice for DN-26-00002 (Tata, ₹24,752), Unpaid; DN-26-00002 Completed |
+| SAL-QTN-2026-00003 | amit | Tata, SP-IMPELLER ×60 + HZ-PUMP-100 ×1, ₹5,20,873.50, Draft, valid till 15-11-2026 |
+| MAT-MR-2026-00003 | Administrator (hourly job) | Manufacture request SP-IMPELLER raised by `reorder_item` during the DEF-07 run |
+| Email Queue | – | 71 rows, all Not Sent (scheduler off): incl. the two 'QA retest DEF-01' mails and the September budget mail with PDF |
+
+Stock after the retest: HQ FG SP-IMPELLER 5 (reserved 35 for SAL-ORD-2026-00002/00003), SP-SEAL-SET HQ 26 / DEL 5, CMP-MOTOR-5HP HQ RM 12, RM-PAINT-GREY 129 L. Throwaway users qa.sales / qa.accounts / qa.api remain disabled; no leave application, low audit, capacity WO or blacklist PO from the retest was kept.
+
+### 8.4 New findings
+
+**DEF-22 – Unit suite is not leftover-free; the "leftover = 0" claim in the fix round is wrong**
+*Severity* Low · *Priority* P4 · *Risk* Low (test hygiene; no business impact) · *Type* Tests
+*Evidence*: after `Ran 134 tests — OK` the per-prefix counts are BRTEST 12 (Error Log), APITEST 3 Contact (`apitest-sync`, `apitest-noperm`, `apitest http noperm`) + 4 Error Log, SCHTEST 26 Error Log, GAPTEST 1 Contact (`gaptest-whperm`) + 2 Error Log, FIXTEST 1 Error Log, RPTTEST 0. 40 Error Log rows mentioning test prefixes date from 13:42–14:25 (earlier unit runs, before the fix commit) and were never deleted; each new suite run adds 'Horizon job failed: schtest_failing', 'FIXTEST sendmail failure' (the test asserts the row exists) and 'Inventory snapshot query failed' (20 accumulated).
+*Cause*: `api/test_inventory_api.py` calls `frappe.db.commit()` (lines 64 and 238), which persists everything the class wrote before that point (Users → Contacts, Error Logs); Error Logs written by other tests persist across the class rollback as well.
+*Steps*: run the suite, then `select count(*) from tabContact where name like '%apitest%'` / `tabError Log where error like '%SCHTEST%'`.
+*Expected*: 0 for every prefix. *Actual*: see above.
+*Fix*: drop the commits (use `frappe.db.savepoint` or `self.addCleanup`), delete test-created Error Logs / Contacts in `tearDownClass`, purge the existing rows; re-run the leftover query as part of the suite.
+
+**OBS-R2-1 – Warehouse Manager cannot open the invoice the DN hook links** (Low, configuration). wh.delhi has `Sales Invoice` read = False, yet DN-26-00006's comment links SINV-26-00007. Grant Sales Invoice read to Warehouse Manager in `ROLE_PERMISSIONS` (as done for Sales User) or omit the link for users without read.
+
+**OBS-R2-2 – Auto invoices fall due on the posting date** (Low, demo data). No Payment Terms Template on the demo customers or the company, so SINV-26-00007…00011 have `due_date` = 16-10-2026; SINV-26-00006's 15-11-2026 was typed in by hand. Add a Net-30 template to the demo customers in `setup/demo_data.py`.
+
+**OBS-R2-3** – Email Queue stays 'Not Sent' (scheduler disabled on the dev site) – unchanged from round 1, expected.
+
+### 8.5 Not covered in the retest
+
+Serialised finished-goods dispatch by amit (no HZ-PUMP-100 serial in stock – would need a new pump Work Order); UI list/report views for wh.delhi (PERM-1 UI part); DEF-14 and DEF-20 live (unit evidence only); cancel → amend of a rate-locked Delivery Note / Sales Invoice (ledger reversal of the new hook path); `lock_rates_to_sales_order` on returns (`is_return` skip) and on invoices mapped from several delivery notes; concurrent Delivery Note submission against the same Sales Order row; the ≥ 60-day history branch of `recompute_reorder_levels` on live data; actual SMTP delivery.
+
+### 8.6 Sign-off recommendation
+
+All seven High defects (DEF-01 … DEF-07) are **verified fixed on the live site as the intended users**, the Medium defects DEF-08 … DEF-12 are verified fixed, the regression suite is green (134 tests) and the spot regressions of the touched flows pass. **No High or Critical defect remains open.** The retest found one new Low defect (DEF-22, test hygiene) and two Low observations (OBS-R2-1/2).
+
+**Recommendation: sign off for go-live**, with the following non-blocking follow-ups to be scheduled: DEF-22 before the suite is used as a CI gate; OBS-R2-1 (Sales Invoice read for Warehouse Manager) and OBS-R2-2 (payment terms) with the next demo-data refresh; DEF-13/16/17 remain as documented design/demo-data items; production prerequisites from `docs/06` (real SMTP account replacing the placeholder, scheduler enabled) still apply.
