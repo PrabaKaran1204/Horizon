@@ -262,3 +262,73 @@ attendance.
 it back and hits the validation.
 
 **Status.** Accepted.
+
+---
+
+## ADR-13 Employee user permissions scoped to self-service DocTypes
+
+**Context.** ERPNext links an Employee to a User by creating a User Permission (allow = Employee,
+"apply to all document types"). For an operator that is the right default. For the demo managers
+(Operations Head, Finance Director, Sales Manager, HR Manager, QC) it hid every record that links
+*another* employee: a Production Audit whose `inspector` is not the reviewer, an Employee Checkin for
+a shop-floor worker, another employee's Leave Application (QA DEF-03) - the escalation workflow could
+only be completed by Administrator.
+
+**Options.** (a) Remove the Employee permission for managers altogether (they then see every
+employee's Salary Slip / Expense Claim). (b) Give every manager System Manager (no). (c) Keep the
+permission but restrict it to the self-service DocTypes where "only my own record" is the intent.
+
+**Decision.** (c). `demo_hr_finance.scope_employee_user_permissions` replaces the catch-all row
+with one User Permission row per DocType in `EMPLOYEE_SELF_SERVICE_DOCTYPES` (Employee, Salary
+Slip, Expense Claim, Employee Tax Exemption Declaration) - Frappe stores "applies to these DocTypes
+only" as one row per `applicable_for`. Applied to every HML employee with a `user_id`, on install
+and on every re-run; ERPNext does not re-create the catch-all row because it only acts when
+`user_id` changes.
+
+**Consequences.** Managers read / review documents of other employees according to their roles
+(Production Audit via Operations Head, Employee Checkin via HR Manager, Leave Application via Leave
+Approver); payslips, expense claims and tax declarations remain visible only to their owner (plus
+HR / Accounts roles). Leave Application is deliberately *not* in the list: approvers must see
+others' applications; HRMS already restricts employees to their own via `leave_approver` / owner
+checks. Adding a new self-service DocType means adding it to the tuple and re-running the step.
+
+**Status.** Accepted.
+
+---
+
+## ADR-14 Prices are locked at the Sales Order; stacked rule discounts are additive
+
+**Context.** ERPNext re-runs the pricing engine on every mapped document at that document's
+quantity. A Sales Order line of 60 impellers earns the volume rule (>= 51); a partial Delivery Note
+of 30 is re-priced without it, and the Sales Invoice mapped from that delivery then fails ERPNext's
+over-billing check against the Sales Order (QA DEF-05). Setting "Ignore Pricing Rule" after mapping
+does not help: on the next save ERPNext *removes* the recorded rules and resets the rate to list
+price (`remove_pricing_rule_for_item`). The documentation also described stacked rules as
+compounding, while the engine adds percentages (QA DEF-10).
+
+**Options.** Over-billing allowance in Accounts Settings (hides the problem, allows real
+over-billing); `validate_applied_rule` on every rule (warns only); copy the Sales Order rates onto
+the Delivery Note / Sales Invoice rows before the controller validates (chosen).
+
+**Decision.** `selling.lock_rates_to_sales_order`, wired as `before_validate` on Delivery Note and
+Sales Invoice (it must run *before* the ERPNext controller's `validate`, which hosts the pricing
+engine, totals and the "Maintain Same Rate" check - a `validate` doc_event runs after it). Rows
+referencing a Sales Order row (`so_detail`) copy `price_list_rate`, `discount_percentage`,
+`discount_amount`, `margin_type`, `margin_rate_or_amount` and `rate` from it; invoice rows that
+only reference a Delivery Note row copy from that (already locked) row. `pricing_rules` is cleared
+on the copy and `ignore_pricing_rule` is set on the document, so the engine neither re-evaluates
+nor removes anything on later saves; the Sales Order row keeps the audit record of the rules that
+produced the price. Selling Settings "Maintain Same Rate Throughout Sales Cycle" = Stop is switched
+on as the standard safety net (`demo_data.setup_company_settings`). The draft invoice is created
+server-side on Delivery Note submit with `ignore_permissions` on the mapped target, so a Sales User
+or Warehouse Manager who may not create invoices still triggers it (DEF-06); Sales User gets read
+on Sales Invoice to see it. `get_rule_rate` now adds the percentages of stacked rules exactly as
+ERPNext does (5 + 8 + 10 = 23 %), compounding only a rule flagged `apply_discount_on_rate`.
+
+**Consequences.** Partial deliveries and their invoices carry the ordered price; the over-billing
+check passes. Limitation: on a Delivery Note / Sales Invoice that carries Sales Order rows, a row
+added by hand without an order reference is priced at list price (the engine is off for the whole
+document) - add the item to the Sales Order instead. Returns are untouched. Price changes after
+order confirmation are made on the Sales Order (amend) and flow from there.
+
+**Status.** Accepted.

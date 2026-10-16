@@ -59,9 +59,13 @@ bench --site horizon.local migrate
 bench restart        # or `bench start` in development
 ```
 
-Email: configure an Email Account (outgoing) or set `mute_emails` in `site_config.json` for demos;
-notifications and job emails are logged in Error Log when no outgoing account exists and never
-block the transaction.
+Email: `demo_data.setup_email_account` creates the default outgoing Email Account **Horizon
+Notifications** (`notifications@horizon.local`, SMTP `localhost:25`, no authentication) as a
+placeholder so workflow / notification / scheduler e-mails can be queued; replace its server, port,
+TLS and login with the client's SMTP relay before go-live (the step never overwrites an existing
+account's connection settings). Without a default outgoing account every `frappe.sendmail` raises and
+ERPNext logs one Error Log per notification; Horizon's own mails go through
+`tasks.safe_sendmail` and never block a transaction either way.
 
 ### Reaching the site from Windows (WSL2)
 
@@ -97,8 +101,9 @@ bench restart
 | 5 | Print formats render | Open a Sales Invoice, choose *Horizon Sales Invoice*; a Delivery Note with *Horizon Packing Slip Thermal* |
 | 6 | Scheduler running | `bench --site horizon.local scheduler status`; Scheduled Job Log shows `horizon_erp.tasks.*` |
 | 7 | Workspaces consistent | `bench --site horizon.local execute horizon_erp.setup.dashboards.setup_dashboards` |
+| 7b | Role matrix applied | `bench --site horizon.local execute horizon_erp.setup.roles.setup_role_permissions` (also runs on every `bench migrate`); Custom DocPerm rows for Batch, Serial No, Serial and Batch Bundle, Address, Contact, Supplier, Customer, Quality Inspection, Sales Invoice, Delivery Note |
 | 8 | API keys regenerated | Backups do not carry usable secrets for new users; regenerate on the integration user |
-| 9 | Email account and site URL | Email Account outgoing; `host_name` in `site_config.json` so links in emails resolve |
+| 9 | Email account and site URL | Replace the placeholder SMTP settings of Email Account *Horizon Notifications*; `host_name` in `site_config.json` so links in emails resolve |
 | 10 | Redis counters | Rate-limit buckets live in Redis, not the DB: `bench --site horizon.local execute horizon_erp.api.rate_limit.reset_rate_limit --args '["<client>"]'` if needed |
 | 11 | Demo passwords | Change `Horizon@123` on the eight demo users before any shared environment |
 | 12 | Developer mode off | `developer_mode 0` in production (disables `_simulate_failure`) |
