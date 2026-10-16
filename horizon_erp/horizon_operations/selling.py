@@ -6,54 +6,496 @@
 Wired from ``hooks.py`` ``doc_events``. Every handler takes ``(doc, method=None)``.
 """
 
+import math
+
 import frappe
 from frappe import _
+from frappe.utils import add_days, cint, cstr, flt, get_link_to_form, getdate
+
+from horizon_erp.horizon_operations import config
 
 
+# ---------------------------------------------------------------------------------------------
+# Quotation / Sales Order: discount governance + availability
+# ---------------------------------------------------------------------------------------------
 def validate_discounts(doc, method=None):
 	"""Quotation / Sales Order ``validate`` hook (shared).
 
-	Intended behaviour:
-	- For each item row compute ``rule_rate`` (rate after Pricing Rules) and
-	  ``discount_over_rule_pct`` = (rule_rate - rate) / rule_rate * 100.
-	- Set parent ``needs_discount_approval`` when any row exceeds the allowed discount threshold
-	  and require ``discount_reason``; the "Horizon Discount Approval" workflow routes it.
-	- Populate ``available_qty`` and ``mfg_lead_days`` on each row for sales visibility.
+	- ``rule_rate``: price list rate after the Pricing Rules recorded on the row.
+	- ``discount_over_rule_pct``: extra discount the user granted below the rule rate.
+	- ``needs_discount_approval`` when any row (or the document-level discount) exceeds
+	  ``DISCOUNT_AUTO_APPROVE_PCT``; a ``discount_reason`` is then mandatory and only a Sales
+	  Manager / System Manager may submit.
+	- Ad-hoc pricing (``ignore_pricing_rule`` or a hand-edited ``price_list_rate``) is reserved
+	  for Sales Managers.
+	- Quotation rows additionally get ``available_qty`` / ``mfg_lead_days`` / ``expected_delivery_date``.
 	"""
-	# TODO(selling): pricing rule comparison + discount approval flag + availability enrichment
-	pass
+	threshold = config.get_threshold("discount_auto_approve_pct", config.DISCOUNT_AUTO_APPROVE_PCT)
+	is_manager = config.user_has_any_role(config.DISCOUNT_APPROVER_ROLES)
+
+	if doc.get("ignore_pricing_rule") and not is_manager:
+		frappe.throw(
+			_(
+				"Only a Sales Manager may untick 'Ignore Pricing Rule'; prices must come from the "
+				"price list and pricing rules"
+			),
+			title=_("Ad-hoc Pricing Not Allowed"),
+		)
+
+	if not is_manager:
+		validate_price_list_rates_untouched(doc)
+
+	needs_approval = flt(doc.get("additional_discount_percentage")) > threshold
+	rule_cache = {}
+	for row in doc.get("items", []):
+		row.rule_rate = get_rule_rate(row, rule_cache)
+		row.discount_over_rule_pct = get_discount_over_rule_pct(row.rule_rate, row.rate)
+		if flt(row.discount_over_rule_pct) > threshold:
+			needs_approval = True
+
+	doc.needs_discount_approval = cint(needs_approval)
+
+	if needs_approval:
+		reason = cstr(doc.get("discount_reason")).strip()
+		if len(reason) < config.DISCOUNT_REASON_MIN_LENGTH:
+			frappe.throw(
+				_(
+					"Discount exceeds {0}% below the pricing-rule rate. Please give a Discount Reason of at "
+					"least {1} characters on the Horizon tab; the document will route to a Sales Manager"
+				).format(threshold, config.DISCOUNT_REASON_MIN_LENGTH),
+				title=_("Discount Reason Required"),
+			)
+		if doc.docstatus == 1 and not is_manager:
+			frappe.throw(
+				_(
+					"This {0} needs Sales Manager approval before it can be submitted (discount above {1}%). "
+					"Use 'Submit for Discount Approval'."
+				).format(_(doc.doctype), threshold),
+				frappe.PermissionError,
+				title=_("Approval Required"),
+			)
+	else:
+		doc.discount_reason = None
+
+	if doc.doctype == "Quotation":
+		set_quotation_availability(doc)
 
 
+def get_rule_rate(row, rule_cache=None):
+	"""Price list rate after the pricing rules applied on the row (``pricing_rules`` JSON list).
+	Without rules the rule rate is simply the price list rate."""
+	from erpnext.accounts.doctype.pricing_rule.utils import get_applied_pricing_rules
+
+	price_list_rate = flt(row.get("price_list_rate"))
+	if not price_list_rate:
+		return 0.0
+
+	rule_rate = price_list_rate
+	rule_cache = rule_cache if rule_cache is not None else {}
+	for rule_name in get_applied_pricing_rules(row.get("pricing_rules")) or []:
+		if rule_name not in rule_cache:
+			rule_cache[rule_name] = frappe.db.get_value(
+				"Pricing Rule",
+				rule_name,
+				[
+					"price_or_product_discount",
+					"rate_or_discount",
+					"rate",
+					"discount_percentage",
+					"discount_amount",
+				],
+				as_dict=True,
+			)
+		rule = rule_cache[rule_name]
+		if not rule or rule.price_or_product_discount != "Price":
+			continue
+		if rule.rate_or_discount == "Rate" and flt(rule.rate):
+			rule_rate = flt(rule.rate)
+		elif rule.rate_or_discount == "Discount Percentage":
+			rule_rate = rule_rate * (1 - flt(rule.discount_percentage) / 100)
+		elif rule.rate_or_discount == "Discount Amount":
+			rule_rate = rule_rate - flt(rule.discount_amount)
+
+	return flt(rule_rate, row.precision("rule_rate") if hasattr(row, "precision") else 2)
+
+
+def get_discount_over_rule_pct(rule_rate, rate):
+	rule_rate, rate = flt(rule_rate), flt(rate)
+	if rule_rate <= 0 or rate >= rule_rate:
+		return 0.0
+	return flt((rule_rate - rate) / rule_rate * 100, 2)
+
+
+def validate_price_list_rates_untouched(doc):
+	"""Non-managers may not type over ``price_list_rate``. Compared against Item Price for the
+	document's selling price list / currency (rows whose UOM differs from the Item Price UOM are
+	skipped to avoid conversion false positives)."""
+	price_list = doc.get("selling_price_list")
+	if not price_list:
+		return
+	item_codes = list({row.item_code for row in doc.get("items", []) if row.item_code})
+	if not item_codes:
+		return
+
+	prices = frappe.get_all(
+		"Item Price",
+		filters={
+			"price_list": price_list,
+			"item_code": ["in", item_codes],
+			"currency": doc.currency,
+		},
+		fields=["item_code", "uom", "price_list_rate", "valid_from", "valid_upto"],
+	)
+	by_item = {}
+	for p in prices:
+		by_item.setdefault(p.item_code, []).append(p)
+
+	for row in doc.get("items", []):
+		candidates = [
+			p
+			for p in by_item.get(row.item_code, [])
+			if not p.uom or p.uom == row.uom or p.uom == row.stock_uom
+		]
+		if not candidates or not flt(row.price_list_rate):
+			continue
+		expected = [flt(p.price_list_rate) for p in candidates]
+		if any(abs(flt(row.price_list_rate) - e) < 0.005 for e in expected):
+			continue
+		if row.uom != row.stock_uom:
+			continue
+		frappe.throw(
+			_(
+				"Row {0}: Price List Rate for {1} was changed manually ({2} instead of {3}). Only a Sales "
+				"Manager may override list prices; use a discount instead."
+			).format(
+				row.idx,
+				frappe.bold(row.item_code),
+				frappe.format(row.price_list_rate, {"fieldtype": "Currency"}),
+				frappe.format(expected[0], {"fieldtype": "Currency"}),
+			),
+			frappe.PermissionError,
+			title=_("Ad-hoc Pricing Not Allowed"),
+		)
+
+
+# --- availability ----------------------------------------------------------------------------
+def set_quotation_availability(doc):
+	cache = {}
+	base_date = getdate(doc.get("transaction_date") or frappe.utils.nowdate())
+	for row in doc.get("items", []):
+		if not row.item_code:
+			continue
+		if row.item_code not in cache:
+			cache[row.item_code] = get_item_availability(row.item_code, qty=row.qty, company=doc.company)
+		info = cache[row.item_code]
+		row.available_qty = info["available_qty"]
+		row.mfg_lead_days = info["mfg_lead_days"]
+		lead = (
+			config.STOCK_AVAILABLE_LEAD_DAYS
+			if flt(info["available_qty"]) >= flt(row.qty)
+			else info["mfg_lead_days"]
+		)
+		computed = add_days(base_date, cint(lead))
+		if not row.get("expected_delivery_date") or getdate(row.expected_delivery_date) < computed:
+			row.expected_delivery_date = computed
+
+
+@frappe.whitelist()
+def get_item_availability(item_code, qty=1, company=None):
+	"""Free stock across the company's warehouses plus the manufacturing lead time of an item.
+
+	Returns ``{available_qty, warehouses: {warehouse: free_qty}, mfg_lead_days, is_stock_item}``.
+	"""
+	frappe.has_permission("Item", "read", throw=True)
+	if not frappe.db.exists("Item", item_code):
+		frappe.throw(_("Item {0} not found").format(item_code))
+
+	filters = {"item_code": item_code}
+	bins = frappe.get_all(
+		"Bin", filters=filters, fields=["warehouse", "actual_qty", "reserved_qty", "projected_qty"]
+	)
+	if company:
+		company_warehouses = set(frappe.get_all("Warehouse", filters={"company": company}, pluck="name"))
+		bins = [b for b in bins if b.warehouse in company_warehouses]
+
+	warehouses = {}
+	for b in bins:
+		free = flt(b.actual_qty) - flt(b.reserved_qty)
+		if free:
+			warehouses[b.warehouse] = flt(free, 3)
+
+	return {
+		"item_code": item_code,
+		"requested_qty": flt(qty),
+		"available_qty": flt(sum(warehouses.values()), 3),
+		"warehouses": warehouses,
+		"mfg_lead_days": get_mfg_lead_days(item_code),
+		"is_stock_item": cint(frappe.get_cached_value("Item", item_code, "is_stock_item")),
+	}
+
+
+def get_mfg_lead_days(item_code):
+	"""Lead days = ceil(BOM operation hours / working hours per day) + longest raw-material
+	``lead_time_days``; items without a default BOM use their own ``lead_time_days``."""
+	item = frappe.db.get_value("Item", item_code, ["default_bom", "lead_time_days"], as_dict=True)
+	if not item:
+		return 0
+	if not item.default_bom:
+		return cint(item.lead_time_days)
+
+	op_minutes = flt(
+		frappe.db.get_value("BOM Operation", {"parent": item.default_bom}, "sum(time_in_mins)") or 0
+	)
+	op_days = math.ceil(op_minutes / 60 / config.WORKING_HOURS_PER_DAY) if op_minutes else 0
+
+	rm_items = frappe.get_all("BOM Item", filters={"parent": item.default_bom}, pluck="item_code")
+	rm_lead = 0
+	if rm_items:
+		rm_lead = cint(frappe.db.get_value("Item", {"name": ["in", rm_items]}, "max(lead_time_days)") or 0)
+	return cint(op_days + rm_lead)
+
+
+# ---------------------------------------------------------------------------------------------
+# Delivery Note
+# ---------------------------------------------------------------------------------------------
 def validate_delivery_note(doc, method=None):
 	"""Delivery Note ``validate`` hook.
 
-	Intended behaviour:
-	- If the linked Sales Order has an open Shipment Decision, enforce its outcome
-	  (partial qty / delay / concession) and link it in ``shipment_decision``.
-	- Require ``deviation_notes`` when delivered qty differs from ordered qty.
+	1. Short shipment (row qty below the Sales Order's pending qty) requires ``deviation_notes``.
+	2. Quality gate: if any Work Order feeding the Sales Order has a failed Production Audit that
+	   is not Action Closed, or a Rejected / Fail / Rework Quality Inspection without a later
+	   Accepted one, a submitted Shipment Decision for that Sales Order is required and linked.
+	3. ``received_by`` is mandatory once a ``customer_signature`` is captured.
 	"""
-	# TODO(selling): shipment decision enforcement
-	pass
+	if doc.get("is_return"):
+		return
+
+	validate_short_shipment(doc)
+	enforce_quality_gate(doc)
+
+	if doc.get("customer_signature") and not cstr(doc.get("received_by")).strip():
+		frappe.throw(
+			_("Please record who received the goods (Received By) along with the customer signature"),
+			title=_("Received By Required"),
+		)
+
+
+def get_so_pending_qty_map(so_detail_names):
+	if not so_detail_names:
+		return {}
+	rows = frappe.get_all(
+		"Sales Order Item",
+		filters={"name": ["in", list(so_detail_names)]},
+		fields=["name", "qty", "delivered_qty"],
+	)
+	return {r.name: flt(r.qty) - flt(r.delivered_qty) for r in rows}
+
+
+def validate_short_shipment(doc):
+	so_rows = [row for row in doc.get("items", []) if row.get("so_detail")]
+	if not so_rows:
+		return
+	pending = get_so_pending_qty_map({row.so_detail for row in so_rows})
+	short = []
+	for row in so_rows:
+		pending_qty = pending.get(row.so_detail)
+		if pending_qty is None:
+			continue
+		if flt(row.qty) + 0.000001 < pending_qty:
+			short.append(f"{row.item_code}: {flt(row.qty)} / {pending_qty}")
+	if short and not cstr(doc.get("deviation_notes")).strip():
+		frappe.throw(
+			_(
+				"This delivery is short against the Sales Order ({0}). Please explain the deviation in "
+				"'Deviation Notes' on the Horizon tab."
+			).format("; ".join(short)),
+			title=_("Deviation Notes Required"),
+		)
+
+
+def get_quality_blockers(sales_orders, item_codes=None):
+	"""Return a list of human-readable blockers for the Work Orders behind ``sales_orders``."""
+	if not sales_orders:
+		return []
+	wo_filters = {"sales_order": ["in", list(sales_orders)], "docstatus": 1}
+	if item_codes:
+		wo_filters["production_item"] = ["in", list(item_codes)]
+	work_orders = frappe.get_all("Work Order", filters=wo_filters, pluck="name")
+	if not work_orders:
+		return []
+
+	blockers = []
+	audits = frappe.get_all(
+		"Production Audit",
+		filters={
+			"work_order": ["in", work_orders],
+			"docstatus": 1,
+			"audit_score": ["<", config.AUDIT_FAIL_SCORE],
+			"status": ["!=", "Action Closed"],
+		},
+		fields=["name", "work_order", "audit_score"],
+	)
+	for a in audits:
+		blockers.append(
+			_("Production Audit {0} scored {1} on Work Order {2} and is not Action Closed").format(
+				get_link_to_form("Production Audit", a.name), a.audit_score, a.work_order
+			)
+		)
+
+	# Quality Inspections referencing Job Cards / Stock Entries of these Work Orders
+	job_cards = frappe.get_all(
+		"Job Card", filters={"work_order": ["in", work_orders]}, fields=["name", "work_order"]
+	)
+	stock_entries = frappe.get_all(
+		"Stock Entry",
+		filters={"work_order": ["in", work_orders], "docstatus": ["!=", 2]},
+		fields=["name", "work_order"],
+	)
+	ref_to_wo = {jc.name: jc.work_order for jc in job_cards}
+	ref_to_wo.update({se.name: se.work_order for se in stock_entries})
+	if not ref_to_wo:
+		return blockers
+
+	inspections = frappe.get_all(
+		"Quality Inspection",
+		filters={"reference_name": ["in", list(ref_to_wo)], "docstatus": 1},
+		fields=["name", "reference_name", "status", "qc_result", "report_date", "creation"],
+		order_by="report_date asc, creation asc",
+	)
+	latest_by_wo = {}
+	for qi in inspections:
+		wo = ref_to_wo.get(qi.reference_name)
+		failed = qi.status == "Rejected" or qi.qc_result in ("Fail", "Rework")
+		if failed:
+			latest_by_wo[wo] = qi
+		elif qi.status == "Accepted":
+			latest_by_wo.pop(wo, None)  # a later Accepted inspection clears the earlier failure
+	for wo, qi in latest_by_wo.items():
+		blockers.append(
+			_("Quality Inspection {0} on Work Order {1} is {2}").format(
+				get_link_to_form("Quality Inspection", qi.name), wo, qi.qc_result or qi.status
+			)
+		)
+	return blockers
+
+
+def enforce_quality_gate(doc):
+	sales_orders = {row.against_sales_order for row in doc.get("items", []) if row.get("against_sales_order")}
+	if not sales_orders:
+		return
+	item_codes = {row.item_code for row in doc.get("items", [])}
+	blockers = get_quality_blockers(sales_orders, item_codes)
+	if not blockers:
+		return
+
+	decision = get_valid_shipment_decision(doc.get("shipment_decision"), sales_orders)
+	if not decision:
+		decision = frappe.db.get_value(
+			"Shipment Decision",
+			{"sales_order": ["in", list(sales_orders)], "docstatus": 1, "decision": ["!=", ""]},
+			"name",
+			order_by="creation desc",
+		)
+	if not decision:
+		frappe.throw(
+			_(
+				"Goods for this Sales Order have open quality issues:<br>- {0}<br><br>"
+				"A submitted Shipment Decision for {1} is required before delivery. {2}"
+			).format(
+				"<br>- ".join(blockers),
+				", ".join(sorted(sales_orders)),
+				_("Create one here: {0}").format(
+					f'<a href="/app/shipment-decision/new?sales_order={next(iter(sales_orders))}">'
+					+ _("New Shipment Decision")
+					+ "</a>"
+				),
+			),
+			title=_("Shipment Decision Required"),
+		)
+	doc.shipment_decision = decision
+
+
+def get_valid_shipment_decision(name, sales_orders):
+	if not name:
+		return None
+	sd = frappe.db.get_value(
+		"Shipment Decision", name, ["sales_order", "docstatus", "decision"], as_dict=True
+	)
+	if sd and sd.docstatus == 1 and sd.decision and sd.sales_order in sales_orders:
+		return name
+	return None
 
 
 def on_submit_delivery_note(doc, method=None):
-	"""Delivery Note ``on_submit`` hook.
+	"""Delivery Note ``on_submit`` hook: raise a DRAFT Sales Invoice so billing never lags
+	dispatch. Skipped for returns and internal (inter-company) customers. Customer e-mail is
+	handled by the "Horizon" Notification, not here."""
+	if doc.get("is_return"):
+		return
+	if frappe.db.get_value("Customer", doc.customer, "is_internal_customer"):
+		return
 
-	Intended behaviour:
-	- Close the linked Shipment Decision (status "Closed") once goods leave the warehouse.
-	- Require ``customer_signature`` / ``received_by`` for direct deliveries (POD).
-	"""
-	# TODO(selling): close shipment decision + POD enforcement
-	pass
+	from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
+
+	try:
+		si = make_sales_invoice(doc.name)
+		if not si.get("items"):
+			return
+		config.apply_default_dimensions(si)
+		si.flags.ignore_permissions = True
+		si.insert()
+	except Exception:
+		frappe.log_error(title=f"Auto Sales Invoice failed for {doc.name}", message=frappe.get_traceback())
+		frappe.msgprint(
+			_("The draft Sales Invoice could not be created automatically; see Error Log."),
+			indicator="orange",
+			alert=True,
+		)
+		return
+
+	link = get_link_to_form("Sales Invoice", si.name)
+	doc.add_comment("Comment", _("Draft Sales Invoice {0} created automatically").format(link))
+	frappe.msgprint(_("Draft Sales Invoice {0} created").format(link), alert=True)
 
 
+# ---------------------------------------------------------------------------------------------
+# Sales Invoice
+# ---------------------------------------------------------------------------------------------
 def validate_sales_invoice(doc, method=None):
-	"""Sales Invoice ``validate`` hook.
+	"""Sales Invoice ``validate`` hook: a stock invoice must come from a Delivery Note unless a
+	Finance Director authorises it (audited via a comment). Returns, POS, update-stock invoices,
+	internal customers and service / milestone invoices (any non-stock row) are exempt."""
+	if doc.get("is_return") or doc.get("is_pos") or cint(doc.get("update_stock")):
+		return
+	if frappe.db.get_value("Customer", doc.customer, "is_internal_customer"):
+		return
+	items = doc.get("items", [])
+	if not items or any(row.get("delivery_note") for row in items):
+		return
 
-	Intended behaviour:
-	- For project milestone billing, check ``Task.billing_percent`` totals do not exceed 100 %
-	  and stamp ``Task.milestone_invoice``.
-	- Honour "Invoice Now Ship Later" Shipment Decisions (allow invoice without Delivery Note).
-	"""
-	# TODO(selling): milestone billing validation
-	pass
+	item_codes = {row.item_code for row in items if row.item_code}
+	if not item_codes:
+		return
+	stock_flags = frappe.get_all(
+		"Item", filters={"name": ["in", list(item_codes)]}, fields=["name", "is_stock_item"]
+	)
+	if any(not cint(f.is_stock_item) for f in stock_flags) or len(stock_flags) < len(item_codes):
+		return  # service / milestone invoice
+
+	if config.user_has_any_role(config.INVOICE_WITHOUT_DN_ROLES):
+		if not doc.flags.horizon_dn_bypass_logged:
+			config.add_audit_comment(
+				doc, _("Invoice without Delivery Note authorised by {0}").format(frappe.session.user)
+			)
+			doc.flags.horizon_dn_bypass_logged = True
+		return
+
+	frappe.throw(
+		_(
+			"Sales Invoices for stock items must be created from a submitted Delivery Note "
+			"(use 'Create > Sales Invoice' on the Delivery Note). A Finance Director can authorise an "
+			"exception."
+		),
+		frappe.PermissionError,
+		title=_("Delivery Note Required"),
+	)
