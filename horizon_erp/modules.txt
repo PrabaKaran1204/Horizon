@@ -1,1 +1,4 @@
-Horizon ERP
+Horizon Quality
+Horizon Integration
+Horizon Operations
+Horizon Finance

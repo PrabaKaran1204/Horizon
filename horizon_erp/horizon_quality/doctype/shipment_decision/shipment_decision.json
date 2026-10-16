@@ -1,0 +1,280 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "SD-.YYYY.-.#####",
+ "creation": "2026-10-16 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "sales_order",
+  "customer",
+  "delivery_date",
+  "work_order",
+  "column_break_issue",
+  "quality_issue",
+  "status",
+  "section_break_decision",
+  "decision",
+  "reason",
+  "column_break_decision",
+  "new_delivery_date",
+  "partial_qty",
+  "section_break_cost",
+  "estimated_quality_cost",
+  "column_break_cost",
+  "estimated_delay_cost",
+  "section_break_approvers",
+  "sales_approver",
+  "column_break_approvers_1",
+  "quality_approver",
+  "column_break_approvers_2",
+  "finance_approver",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sales Order",
+   "options": "Sales Order",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "sales_order.customer",
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "sales_order.delivery_date",
+   "fieldname": "delivery_date",
+   "fieldtype": "Date",
+   "label": "Delivery Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "work_order",
+   "fieldtype": "Link",
+   "label": "Work Order",
+   "options": "Work Order"
+  },
+  {
+   "fieldname": "column_break_issue",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "quality_issue",
+   "fieldtype": "Small Text",
+   "label": "Quality Issue"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Open\nDecided\nClosed"
+  },
+  {
+   "fieldname": "section_break_decision",
+   "fieldtype": "Section Break",
+   "label": "Decision"
+  },
+  {
+   "fieldname": "decision",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Decision",
+   "options": "Ship Partial\nDelay Delivery\nInvoice Now Ship Later\nShip With Concession",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_decision",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.decision == 'Delay Delivery'",
+   "fieldname": "new_delivery_date",
+   "fieldtype": "Date",
+   "label": "New Delivery Date",
+   "mandatory_depends_on": "eval:doc.decision == 'Delay Delivery'"
+  },
+  {
+   "depends_on": "eval:doc.decision == 'Ship Partial'",
+   "fieldname": "partial_qty",
+   "fieldtype": "Float",
+   "label": "Partial Qty",
+   "mandatory_depends_on": "eval:doc.decision == 'Ship Partial'"
+  },
+  {
+   "fieldname": "section_break_cost",
+   "fieldtype": "Section Break",
+   "label": "Cost Impact"
+  },
+  {
+   "fieldname": "estimated_quality_cost",
+   "fieldtype": "Currency",
+   "label": "Estimated Quality Cost",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "fieldname": "column_break_cost",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "estimated_delay_cost",
+   "fieldtype": "Currency",
+   "label": "Estimated Delay Cost",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "fieldname": "section_break_approvers",
+   "fieldtype": "Section Break",
+   "label": "Approvers"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "sales_approver",
+   "fieldtype": "Link",
+   "label": "Sales Approver",
+   "options": "User"
+  },
+  {
+   "fieldname": "column_break_approvers_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "quality_approver",
+   "fieldtype": "Link",
+   "label": "Quality Approver",
+   "options": "User"
+  },
+  {
+   "fieldname": "column_break_approvers_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "finance_approver",
+   "fieldtype": "Link",
+   "label": "Finance Approver",
+   "options": "User"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Shipment Decision",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-16 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Horizon Quality",
+ "name": "Shipment Decision",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Quality Inspector",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Operations Head",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Finance Director",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "sales_order",
+ "track_changes": 1
+}

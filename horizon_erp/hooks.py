@@ -8,7 +8,7 @@ app_license = "mit"
 # Apps
 # ------------------
 
-# required_apps = []
+required_apps = ["erpnext"]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
@@ -247,3 +247,113 @@ app_license = "mit"
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 
+
+# ---------------------------------------------------------------------------
+# Horizon ERP active hooks
+# ---------------------------------------------------------------------------
+# Every dotted path below is a stub that another developer fills in. Keep this
+# block authoritative: add the hook here first, then implement the function.
+
+# Installation / migration
+after_install = "horizon_erp.setup.install.after_install"
+after_migrate = "horizon_erp.setup.install.after_migrate"
+
+# Document Events
+doc_events = {
+	"Purchase Order": {"validate": "horizon_erp.horizon_operations.buying.validate_purchase_order"},
+	"Purchase Receipt": {"on_submit": "horizon_erp.horizon_operations.buying.on_submit_purchase_receipt"},
+	"Quality Inspection": {
+		"on_submit": "horizon_erp.horizon_quality.inspection.on_submit_quality_inspection"
+	},
+	"Quotation": {"validate": "horizon_erp.horizon_operations.selling.validate_discounts"},
+	"Sales Order": {"validate": "horizon_erp.horizon_operations.selling.validate_discounts"},
+	"Delivery Note": {
+		"validate": "horizon_erp.horizon_operations.selling.validate_delivery_note",
+		"on_submit": "horizon_erp.horizon_operations.selling.on_submit_delivery_note",
+	},
+	"Sales Invoice": {"validate": "horizon_erp.horizon_operations.selling.validate_sales_invoice"},
+	"Work Order": {"validate": "horizon_erp.horizon_operations.manufacturing.validate_work_order"},
+	"Stock Entry": {"validate": "horizon_erp.horizon_quality.production_audit_hooks.validate_stock_entry"},
+	"Timesheet": {"validate": "horizon_erp.horizon_operations.projects.validate_timesheet"},
+	"Task": {"on_update": "horizon_erp.horizon_operations.projects.on_update_task"},
+}
+
+# Scheduled Tasks
+scheduler_events = {
+	"hourly": [
+		"horizon_erp.tasks.hourly.reorder_and_accuracy_check",
+		"horizon_erp.tasks.hourly.po_approval_reminders",
+	],
+	"daily": [
+		"horizon_erp.tasks.daily.recompute_reorder_levels",
+		"horizon_erp.tasks.daily.detect_quality_deadline_conflicts",
+		"horizon_erp.tasks.daily.budget_threshold_alerts",
+	],
+	"cron": {
+		"0 18 * * *": ["horizon_erp.tasks.daily.send_daily_summary"],
+		"0 9 1 * *": ["horizon_erp.tasks.monthly.send_budget_report"],
+	},
+}
+
+# Jinja
+jinja = {"methods": ["horizon_erp.utils.jinja_methods"]}
+
+# Fixtures
+# Custom Fields are NOT fixtures: they are created in code by
+# horizon_erp.setup.custom_fields.setup_custom_fields (after_install / after_migrate).
+# Workflow State and Workflow Action Master are shared DocTypes, so they are filtered
+# by explicit name lists; add every new Horizon state / action to these lists.
+horizon_roles = [
+	"Department Head",
+	"Procurement Manager",
+	"Finance Director",
+	"Operations Head",
+	"Sales Manager",
+	"Warehouse Manager",
+	"Quality Inspector",
+	"HR Manager",
+]
+
+horizon_workflows = [
+	"Horizon PO Approval",
+	"Horizon Discount Approval",
+	"Horizon Production Audit",
+	"Horizon Payment Approval",
+]
+
+horizon_workflow_states = [
+	"Pending Level 1 Approval",
+	"Pending Level 2 Approval",
+	"Pending Level 3 Approval",
+	"Pending Discount Approval",
+	"Pending Finance Approval",
+	"Pending Payment Approval",
+	"Pending Review",
+	"Reviewed",
+	"Action Closed",
+	"Escalated",
+	"Override Requested",
+]
+
+horizon_workflow_actions = [
+	"Escalate",
+	"Request Override",
+	"Mark Reviewed",
+	"Close Action",
+	"Release Payment",
+]
+
+horizon_modules = ["Horizon Quality", "Horizon Integration", "Horizon Operations", "Horizon Finance"]
+
+fixtures = [
+	{"dt": "Role", "filters": [["role_name", "in", horizon_roles]]},
+	{"dt": "Workflow", "filters": [["name", "in", horizon_workflows]]},
+	{"dt": "Workflow State", "filters": [["name", "in", horizon_workflow_states]]},
+	{"dt": "Workflow Action Master", "filters": [["name", "in", horizon_workflow_actions]]},
+	{"dt": "Property Setter", "filters": [["module", "in", horizon_modules]]},
+	{"dt": "Print Format", "filters": [["name", "like", "Horizon%"]]},
+	{"dt": "Notification", "filters": [["name", "like", "Horizon%"]]},
+	{"dt": "Workspace", "filters": [["name", "like", "Horizon%"]]},
+	{"dt": "Number Card", "filters": [["name", "like", "Horizon%"]]},
+	{"dt": "Dashboard Chart", "filters": [["name", "like", "Horizon%"]]},
+]
