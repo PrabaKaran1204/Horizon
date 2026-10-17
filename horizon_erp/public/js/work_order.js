@@ -3,7 +3,7 @@
 
 // Work Order form script (hooks.py doctype_js: "Work Order": "public/js/work_order.js").
 // Shows the machine-hour requirement and the production line as dashboard indicators. Capacity
-// violations are raised server-side by horizon_operations.manufacturing.validate_work_order.
+// violations are raised server-side by horizon_manufacturing.manufacturing.validate_work_order.
 
 frappe.ui.form.on("Work Order", {
 	refresh(frm) {

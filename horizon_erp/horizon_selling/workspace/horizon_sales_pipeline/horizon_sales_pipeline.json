@@ -1,0 +1,241 @@
+{
+ "charts": [
+  {
+   "chart_name": "Horizon Leads by Status",
+   "label": "Horizon Leads by Status"
+  },
+  {
+   "chart_name": "Horizon Pipeline by Stage",
+   "label": "Horizon Pipeline by Stage"
+  },
+  {
+   "chart_name": "Horizon Quotation Value Trend",
+   "label": "Horizon Quotation Value Trend"
+  }
+ ],
+ "content": "[{\"id\": \"C2B8OI2LEJ\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Dashboard</b></span>\", \"col\": 12}}, {\"id\": \"WGV3WFgWQC\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Horizon Leads by Status\", \"col\": 6}}, {\"id\": \"M6CFFHeBCc\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Horizon Pipeline by Stage\", \"col\": 6}}, {\"id\": \"a9x9pHNfVx\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Horizon Quotation Value Trend\", \"col\": 6}}, {\"id\": \"XybkoJ98Cw\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Open Leads\", \"col\": 3}}, {\"id\": \"qMdvsx4T4K\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Leads Over 14 Days Old\", \"col\": 3}}, {\"id\": \"vAwGxZ7Eai\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Open Quotation Value\", \"col\": 3}}, {\"id\": \"C8NTHLtoOD\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Quote to Order Conversion Pct (90d)\", \"col\": 3}}, {\"id\": \"PfyfV6gE33\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Avg Days Quote to SO (90d)\", \"col\": 3}}, {\"id\": \"EqFuiZRMgX\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"eEQsORfTx2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"mIAuVNazwP\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lead\", \"col\": 3}}, {\"id\": \"abnSIexQNS\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Opportunity\", \"col\": 3}}, {\"id\": \"XSSd0nCRLl\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Open Quotations\", \"col\": 3}}, {\"id\": \"qX1tzjilpF\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sales Order (To Deliver)\", \"col\": 3}}, {\"id\": \"0GRFAvPya8\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Price List Comparison\", \"col\": 3}}, {\"id\": \"z54DFd1W5v\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Order Status Report\", \"col\": 3}}, {\"id\": \"DXxbinr1wS\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sales Funnel\", \"col\": 3}}, {\"id\": \"oHBit9zg6b\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"SwDYuE14wP\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\", \"col\": 12}}, {\"id\": \"dyUKtc8fU6\", \"type\": \"card\", \"data\": {\"card_name\": \"Sales Reports\", \"col\": 4}}, {\"id\": \"cyZCo9bfvq\", \"type\": \"card\", \"data\": {\"card_name\": \"CRM\", \"col\": 4}}]",
+ "creation": "2026-10-16 13:50:55.748880",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "sell",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Horizon Sales Pipeline",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales Reports",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Price List Comparison",
+   "link_count": 0,
+   "link_to": "Price List Comparison",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Order Status Report",
+   "link_count": 0,
+   "link_to": "Order Status Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Project Profitability",
+   "link_count": 0,
+   "link_to": "Project Profitability",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Sales Analytics",
+   "link_count": 0,
+   "link_to": "Sales Analytics",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Quotation Trends",
+   "link_count": 0,
+   "link_to": "Quotation Trends",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "CRM",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Lead",
+   "link_count": 0,
+   "link_to": "Lead",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Opportunity",
+   "link_count": 0,
+   "link_to": "Opportunity",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quotation",
+   "link_count": 0,
+   "link_to": "Quotation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales Order",
+   "link_count": 0,
+   "link_to": "Sales Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Customer",
+   "link_count": 0,
+   "link_to": "Customer",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pricing Rule",
+   "link_count": 0,
+   "link_to": "Pricing Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-16 13:50:55.748880",
+ "modified_by": "Administrator",
+ "module": "Horizon Selling",
+ "name": "Horizon Sales Pipeline",
+ "number_cards": [
+  {
+   "label": "Horizon Open Leads",
+   "number_card_name": "Horizon Open Leads"
+  },
+  {
+   "label": "Horizon Leads Over 14 Days Old",
+   "number_card_name": "Horizon Leads Over 14 Days Old"
+  },
+  {
+   "label": "Horizon Open Quotation Value",
+   "number_card_name": "Horizon Open Quotation Value"
+  },
+  {
+   "label": "Horizon Quote to Order Conversion Pct (90d)",
+   "number_card_name": "Horizon Quote to Order Conversion Pct (90d)"
+  },
+  {
+   "label": "Horizon Avg Days Quote to SO (90d)",
+   "number_card_name": "Horizon Avg Days Quote to SO (90d)"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 30.5,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Lead",
+   "link_to": "Lead",
+   "stats_filter": "{\"status\": [\"in\", [\"Lead\", \"Open\", \"Replied\", \"Interested\"]]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Opportunity",
+   "link_to": "Opportunity",
+   "stats_filter": "{\"status\": [\"=\", \"Open\"]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Open Quotations",
+   "link_to": "Quotation",
+   "stats_filter": "{\"status\": [\"=\", \"Open\"], \"docstatus\": [\"=\", 1]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Sales Order (To Deliver)",
+   "link_to": "Sales Order",
+   "stats_filter": "{\"status\": [\"in\", [\"To Deliver\", \"To Deliver and Bill\"]]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Price List Comparison",
+   "link_to": "Price List Comparison",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "label": "Order Status Report",
+   "link_to": "Order Status Report",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "label": "Sales Funnel",
+   "link_to": "sales-funnel",
+   "type": "Page"
+  }
+ ],
+ "title": "Horizon Sales Pipeline"
+}

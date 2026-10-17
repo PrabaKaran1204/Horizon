@@ -7,7 +7,7 @@
 frappe.provide("horizon_erp.sales");
 
 if (!horizon_erp.sales.fetch_availability) {
-	horizon_erp.sales.AVAILABILITY_METHOD = "horizon_erp.horizon_operations.selling.get_item_availability";
+	horizon_erp.sales.AVAILABILITY_METHOD = "horizon_erp.horizon_selling.selling.get_item_availability";
 
 	horizon_erp.sales.fetch_availability = function (frm, cdt, cdn, with_delivery_date) {
 		const row = locals[cdt][cdn];

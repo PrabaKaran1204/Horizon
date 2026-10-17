@@ -1,4 +1,15 @@
-Horizon Quality
-Horizon Integration
-Horizon Operations
-Horizon Finance
+Horizon Setup
+Horizon Core
+Horizon Buying
+Horizon Selling
+Horizon CRM
+Horizon Stock
+Horizon Manufacturing
+Horizon Quality Management
+Horizon Projects
+Horizon HR
+Horizon Payroll
+Horizon Accounts
+Horizon Assets
+Horizon Integrations
+Horizon Workflow

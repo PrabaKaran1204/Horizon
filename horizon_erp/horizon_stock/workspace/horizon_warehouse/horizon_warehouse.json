@@ -1,0 +1,185 @@
+{
+ "charts": [
+  {
+   "chart_name": "Horizon Stock Value by Warehouse",
+   "label": "Horizon Stock Value by Warehouse"
+  }
+ ],
+ "content": "[{\"id\": \"I4AxQrB7js\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Dashboard</b></span>\", \"col\": 12}}, {\"id\": \"byEMKkAadL\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Horizon Stock Value by Warehouse\", \"col\": 12}}, {\"id\": \"N5KY0kLEbn\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Deliveries Due Today\", \"col\": 3}}, {\"id\": \"RZJ2iS4m26\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Open Pick Lists\", \"col\": 3}}, {\"id\": \"6F1cxuZWkC\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Horizon Items Below Reorder\", \"col\": 3}}, {\"id\": \"HRKwQKHHKB\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"S5kxnj2vQG\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"qgqys1qjFz\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Open Pick Lists\", \"col\": 3}}, {\"id\": \"sFAJDq2iVp\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Deliveries Today\", \"col\": 3}}, {\"id\": \"APMAtKwBMB\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Draft Purchase Receipts\", \"col\": 3}}, {\"id\": \"IwRBjTEqBI\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Stock Entry\", \"col\": 3}}, {\"id\": \"60BxwWywXj\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Pending Quality Inspections\", \"col\": 3}}, {\"id\": \"Uo9Ua3PYOf\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"J2WloXdUkV\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\", \"col\": 12}}, {\"id\": \"CFnt5Mqurl\", \"type\": \"card\", \"data\": {\"card_name\": \"Warehouse Reports\", \"col\": 4}}, {\"id\": \"gaEh0iDeL1\", \"type\": \"card\", \"data\": {\"card_name\": \"Stock Transactions\", \"col\": 4}}]",
+ "creation": "2026-10-16 13:50:55.748880",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "stock",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Horizon Warehouse",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Warehouse Reports",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Order Status Report",
+   "link_count": 0,
+   "link_to": "Order Status Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Inventory Obsolescence Analysis",
+   "link_count": 0,
+   "link_to": "Inventory Obsolescence Analysis",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Stock Transactions",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pick List",
+   "link_count": 0,
+   "link_to": "Pick List",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Delivery Note",
+   "link_count": 0,
+   "link_to": "Delivery Note",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Purchase Receipt",
+   "link_count": 0,
+   "link_to": "Purchase Receipt",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Stock Entry",
+   "link_count": 0,
+   "link_to": "Stock Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Stock Reconciliation",
+   "link_count": 0,
+   "link_to": "Stock Reconciliation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quality Inspection",
+   "link_count": 0,
+   "link_to": "Quality Inspection",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-16 13:50:55.748880",
+ "modified_by": "Administrator",
+ "module": "Horizon Stock",
+ "name": "Horizon Warehouse",
+ "number_cards": [
+  {
+   "label": "Horizon Deliveries Due Today",
+   "number_card_name": "Horizon Deliveries Due Today"
+  },
+  {
+   "label": "Horizon Open Pick Lists",
+   "number_card_name": "Horizon Open Pick Lists"
+  },
+  {
+   "label": "Horizon Items Below Reorder",
+   "number_card_name": "Horizon Items Below Reorder"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 30.2,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Open Pick Lists",
+   "link_to": "Pick List",
+   "stats_filter": "{\"status\": [\"in\", [\"Open\", \"Partly Delivered\"]], \"docstatus\": [\"=\", 1]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Deliveries Today",
+   "link_to": "Delivery Note",
+   "stats_filter": "{\"posting_date\": [\"=\", \"Today\"], \"docstatus\": [\"=\", 0]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Draft Purchase Receipts",
+   "link_to": "Purchase Receipt",
+   "stats_filter": "{\"docstatus\": [\"=\", 0]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Stock Entry",
+   "link_to": "Stock Entry",
+   "stats_filter": "{\"docstatus\": [\"=\", 0]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Pending Quality Inspections",
+   "link_to": "Quality Inspection",
+   "stats_filter": "{\"docstatus\": [\"=\", 0]}",
+   "type": "DocType"
+  }
+ ],
+ "title": "Horizon Warehouse"
+}
