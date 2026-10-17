@@ -18,6 +18,8 @@ from frappe.query_builder import CustomFunction
 from frappe.query_builder.functions import Coalesce, Count, Sum
 from frappe.utils import add_days, cint, flt, getdate, now_datetime, nowdate
 
+from horizon_erp.horizon_stock.permissions import get_permitted_warehouses
+
 DateDiff = CustomFunction("DATEDIFF", ["end", "start"])
 AGING_DAYS = 90
 TURNOVER_DAYS = 90
@@ -49,7 +51,11 @@ def get_items_below_reorder(filters=None):
 		.on((bin_.item_code == reorder.parent) & (bin_.warehouse == reorder.warehouse))
 		.select(Count(reorder.parent).distinct())
 		.where(Coalesce(bin_.projected_qty, 0) < reorder.warehouse_reorder_level)
-	).run()
+	)
+	allowed = get_permitted_warehouses()
+	if allowed is not None:
+		count = count.where(reorder.warehouse.isin(sorted(allowed) or [""]))
+	count = count.run()
 	return {"value": cint(count[0][0]) if count else 0, "fieldtype": "Int"}
 
 
@@ -100,6 +106,9 @@ def get_stock_turnover(filters=None):
 	base = frappe.qb.from_(sle).where(
 		(sle.is_cancelled == 0) & (sle.company == company) & (sle.posting_date >= start)
 	)
+	allowed = get_permitted_warehouses()
+	if allowed is not None:
+		base = base.where(sle.warehouse.isin(sorted(allowed) or [""]))
 	outgoing = flt(
 		base.select(Sum(-sle.stock_value_difference))
 		.where(
@@ -110,14 +119,16 @@ def get_stock_turnover(filters=None):
 	net_change = flt(base.select(Sum(sle.stock_value_difference)).run()[0][0])
 	bin_ = frappe.qb.DocType("Bin")
 	wh = frappe.qb.DocType("Warehouse")
-	current = flt(
+	current_q = (
 		frappe.qb.from_(bin_)
 		.inner_join(wh)
 		.on(wh.name == bin_.warehouse)
 		.select(Sum(bin_.stock_value))
 		.where(wh.company == company)
-		.run()[0][0]
 	)
+	if allowed is not None:
+		current_q = current_q.where(bin_.warehouse.isin(sorted(allowed) or [""]))
+	current = flt(current_q.run()[0][0])
 	opening = current - net_change
 	average = (current + opening) / 2
 	return {"value": flt(outgoing / average, 2) if average > 0 else 0, "fieldtype": "Float"}

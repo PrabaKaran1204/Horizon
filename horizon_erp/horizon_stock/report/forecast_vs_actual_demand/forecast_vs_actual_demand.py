@@ -9,6 +9,8 @@ from frappe.query_builder import CustomFunction
 from frappe.query_builder.functions import Min, Sum
 from frappe.utils import add_months, cint, flt, formatdate, get_first_day, getdate, nowdate
 
+from horizon_erp.horizon_stock.permissions import get_permitted_warehouses
+
 DateFormat = CustomFunction("DATE_FORMAT", ["date", "format"])
 DELIVERY_VOUCHERS = ("Delivery Note", "Sales Invoice")
 ISSUE_PURPOSES = ("Material Issue", "Manufacture", "Material Consumption for Manufacture")
@@ -78,6 +80,9 @@ def get_outgoing(filters, from_date):
 		q = q.where(item.item_group == filters.item_group)
 	if filters.item:
 		q = q.where(sle.item_code == filters.item)
+	allowed = get_permitted_warehouses()
+	if allowed is not None:
+		q = q.where(sle.warehouse.isin(sorted(allowed) or [""]))
 	return q.run(as_dict=True)
 
 
@@ -88,7 +93,11 @@ def get_first_movement(filters, item_codes):
 		.select(sle.item_code, Min(sle.posting_date).as_("first_date"))
 		.where((sle.is_cancelled == 0) & (sle.item_code.isin(item_codes)) & (sle.company == filters.company))
 		.groupby(sle.item_code)
-	).run(as_dict=True)
+	)
+	allowed = get_permitted_warehouses()
+	if allowed is not None:
+		rows = rows.where(sle.warehouse.isin(sorted(allowed) or [""]))
+	rows = rows.run(as_dict=True)
 	return {r.item_code: r.first_date for r in rows}
 
 

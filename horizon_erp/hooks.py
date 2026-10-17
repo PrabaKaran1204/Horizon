@@ -68,6 +68,13 @@ override_whitelisted_methods = {
 }
 extend_bootinfo = "horizon_erp.overrides.desktop.extend_bootinfo"
 
+# Warehouse User Permissions on documents whose warehouse sits on the item rows only
+permission_query_conditions = {
+	"Delivery Note": "horizon_erp.horizon_stock.permissions.delivery_note_query",
+	"Purchase Receipt": "horizon_erp.horizon_stock.permissions.purchase_receipt_query",
+	"Stock Entry": "horizon_erp.horizon_stock.permissions.stock_entry_query",
+}
+
 # Document Events
 # ---------------
 doc_events = {
@@ -187,6 +194,8 @@ horizon_workflow_actions = [
 # sync with ROLE_PERMISSIONS there). setup_role_permissions also mirrors the standard rules into
 # Custom DocPerm on the target site, so importing only these rows can never strip a standard role.
 horizon_permission_roles = [
+	"Accounts Manager",
+	"Finance Director",
 	"Manufacturing User",
 	"Purchase User",
 	"Quality Inspector",
@@ -206,6 +215,7 @@ horizon_permission_doctypes = [
 	"Serial No",
 	"Serial and Batch Bundle",
 	"Supplier",
+	"UOM",
 ]
 
 fixtures = [

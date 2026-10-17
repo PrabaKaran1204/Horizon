@@ -20,7 +20,6 @@ import time
 import traceback
 
 import frappe
-import frappe.permissions
 from frappe import _
 from frappe.query_builder.functions import Max, Sum
 from frappe.utils import cint, flt
@@ -38,6 +37,7 @@ from horizon_erp.horizon_integrations.rate_limit import (
 	get_configured_limit,
 	rate_limited,
 )
+from horizon_erp.horizon_stock.permissions import get_leaf_warehouses, get_permitted_warehouses
 
 # Identifier written to Inventory API Log.endpoint. Kept on the published (pre-restructure) path so
 # the API Usage Report groups old and new calls together.
@@ -228,45 +228,6 @@ def _prefer_default_company(matches, default_company):
 		if default_company and row.company == default_company:
 			return row.name
 	return matches[0].name
-
-
-def get_leaf_warehouses(warehouse: str) -> list[str]:
-	"""Leaf warehouses under ``warehouse`` (itself when it is a leaf)."""
-	wh = frappe.db.get_value("Warehouse", warehouse, ["is_group", "lft", "rgt"], as_dict=True)
-	if not wh:
-		return []
-	if not cint(wh.is_group):
-		return [warehouse]
-	return frappe.get_all(
-		"Warehouse",
-		filters={"lft": [">=", wh.lft], "rgt": ["<=", wh.rgt], "is_group": 0, "disabled": 0},
-		pluck="name",
-		order_by="lft asc",
-	)
-
-
-def get_permitted_warehouses(user: str | None = None) -> set[str] | None:
-	"""Leaf warehouses the user may read, or ``None`` when the user is unrestricted.
-
-	Unrestricted: Administrator, System Manager, or no User Permission on Warehouse at all. A
-	permission on a group warehouse covers every leaf below it (``hide_descendants`` limits it to
-	the record itself); permissions restricted via ``applicable_for`` to a DocType other than Bin do
-	not apply to this endpoint.
-	"""
-	user = user or frappe.session.user
-	if not user or user == "Administrator" or "System Manager" in frappe.get_roles(user):
-		return None
-	entries = frappe.permissions.get_user_permissions(user).get("Warehouse") or []
-	entries = [e for e in entries if not e.get("applicable_for") or e.get("applicable_for") == "Bin"]
-	if not entries:
-		return None
-	allowed: set[str] = set()
-	for entry in entries:
-		if entry.get("hide_descendants"):
-			allowed.add(entry.doc)
-		else:
-			allowed.update(get_leaf_warehouses(entry.doc))
-	return allowed
 
 
 def fetch_snapshot_rows(leaves: list[str], only_critical: bool = False) -> list[dict]:

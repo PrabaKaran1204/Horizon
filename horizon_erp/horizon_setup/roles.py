@@ -69,6 +69,9 @@ ROLE_PERMISSIONS = {
 	"Sales Invoice": {"Sales User": READ, "Warehouse Manager": READ},
 	# a Warehouse Manager dispatches without holding Stock User
 	"Delivery Note": {"Warehouse Manager": TRANSACT},
+	# Stock Balance is granted to Accounts Manager, but its prepared run checks read on every
+	# linked DocType and UOM is stock-roles only: the Finance Director's run failed
+	"UOM": {"Accounts Manager": READ, "Finance Director": READ},
 }
 
 # Roles / DocTypes referenced above - used by the Custom DocPerm fixture filter in hooks.py

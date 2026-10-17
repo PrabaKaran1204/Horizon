@@ -9,6 +9,8 @@ from frappe.query_builder import Case
 from frappe.query_builder.functions import Max, Min
 from frappe.utils import cint, date_diff, flt, getdate, today
 
+from horizon_erp.horizon_stock.permissions import get_permitted_warehouses
+
 BUCKETS = (("0-30", 0, 30), ("31-90", 31, 90), ("91-180", 91, 180), ("180+", 181, None))
 SALE_VOUCHERS = ("Delivery Note", "Sales Invoice")
 
@@ -94,6 +96,12 @@ def get_data(filters):
 		query = query.where(item.item_group == filters.item_group)
 	if filters.warehouse:
 		query = query.where(bin_.warehouse == filters.warehouse)
+	# rows, summary and the Aging Stock Value card stay inside the user's Warehouse permissions
+	allowed = get_permitted_warehouses()
+	if allowed is not None:
+		if not allowed:
+			return []
+		query = query.where(bin_.warehouse.isin(sorted(allowed)))
 
 	rows = query.run(as_dict=True)
 	if not rows:
