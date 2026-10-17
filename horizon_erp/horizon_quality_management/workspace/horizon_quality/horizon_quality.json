@@ -118,7 +118,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 4,
+   "link_count": 5,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -161,9 +161,19 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Supplier Scorecard",
+   "link_count": 0,
+   "link_to": "Supplier Scorecard",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-17 23:00:00.000000",
+ "modified": "2026-10-17 23:30:00.000000",
  "modified_by": "Administrator",
  "module": "Horizon Quality Management",
  "name": "Horizon Quality",

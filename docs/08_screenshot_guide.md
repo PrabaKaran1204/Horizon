@@ -49,7 +49,7 @@ Capture `/app/horizon-erp` first as the title slide of the demo.
 | 3 | Branch dimension | `/app/accounting-dimension/Branch` | Administrator | *Branch* is an Accounting Dimension, mandatory on P&L accounts, so location P&L comes from one ledger (ADR-1: not two companies) |
 | 4 | Branch list | `/app/branch` | Administrator | Two branches: Mumbai HQ (plant) and Delhi DC (distribution) |
 | 5 | Cost-centre tree | `/app/cost-center/view/tree?company=Horizon%20Manufacturing%20Ltd` (expand *Manufacturing - HML*) | Administrator | Product-line cost centres Equipment / Spares / Components plus *Mfg - Shared* allocated 50/30/20 by the monthly job |
-| 6 | Warehouse tree | `/app/warehouse/view/tree?company=Horizon%20Manufacturing%20Ltd` (expand *Mumbai HQ - HML* and *Delhi DC - HML*) | Administrator | Receiving goes to *HQ QC Hold*, rejections to *HQ Rejected*, inter-branch stock via *Goods In Transit*; no sellable stock without an accepted inspection |
+| 6 | Warehouse tree | `/app/warehouse/view/tree?company=Horizon%20Manufacturing%20Ltd` (expand *Mumbai HQ - HML* and *Delhi DC - HML*) | Administrator | Receiving goes to *HQ Raw Materials* (PR submit = GRN); *HQ QC Hold* only in the optional QC Hold mode; rejections to *HQ Rejected*, inter-branch stock via *Goods In Transit*; no sellable stock without an accepted inspection |
 | 7 | Chart of accounts | `/app/account/view/tree?company=Horizon%20Manufacturing%20Ltd` | Administrator | Standard Indian CoA; GST input/output heads per registration, no custom accounts needed |
 | 8 | Item with criticality and reorder level | `/app/item/RM-WELD-ROD` (Inventory tab, *Auto re-order* table) | Administrator | Custom field *Criticality* (A/B/C) drives API filtering and reorder; reorder level 50 / qty 100 at HQ Raw Materials; batch-tracked |
 | 9 | Serialised item | `/app/item/HZ-PUMP-100` | Administrator | Finished pumps are serialised; `use_serial_batch_fields` on; BOM-HZ-PUMP-100-001 is default |
@@ -73,7 +73,7 @@ Capture `/app/horizon-erp` first as the title slide of the demo.
 
 | # | Screen | URL | Login | Annotation |
 | --- | --- | --- | --- | --- |
-| 20 | Purchase Receipt with QC Hold / Rejected | `/app/purchase-receipt/PR-26-00001` (Items table: Accepted Warehouse / Rejected Warehouse columns) | priya@horizon.local | 100 plates received: 90 accepted into *HQ QC Hold*, 10 rejected into *HQ Rejected*; inspection MAT-QA-2026-00001 linked on the row |
+| 20 | Purchase Receipt (GRN) with Rejected qty | `/app/purchase-receipt/PR-26-00009` (Items table: Accepted Warehouse / Rejected Warehouse columns) | procure@horizon.local | 18 to HQ Raw Materials, 2 to HQ Rejected, QI MAT-QA-2026-00007, draft return PR-26-00010 |
 | 21 | Incoming Quality Inspection | `/app/quality-inspection/MAT-QA-2026-00001` | qc@horizon.local | Template *RM Steel Incoming*; readings per parameter; Stock Settings stop a submit when inspection is missing or rejected |
 | 22 | In-process inspection -> rework | `/app/quality-inspection/MAT-QA-2026-00005` then `/app/work-order/MFG-WO-2026-00003` | qc@horizon.local | Job Card PO-JOB00009 (Machining, Line B) inspected with *QC Result = Rework*; the hook created draft Work Order MFG-WO-2026-00003 with `rework_of = MFG-WO-2026-00002` |
 | 23 | Production Audit, low score | `/app/production-audit/PA-2026-00002` | priya@horizon.local | Score 65 on MFG-WO-2026-00002: photo mandatory, Operations Head alerted, Quality Action QA-ACT-00014 opened, Manufacture entry blocked until *Action Closed* |
@@ -83,6 +83,7 @@ Capture `/app/horizon-erp` first as the title slide of the demo.
 | 27 | Quality Metrics report | `/app/query-report/Quality%20Metrics` | Administrator | First-pass yield, rework cost %, defect trend, inspection SLA in one script report |
 | 28 | Quality vs Deadline Conflicts | `/app/query-report/Quality%20vs%20Deadline%20Conflicts` | Administrator | Open orders whose Work Order has a low audit or rework and a delivery date inside 7 days |
 | 29 | Supplier Quality Scorecard | `/app/query-report/Supplier%20Quality%20Scorecard` | Administrator | Rejection %, on-time delivery and price stability per supplier; ABC Supplies visible with its override |
+| 29a | Supplier Scorecard (standard) | `/app/supplier-scorecard` | Administrator | Standard Supplier Scorecard, one per demo supplier; criteria Quality 50 / Delivery 30 / Price 20 |
 
 ## D. Manufacturing
 
@@ -141,7 +142,7 @@ Capture `/app/horizon-erp` first as the title slide of the demo.
 | 65 | Data Validation Report | `/app/query-report/Data%20Validation%20Report` | Administrator | Post-migration data issues with severity and suggested action: GSTIN missing / failing checksum, negative stock, invoices without PO, stock items invoiced without a Delivery Note |
 | 66 | Project Profitability | `/app/query-report/Project%20Profitability` and `/app/project/PROJ-0001` | Administrator | Custom Conveyor - Bharat Mining: cost, margin and schedule variance per project (alert below -10 %) |
 
-Items 1-6, 11-18, 20-29, 30-32, 35-41, 44-47, 51-53 are the ~30 core screens for the PDF; the rest
+Items 1-6, 11-18, 20-29a, 30-32, 35-41, 44-47, 51-53 are the ~30 core screens for the PDF; the rest
 are optional supporting evidence.
 
 ## Recording the demo
