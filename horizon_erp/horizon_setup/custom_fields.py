@@ -9,6 +9,7 @@ domain module that owns it (same convention as the kaynes app)::
     horizon_stock/custom/item.json                      Item
     horizon_buying/custom/{supplier,purchase_order}.json
     horizon_selling/custom/{quotation,quotation_item,sales_order,sales_order_item,delivery_note}.json
+    horizon_crm/custom/opportunity.json                 Opportunity (+ Property Setter customer_group)
     horizon_quality_management/custom/quality_inspection.json
     horizon_manufacturing/custom/{work_order,bom}.json
     horizon_projects/custom/{project,task,timesheet_detail}.json
@@ -26,6 +27,10 @@ Standard fields deliberately NOT duplicated:
 - Task.is_milestone already exists -> only billing_percent / milestone_invoice added.
 - Sales Order Item.delivery_date already exists -> expected_delivery_date only on Quotation Item.
 - Item.safety_stock / lead_time_days exist -> safety_stock_factor is a multiplier on top.
+- Opportunity.customer_group / city / state / country / territory exist (copied from the Lead by
+  Opportunity.map_fields) -> reused for the new-customer details; only GST Category, GSTIN, billing
+  line 1, pincode, credit limit, payment terms and horizon_customer are added (ADR-17). The
+  Opportunity "horizon" section sits after territory, next to those standard fields.
 - Supplier.on_hold / hold_type (standard supplier block) exist -> is_blacklisted is a separate,
   override-able flag driven by Supplier Exception Log.
 """
