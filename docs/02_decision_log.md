@@ -418,3 +418,45 @@ sidebar; the content blocks resolve cards / charts by the child-row *label* (des
 `blocks/block.js`), which `setup_dashboards` and `test_dashboards` now check.
 
 **Status.** Accepted.
+
+## ADR-17 Customer created from the qualified Opportunity, before quotation pricing, not at Sales Order
+
+**Context.** ERPNext v15 creates the Customer of a Lead only when a Sales Order is made from the
+Quotation (`quotation._make_customer` -> `create_customer_from_lead`), using the Selling Settings
+default Customer Group / Territory (empty on horizon.local, so the conversion fails as *Mandatory
+Missing*) and no GSTIN, billing address, credit limit or payment terms. Until then the Quotation is
+addressed to the Lead: the Premium 5 % rule (keyed on Customer Group) does not fire, GST is computed
+without the customer's GSTIN / state (a Tamil Nadu buyer got the in-state CGST + SGST template from
+the Lead), and credit control and due dates have nothing to work on.
+
+**Options.** (a) Keep the standard: create the Customer by hand before quoting. (b) Capture the
+customer data on the Lead and convert early. (c) Capture it on the Opportunity - the stage at which
+a lead is qualified - and create the Customer from there before the first quotation is priced.
+
+**Decision.** (c). Customer details are captured on the qualified Opportunity; the Customer is
+created before quotation pricing, not at Sales Order; leads that never qualify create no customer
+and the Lead stays light (standard fields only). The Opportunity reuses standard `customer_group`
+(Property Setter `depends_on = eval:doc.party_name` so it shows for Lead opportunities), `city`,
+`state`, `country`, `territory`, `company` (copied from the Lead by `Opportunity.map_fields`) and adds
+GST Category, GSTIN, billing address line 1, pincode, credit limit, payment terms (Net 30) and the
+read-only `horizon_customer`. `ensure_customer_from_opportunity` (form button, or automatically from
+`Quotation.before_validate`) is idempotent and builds the Customer with ERPNext's own Lead mapper so
+`lead_name` is set: the Lead turns Converted, its Contact / Address move to the Customer and the
+Sales Order path finds this Customer instead of creating a second one. `before_validate` runs before
+the controller's `validate` -> `set_missing_values` -> pricing rules (verified by trace: hook first,
+then `apply_pricing_rule_on_items` with `quotation_to = Customer`), so the first save already carries
+Premium pricing, the customer's GSTIN / place of supply and the IGST or CGST + SGST template. The
+Opportunity keeps `opportunity_from = Lead`: funnel reports stay Lead -> Opportunity -> Quotation,
+ERPNext's Opportunity -> Quotation mapper keeps working unchanged (it copies `opportunity_from` into
+`quotation_to`, which the hook then switches), and the detail section stays visible for reference.
+Permission: the caller needs Customer *create* or the Sales User / Sales Manager role; Customer,
+Address and Contact links are then written with `ignore_permissions`. A Lead quotation without
+details is not blocked: it stays on the Lead with a warning that Premium / GST / credit will not apply.
+
+**Consequences.** One data-entry point for the commercial terms; the first quotation is priced and
+taxed like every later one. Costs: a Quotation typed directly against a Lead (no Opportunity) is only
+switched once that Lead has a Customer; ERPNext's standard *Create > Customer* on the Opportunity is
+replaced by the Horizon action; a billing state different from the organisation state must be typed
+over the State copied from the Lead.
+
+**Status.** Accepted.

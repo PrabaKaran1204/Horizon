@@ -151,7 +151,8 @@ horizon_erp/
                                 custom/, report/ (order_status_report, price_list_comparison),
                                 print_format/horizon_sales_invoice, workspace/horizon_selling,
                                 number_card/, dashboard_chart/, tests/
-  horizon_crm/                  number_card/ (open leads, leads > 14 days), dashboard_chart/
+  horizon_crm/                  opportunity.py (Opportunity -> Customer, Lead quotation switch), custom/opportunity.json,
+                                number_card/ (open leads, leads > 14 days), dashboard_chart/, tests/
   horizon_stock/                purchase_receipt.py (rejection paperwork, optional QC Hold), scrap.py,
                                 tasks.py (reorder + accuracy, reorder recompute), custom/{item,stock_settings}.json,
                                 report/ (inventory_obsolescence_analysis, forecast_vs_actual_demand),
@@ -187,7 +188,7 @@ docs/                           design documents (business rules, API contract, 
 | Horizon Workflow | - | `horizon_workflow.workflows.setup_workflows` | - | - |
 | Horizon Buying | Supplier Exception Log, Quarterly Purchase Plan (+ Item) | `horizon_buying.buying`, `horizon_buying.tasks.po_approval_reminders`, `public/js/purchase_order.js` | Approval Audit | Horizon Buying |
 | Horizon Selling | - | `horizon_selling.selling`, `public/js/{quotation,sales_order,delivery_note}.js` | Order Status, Price List Comparison | Horizon Selling |
-| Horizon CRM | - | lead / opportunity cards and charts | - | (cards on Horizon Selling) |
+| Horizon CRM | - | `horizon_crm.opportunity` (Customer created from the qualified Opportunity with group, GSTIN, billing address, credit limit and payment terms; Lead quotations moved to that Customer before pricing - ADR-17), `public/js/opportunity.js`, `custom/opportunity.json`; lead / opportunity cards and charts | - | (cards on Horizon Selling) |
 | Horizon Stock | - | `horizon_stock.purchase_receipt`, `horizon_stock.scrap`, `horizon_stock.tasks` | Forecast vs Actual Demand, Inventory Obsolescence Analysis | Horizon Inventory |
 | Horizon Manufacturing | - | `horizon_manufacturing.manufacturing`, `public/js/work_order.js` | BOM Explosion with Lead Time, Capacity Utilisation and Sequence | Horizon Manufacturing |
 | Horizon Quality Management | Production Audit (+ Photo), Shipment Decision | `horizon_quality_management.inspection`, `production_audit_hooks`, `tasks.detect_quality_deadline_conflicts` | Audit Findings Dashboard, Quality Metrics, Quality vs Deadline Conflicts, Supplier Quality Scorecard | Horizon Quality |

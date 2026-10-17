@@ -178,6 +178,20 @@ Scripts `qa/retest/R1_receipt.py` … `R6_regression.py` (QA scratchpad); every 
 | R2-UNIT | Regression | **PASS (with leftovers)** | **Ran 134 tests in 112.830s — OK**; leftover rows per prefix are **not** 0 (DEF-22). |
 
 
+### Customer from the qualified Opportunity (18-Oct-2026, ADR-17)
+
+Unit tests `horizon_erp.horizon_crm.tests.test_opportunity_customer` (9, prefix LEADTEST, own item
+group / item / Premium rule so the demo rules do not stack) and a live run as amit (kept as demo data).
+
+| ID | Scenario | Expected | Evidence |
+| --- | --- | --- | --- |
+| LC-1 | Customer from Opportunity (Premium, West, Registered Regular, MH GSTIN, credit 25,00,000, Net 30) | Exactly one Customer with those values, credit limit row for HML, primary Billing Address with GSTIN / state code 27, Lead contact primary, Lead Converted, `horizon_customer` set, comments on Lead / Opportunity / Customer; second call returns the same Customer (`test_customer_created_with_commercial_details`) | **PASS** (unit) |
+| LC-2 | Validation | Wrong check digit -> ValidationError; GSTIN 27 with State Tamil Nadu -> ValidationError; Registered Regular without GSTIN -> ValidationError; blank State set from GSTIN, lower-case GSTIN / state normalised (`test_invalid_gstin_rejected`, `test_gstin_state_mismatch_rejected`, `test_registered_regular_needs_gstin`, `test_state_set_from_gstin_and_normalised`) | **PASS** (unit) |
+| LC-3 | Quotation made from the Opportunity | Mapped with `quotation_to = Lead`, saved as Customer; Premium rule on the row (5 % off 1,00,000), group / territory / address / billing GSTIN / place of supply 27-Maharashtra from the Customer; after submit `quotation._make_customer` returns the same Customer (`test_quotation_from_opportunity_switches_to_customer_before_pricing`, `test_quotation_to_converted_lead_uses_existing_customer`) | **PASS** (unit) |
+| LC-4 | Opportunity without details / user without sales role | Quotation stays on the Lead, warning "stays on Lead", no Customer, no Premium rule; Purchase User -> PermissionError (`test_quotation_without_details_stays_on_lead`, `test_permission_required`) | **PASS** (unit) |
+| LC-5 | Trigger order | `before_validate` hook runs before the pricing engine | **PASS** - trace on a rolled-back Quotation: `before_validate hook start (Lead)` -> `hook end (Customer)` -> `apply_pricing_rule_on_items (Customer, PRLE-0005)` |
+| LC-6 | Live: Sundaram Pumps Pvt Ltd (amit) | Lead light -> Opportunity with details -> Quotation auto-switched, Premium + 23 %, IGST | **PASS** - Lead CRM-LEAD-2026-00003 (Karthik R, Exhibition, West) -> Opportunity CRM-OPP-2026-00003 (Premium, Registered Regular, 33AAFCS4521K1ZF, Chennai 600032 Tamil Nadu, credit 15,00,000, Net 30) -> Quotation SAL-QTN-2026-00004 mapped to the Lead with *Output GST In-state*, saved as Customer **Sundaram Pumps Pvt Ltd**: HZ-PUMP-100 x 1 @185,000 -5 % = 1,75,750 (PRLE-0001); SP-IMPELLER x 60 @6,500 -23 % = 5,005 (PRLE-0001 + PRLE-0003 + PRLE-0004), net 4,76,050; place of supply 33-Tamil Nadu, company GSTIN 27AABCU9602H1Z9 (Mumbai HQ), template *Output GST Out-state - HML*: one row IGST 44,823.50 (item tax 5 % pump + 12 % spares), grand 5,20,873.50; payment schedule Net 30 due 17-11-2026; workflow *Submit* -> Approved, docstatus 1. Customer: Premium / West / Company / Registered Regular, credit limit 15,00,000 HML, Address *Sundaram Pumps Pvt Ltd-Billing* (state code 33), primary contact Karthik R; Lead Converted. OBS: neither company address is flagged primary, so `get_default_address` may return Delhi DC on a server-side quotation (company GSTIN 07 seen once in a dry run); the sample sets Mumbai HQ explicitly. |
+
 ### Receipt -> QC -> GRN on the standard flow (17-Oct-2026)
 
 ADR-2 revised: Purchase Receipt draft = receipt, submit = GRN, QC Hold routing optional (off). Site
