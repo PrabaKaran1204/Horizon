@@ -1,5 +1,9 @@
 # Horizon ERP – Live QA Report (16-Oct-2026)
 
+> File paths in this document were updated for the domain-module layout (ADR-15). The QA results
+> themselves were recorded before the restructure; the full suite was re-run on the new layout
+> (144 tests OK, see docs/06 "Upgrading a site from the pre-restructure layout").
+
 ## 1. Environment
 
 | | |
@@ -88,14 +92,14 @@ Severity: Critical / High / Medium / Low. Risk = risk of leaving it unfixed befo
 
 | Defect | Fix status | Where | Evidence (live re-run as the intended user) |
 | --- | --- | --- | --- |
-| DEF-01 | **Fixed** | `demo_data.setup_email_account`, `tasks.safe_sendmail` (used by `notify_users`, daily summary, blacklist override, audit escalation) | Email Account *Horizon Notifications* default outgoing; `frappe.sendmail` with `mute_emails` queues without error; `test_email_account_is_default_outgoing_and_sendmail_never_raises` |
+| DEF-01 | **Fixed** | `demo_data.setup_email_account`, `horizon_core.jobs.safe_sendmail` (used by `notify_users`, daily summary, blacklist override, audit escalation) | Email Account *Horizon Notifications* default outgoing; `frappe.sendmail` with `mute_emails` queues without error; `test_email_account_is_default_outgoing_and_sendmail_never_raises` |
 | DEF-02 | **Fixed** | `roles.setup_role_permissions` (Custom DocPerm: Batch / Serial No / Serial and Batch Bundle / Address / Contact / Supplier / Customer), fixture in `hooks.py`, applied on `after_migrate` | procure: PR-26-00006 from PUR-ORD-2026-00009 submitted, Batch PG-0002 auto-created; priya / wh.delhi read *Tata Precision Works-Billing* and *Mumbai Steel Traders-Billing* |
 | DEF-03 | **Fixed** | `demo_hr_finance.scope_employee_user_permissions` (ADR-13) | priya and qc read PA-2026-00002 (inspector HR-EMP-00010) and see both audits in the list; neha created an Employee Checkin for Ravi Kumar (rolled back); `test_employee_user_permission_scoped_to_self_service_doctypes` |
 | DEF-04 | **Fixed** | same Custom DocPerm set + Delivery Note for Warehouse Manager | wh.delhi: DN-26-00004 from DEL Finished Goods submitted (owner wh.delhi), `has_permission("Serial and Batch Bundle","create")` True for wh.delhi and amit |
 | DEF-05 | **Fixed** | `selling.lock_rates_to_sales_order` (`before_validate` on DN and SI), Selling Settings *Maintain Same Rate* = Stop (ADR-14) | SINV-26-00006 for DN-26-00001 posted at the SO rates (5,005 for 30 of 60 impellers), ₹5,37,243, no over-billing error; `test_partial_delivery_keeps_sales_order_rate_and_invoices_cleanly` |
 | DEF-06 | **Fixed** | `selling.on_submit_delivery_note` maps into a target with `ignore_permissions`, inserts with `ignore_permissions`; Sales User read on Sales Invoice | amit (no SI create): DN-26-00005 → draft SINV-26-00005; wh.delhi: DN-26-00004 → draft SINV-26-00004; no Error Log; `test_auto_invoice_is_created_when_a_sales_user_submits_the_delivery` |
-| DEF-07 | **Fixed** | `hourly._flag_bin_mismatches` compares Bin with the latest SLE `qty_after_transaction` | re-run reports 0 mismatches on the live site; the 14 Info comments of 16-Oct deleted; `test_bin_mismatch_compares_with_latest_sle_qty_after_transaction` |
-| DEF-08 | **Fixed** | `daily.recompute_reorder_levels` upserts per warehouse, keeps `material_request_type`, inserts only for purchase items; `demo_data._sync_item_children` removes duplicates / make-to-order rows | live run after fix: no duplicate rows, SP-* keep their Manufacture row, HZ-PUMP-100 row removed; `test_recompute_reorder_levels_keeps_manufacture_row_and_safety_stock_floor` |
+| DEF-07 | **Fixed** | `horizon_stock.tasks._flag_bin_mismatches` compares Bin with the latest SLE `qty_after_transaction` | re-run reports 0 mismatches on the live site; the 14 Info comments of 16-Oct deleted; `test_bin_mismatch_compares_with_latest_sle_qty_after_transaction` |
+| DEF-08 | **Fixed** | `horizon_stock.tasks.recompute_reorder_levels` upserts per warehouse, keeps `material_request_type`, inserts only for purchase items; `demo_data._sync_item_children` removes duplicates / make-to-order rows | live run after fix: no duplicate rows, SP-* keep their Manufacture row, HZ-PUMP-100 row removed; `test_recompute_reorder_levels_keeps_manufacture_row_and_safety_stock_floor` |
 | DEF-09 | **Fixed** | history gate: first outgoing SLE >= 60 days old and >= 3 movements, floor at `Item.safety_stock` | live run: every demo item `skipped_insufficient_history`, manual levels untouched (RM-STEEL-PLATE 400/1000, bolts 500/2000); `test_recompute_reorder_levels_needs_sixty_days_and_three_movements` |
 | DEF-10 | **Fixed** | `selling.get_rule_rate` additive (compounds only `apply_discount_on_rate`); docs/01 PR-4, ADR-14 | `test_rule_rate_adds_stacked_discount_percentages` (5 + 8 + 10 = 23 % → 5,005) |
 | DEF-11 | **Fixed** (valid_till) / **Not fixed** (price list) | `selling.set_quotation_valid_till` | `test_quotation_valid_till_defaults_from_crm_settings`; the customer default price list on server-created orders is standard ERPNext behaviour (the form sets it) - left as is |
@@ -106,7 +110,7 @@ Severity: Critical / High / Medium / Low. Risk = risk of leaving it unfixed befo
 | DEF-16 | Not fixed (documented) | - | Server-created POs carry the GST template name only; POs created in the UI get the template's tax rows through India Compliance (`set_taxes` on the form), so approval limits apply to the grand total incl. GST for UI-created POs. API/script-created POs must append the template rows themselves (`get_taxes_and_charges`) - see the QA scripts |
 | DEF-17 (bank statement) | Not fixed (demo data) | - | out of scope of this round |
 | DEF-18 (leave block list) | **Fixed** | `demo_hr_finance.ensure_leave_block_list` - *Diwali Peak Production Block* 19 / 22 / 23 Oct 2026 | rajesh approving neha's Leave Application for 22-10-2026 → `LeaveDayBlockedError` "You are not authorized to approve leaves on Block Dates" (HRMS only warns at application time, by design); control date 29-10-2026 approves; `test_leave_block_list_on_working_days` |
-| DEF-19 (budget PDF) | **Fixed** | `monthly.send_budget_report` attaches the PDF with the daily-summary fallback | `test_send_budget_report` asserts no `pdf_error` |
+| DEF-19 (budget PDF) | **Fixed** | `horizon_accounts.tasks.send_budget_report` attaches the PDF with the daily-summary fallback | `test_send_budget_report` asserts no `pdf_error` |
 | DEF-20 (asset last maintenance) | **Fixed** | `demo_hr_finance.complete_first_maintenance_log` | ACC-AML-2026-00001 Completed 10-10-2026, Asset Register shows the date; `test_completed_maintenance_log_feeds_asset_register` |
 | DEF-21 (salary branch) | **Fixed** | Salary Cost Analysis group by *Branch* (`Salary Slip.branch`) | `test_group_by_variants` |
 
@@ -117,20 +121,20 @@ Regression after the fixes: `bench --site horizon.local run-tests --app horizon_
 *Impact*: PO approval requests, blacklist-override alerts, audit escalations, delivery-dispatched mails, reminders, daily/budget reports – none can be queued. 33 "Failed to send Notification", 17 "Failed to send workflow action email", 13 "Blacklist override email failed", 10 "Production Audit escalation email failed" Error Logs accumulated during this run before the workaround. With `mute_emails` the dummy account even raises `AttributeError: 'NoneType' object has no attribute 'encode'`.
 *Steps*: on the site as shipped, `frappe.sendmail(recipients=['rajesh@horizon.local'], subject='x', message='x')`.
 *Expected*: Email Queue row. *Actual*: `OutgoingEmailError: Please setup default outgoing Email Account from Tools > Email Account`.
-*Fix*: add the outgoing Email Account to `setup/demo_data.py` (or document it as a mandatory step in `06_deployment_and_migration_guide.md`) and assert it in `setup_dashboards`-style consistency checks. QA left "Horizon Notifications (QA outgoing)" on the site – replace with the real SMTP account.
+*Fix*: add the outgoing Email Account to `horizon_setup/demo_data.py` (or document it as a mandatory step in `06_deployment_and_migration_guide.md`) and assert it in `setup_dashboards`-style consistency checks. QA left "Horizon Notifications (QA outgoing)" on the site – replace with the real SMTP account.
 
 ### DEF-02 – Demo roles cannot receive batch- or serial-tracked items
 *Severity* High · *Priority* P1 · *Risk* High · *Type* Configuration (role matrix)
 *Impact*: RM-WELD-ROD / RM-PAINT-GREY (create_new_batch) and CMP-MOTOR-5HP (serial) cannot be received by procure@, dept.head@, priya@ or wh.delhi@.
 *Steps*: as procure@ make PR from PUR-ORD-2026-00005 and submit.
 *Expected*: Batch WR-xxxx auto-created, PR submitted. *Actual*: `frappe.PermissionError` from `Batch.insert()` – Batch DocType permissions are **Item Manager only**; Serial No create is Stock Manager only (procure lacks it); priya/wh.delhi (Stock Manager) cannot even map the PR: "does not have access to this document: Address - Mumbai Steel Traders-Billing" (Address read requires Supplier read).
-*Fix*: grant Batch/Serial No create to Stock User (or add Item Manager to the receiving users) and give Stock roles Supplier/Customer read (or a custom Address permission) in `setup/roles.py`; add a receiving test as procure@.
+*Fix*: grant Batch/Serial No create to Stock User (or add Item Manager to the receiving users) and give Stock roles Supplier/Customer read (or a custom Address permission) in `horizon_setup/roles.py`; add a receiving test as procure@.
 
 ### DEF-03 – Employee User Permissions leak into every DocType with an Employee link
 *Severity* High · *Priority* P1 · *Risk* High · *Type* Configuration
 *Impact*: priya@ (Operations Head) gets `PermissionError` on **read** of Production Audits whose `inspector` is not her own Employee record → cannot Review / Close Action (the designated role for the escalation workflow); neha@ (HR Manager) cannot create an Employee Checkin for another employee. The same applies to qc@, amit@, rajesh@.
 *Steps*: `frappe.has_permission('Production Audit','read', doc=PA-2026-00002, user='priya@horizon.local')` → False; set inspector to HR-EMP-00014 → True.
-*Fix*: on the Employee User Permission rows set `applicable_for` to the HRMS self-service DocTypes (or untick "Apply to all document types") in `setup/demo_data.py:setup_users`; Close Action on PA-2026-00002 was performed by Administrator as a stand-in.
+*Fix*: on the Employee User Permission rows set `applicable_for` to the HRMS self-service DocTypes (or untick "Apply to all document types") in `horizon_setup/demo_data.py:setup_users`; Close Action on PA-2026-00002 was performed by Administrator as a stand-in.
 
 ### DEF-04 – Nobody but Administrator can dispatch serialised finished goods from HQ
 *Severity* High · *Priority* P1 · *Risk* High · *Type* Configuration (role matrix)
@@ -150,13 +154,13 @@ Regression after the fixes: `bench --site horizon.local run-tests --app horizon_
 *Fix*: call `make_sales_invoice(doc.name, ignore_permissions=True)` (the ERPNext function accepts it) and cover with a test running as a Sales User.
 
 ### DEF-07 – Stock-accuracy check reports every opening-stock bin as a mismatch and comments on Items daily
-*Severity* High · *Priority* P2 · *Risk* Medium · *Type* Code (`tasks.hourly._flag_bin_mismatches`)
+*Severity* High · *Priority* P2 · *Risk* Medium · *Type* Code (`horizon_stock.tasks._flag_bin_mismatches`)
 *Steps*: run `reorder_and_accuracy_check` → `bin_mismatches` 17 (e.g. CMP-BEARING-6205 bin 200 vs "SLE 0").
 *Cause*: the query sums `Stock Ledger Entry.actual_qty`; Stock Reconciliation rows carry `actual_qty` 0 and only set `qty_after_transaction`. 14 Info comments were written on Item masters in one run (one per item per day).
 *Fix*: compare the Bin to the latest `qty_after_transaction` per item/warehouse (or exclude bins whose last SLE is a Stock Reconciliation); clean the Info comments created today.
 
 ### DEF-08 – `recompute_reorder_levels` creates duplicate Item Reorder rows (Purchase next to Manufacture) incl. make-to-order equipment
-*Severity* Medium · *Priority* P2 · *Risk* Medium · *Type* Code (`tasks.daily`)
+*Severity* Medium · *Priority* P2 · *Risk* Medium · *Type* Code (`tasks.daily`, now `horizon_stock.tasks`)
 *Steps*: run the job after consumption of SP items. Result: SP-IMPELLER / SP-SEAL-SET / SP-BELT-KIT now have **two** rows on HQ Finished Goods - HML (Manufacture 20/50 and Purchase 7/10 …) and HZ-PUMP-100 (make-to-order, no supplier) got a Purchase row level 1 / qty 1.
 *Impact*: ERPNext's own Item validation forbids two rows for one warehouse; `reorder_item` will raise both a Purchase and a Manufacture MR for the same shortage; purchase requests for items Horizon manufactures.
 *Fix*: skip items whose existing reorder row is Manufacture (or whose default BOM exists), key `existing` on (item, warehouse) regardless of request type, skip Equipment item group.
@@ -187,7 +191,7 @@ Regression after the fixes: `bench --site horizon.local run-tests --app horizon_
 
 ### DEF-14 – Quality Inspector role has no permission on Quality Inspection
 *Severity* Low · *Priority* P3 · *Risk* Low · *Type* Configuration
-*Evidence*: DocPerms on Quality Inspection = Quality Manager only; qc@ works because it also holds Quality Manager. A pure inspector could not record incoming inspections. *Fix*: add Quality Inspector (create/write/submit) in `setup/roles.py`.
+*Evidence*: DocPerms on Quality Inspection = Quality Manager only; qc@ works because it also holds Quality Manager. A pure inspector could not record incoming inspections. *Fix*: add Quality Inspector (create/write/submit) in `horizon_setup/roles.py`.
 
 ### DEF-15 – Approval Audit Report omits auto-escalations
 *Severity* Low · *Priority* P4 · *Risk* Low · *Type* Report
@@ -252,7 +256,7 @@ Result values: **Fixed-verified** (reproduced the original failure path as the i
 | DEF-11 valid_till / price list | Medium | **Fixed-verified** (valid_till) · price-list part **Not retestable** (declared design) | Same quotation inserted with `valid_till` empty → **2026-11-15** = transaction date + 30 (CRM Settings). Customer default price list on server-created orders still not applied (standard ERPNext; SAL-ORD-2026-00007 was created with `selling_price_list` set explicitly). |
 | DEF-12 one-level lead time | Medium | **Fixed-verified** | `get_item_availability('HZ-PUMP-100', 1)` → `mfg_lead_days` **30** (≥ 21), `available_qty` 0; quotation row lead 30, `expected_delivery_date` 2026-11-15; impeller row lead 29 (available −30 → mfg lead used). |
 | DEF-13 row-level discount reverted | Low | **Not retestable** (design, not fixed) | Unchanged; documented path is `additional_discount_percentage`. |
-| DEF-14 Quality Inspector permission | Low | **Fixed – unit evidence only** | Custom DocPerm present (`setup/roles.py`), `test_role_permissions_close_receiving_and_dispatch_gaps` in the green suite; no pure-inspector demo user exists, not re-run live. |
+| DEF-14 Quality Inspector permission | Low | **Fixed – unit evidence only** | Custom DocPerm present (`horizon_setup/roles.py`), `test_role_permissions_close_receiving_and_dispatch_gaps` in the green suite; no pure-inspector demo user exists, not re-run live. |
 | DEF-15 auto-escalation missing in report | Low | **Fixed-verified** | Approval Audit Report (14–16 Oct) row for PUR-ORD-2026-00004: transition **'Auto-escalated → Pending Procurement Manager'**, transition_by Administrator, 14:35:41, after the Draft → Pending Dept Head row. |
 | DEF-16 GST rows on server-created POs | Low | **Not retestable** (documented behaviour) | PUR-ORD-2026-00010/00011 still carry the template name with ex-GST totals, as documented. |
 | DEF-17 bank statement without GL | Low | **Not retested** (out of scope of the fix round) | – |
@@ -297,14 +301,14 @@ Stock after the retest: HQ FG SP-IMPELLER 5 (reserved 35 for SAL-ORD-2026-00002/
 **DEF-22 – Unit suite is not leftover-free; the "leftover = 0" claim in the fix round is wrong**
 *Severity* Low · *Priority* P4 · *Risk* Low (test hygiene; no business impact) · *Type* Tests
 *Evidence*: after `Ran 134 tests — OK` the per-prefix counts are BRTEST 12 (Error Log), APITEST 3 Contact (`apitest-sync`, `apitest-noperm`, `apitest http noperm`) + 4 Error Log, SCHTEST 26 Error Log, GAPTEST 1 Contact (`gaptest-whperm`) + 2 Error Log, FIXTEST 1 Error Log, RPTTEST 0. 40 Error Log rows mentioning test prefixes date from 13:42–14:25 (earlier unit runs, before the fix commit) and were never deleted; each new suite run adds 'Horizon job failed: schtest_failing', 'FIXTEST sendmail failure' (the test asserts the row exists) and 'Inventory snapshot query failed' (20 accumulated).
-*Cause*: `api/test_inventory_api.py` calls `frappe.db.commit()` (lines 64 and 238), which persists everything the class wrote before that point (Users → Contacts, Error Logs); Error Logs written by other tests persist across the class rollback as well.
+*Cause*: `horizon_integrations/tests/test_inventory_api.py` calls `frappe.db.commit()` (lines 64 and 238), which persists everything the class wrote before that point (Users → Contacts, Error Logs); Error Logs written by other tests persist across the class rollback as well.
 *Steps*: run the suite, then `select count(*) from tabContact where name like '%apitest%'` / `tabError Log where error like '%SCHTEST%'`.
 *Expected*: 0 for every prefix. *Actual*: see above.
 *Fix*: drop the commits (use `frappe.db.savepoint` or `self.addCleanup`), delete test-created Error Logs / Contacts in `tearDownClass`, purge the existing rows; re-run the leftover query as part of the suite.
 
 **OBS-R2-1 – Warehouse Manager cannot open the invoice the DN hook links** (Low, configuration). wh.delhi has `Sales Invoice` read = False, yet DN-26-00006's comment links SINV-26-00007. Grant Sales Invoice read to Warehouse Manager in `ROLE_PERMISSIONS` (as done for Sales User) or omit the link for users without read.
 
-**OBS-R2-2 – Auto invoices fall due on the posting date** (Low, demo data). No Payment Terms Template on the demo customers or the company, so SINV-26-00007…00011 have `due_date` = 16-10-2026; SINV-26-00006's 15-11-2026 was typed in by hand. Add a Net-30 template to the demo customers in `setup/demo_data.py`.
+**OBS-R2-2 – Auto invoices fall due on the posting date** (Low, demo data). No Payment Terms Template on the demo customers or the company, so SINV-26-00007…00011 have `due_date` = 16-10-2026; SINV-26-00006's 15-11-2026 was typed in by hand. Add a Net-30 template to the demo customers in `horizon_setup/demo_data.py`.
 
 **OBS-R2-3** – Email Queue stays 'Not Sent' (scheduler disabled on the dev site) – unchanged from round 1, expected.
 

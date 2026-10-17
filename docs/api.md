@@ -6,22 +6,22 @@ current stock position of a warehouse, including low-stock alerts derived from `
 | | |
 | --- | --- |
 | Method | `POST` (also `GET` for quick demos) |
-| URL | `/api/method/horizon_erp.api.inventory.get_inventory_snapshot` |
-| Short alias | `/api/method/horizon_erp.api.get_inventory_snapshot` (re-export in `horizon_erp/api/__init__.py`) |
-| Brief alias | `/api/method/get_inventory_snapshot` - requires the `override_whitelisted_methods` line below in `hooks.py` |
+| URL (contract) | `/api/method/get_inventory_snapshot` - `override_whitelisted_methods` alias in `hooks.py` |
+| Canonical path | `/api/method/horizon_erp.horizon_integrations.inventory_api.get_inventory_snapshot` |
+| Legacy paths (kept) | `/api/method/horizon_erp.api.inventory.get_inventory_snapshot` and `/api/method/horizon_erp.api.get_inventory_snapshot` - thin re-export shims in `horizon_erp/api/` so integrations written before the module restructure keep working; all three resolve to the same whitelisted function |
 | Auth | `Authorization: token <api_key>:<api_secret>` (Frappe token auth) or a logged-in session |
 | Permission | caller needs **read** on `Bin` (Stock User / Stock Manager / Sales User / Purchase User ...) |
 | Rate limit | 100 requests per hour per API client (see below) |
-| Logging | every call -> `Inventory API Log` (Horizon Integration) |
+| Logging | every call -> `Inventory API Log` (module Horizon Integrations); `endpoint` column keeps the published value `horizon_erp.api.inventory.get_inventory_snapshot` so the API Usage Report groups calls across the restructure |
 
-Code: `horizon_erp/api/inventory.py`, `horizon_erp/api/rate_limit.py`,
-`horizon_erp/horizon_integration/doctype/inventory_api_log/inventory_api_log.py`.
+Code: `horizon_erp/horizon_integrations/inventory_api.py`, `horizon_erp/horizon_integrations/rate_limit.py`,
+`horizon_erp/horizon_integrations/doctype/inventory_api_log/inventory_api_log.py`.
 
-To enable the brief's bare URL, the lead adds this to `horizon_erp/hooks.py`:
+The bare URL is enabled by this entry in `horizon_erp/hooks.py`:
 
 ```python
 override_whitelisted_methods = {
-	"get_inventory_snapshot": "horizon_erp.api.inventory.get_inventory_snapshot",
+	"get_inventory_snapshot": "horizon_erp.horizon_integrations.inventory_api.get_inventory_snapshot",
 }
 ```
 
@@ -167,7 +167,7 @@ requesting `HQ Raw Materials` returns 403.
 
 * **100 requests per hour per API client**, where client = the authenticated user (owner of the
   API key); IP address is used only for the Guest fallback (which is rejected anyway).
-* Implemented in `horizon_erp/api/rate_limit.py` (`@rate_limited`) with Redis `INCR` + `EXPIRE` on
+* Implemented in `horizon_erp/horizon_integrations/rate_limit.py` (`@rate_limited`) with Redis `INCR` + `EXPIRE` on
   `horizon:ratelimit:<client>:<bucket>`, `bucket = epoch // 3600`. This is a fixed one-hour window
   (an approximation of "rolling hour"): the counter resets at the top of each UTC hour; `Retry-After`
   / `X-RateLimit-Reset` tell the client exactly how long to wait.
@@ -184,7 +184,7 @@ requesting `HQ Raw Materials` returns 403.
 Reset a client's counter (ops):
 
 ```bash
-bench --site horizon.local execute horizon_erp.api.rate_limit.reset_rate_limit --args '["wms-sync@horizon.example"]'
+bench --site horizon.local execute horizon_erp.horizon_integrations.rate_limit.reset_rate_limit --args '["wms-sync@horizon.example"]'
 ```
 
 ## 6. Logging and the API Usage Report
@@ -198,7 +198,7 @@ Frappe rolls the transaction back when a request ends in an exception, and rolls
 requests by default. The log helper therefore sets `frappe.local.flags.commit` (so GET calls persist)
 and commits explicitly on the two paths that re-raise (401 / 403).
 
-**API Usage Report** (Horizon Integration > Reports; roles System Manager, Finance Director):
+**API Usage Report** (Horizon Integrations module, Report list; roles System Manager, Finance Director):
 filters From/To Date (default last 7 days), Client, Status; columns Client, Endpoint, Calls, Success,
 Failed, Rate Limited, Avg Response ms, P95 Response ms (nearest-rank, computed in Python), Last
 Call; line chart of calls per day with average response time; summary cards with totals.
@@ -213,7 +213,7 @@ BASE=http://horizon.local:8000
 AUTH='Authorization: token KEY:SECRET'
 
 # success (POST)
-curl -s -X POST $BASE/api/method/horizon_erp.api.inventory.get_inventory_snapshot \
+curl -s -X POST $BASE/api/method/get_inventory_snapshot \
   -H "$AUTH" -H "Content-Type: application/json" \
   -d '{"warehouse":"HQ Raw Materials","filter_by_criticality":true}'
 
@@ -231,19 +231,19 @@ curl -s -G $BASE/api/method/horizon_erp.api.get_inventory_snapshot -H "$AUTH" \
   --data-urlencode "warehouse=Delhi DC" --data-urlencode "filter_by_criticality=1"
 
 # unknown warehouse -> 404
-curl -s -i -X POST $BASE/api/method/horizon_erp.api.inventory.get_inventory_snapshot \
+curl -s -i -X POST $BASE/api/method/get_inventory_snapshot \
   -H "$AUTH" -H "Content-Type: application/json" -d '{"warehouse":"Nowhere DC"}'
 # -> HTTP/1.1 404 NOT FOUND
 #    {"message":{"error":"invalid_warehouse","message":"Warehouse 'Nowhere DC' not found",
 #      "timestamp":"2026-10-16T13:40:21+05:30","hint":"Pass the Warehouse ID (e.g. 'Delhi DC - HML') or its Warehouse Name (e.g. 'Delhi DC')"}}
 
 # missing warehouse -> 400
-curl -s -X POST $BASE/api/method/horizon_erp.api.inventory.get_inventory_snapshot \
+curl -s -X POST $BASE/api/method/get_inventory_snapshot \
   -H "$AUTH" -H "Content-Type: application/json" -d '{}'
 # -> {"message":{"error":"missing_warehouse","message":"Parameter 'warehouse' is required","timestamp":"..."}}
 
 # simulated backend failure (developer_mode only) -> 503
-curl -s -X POST $BASE/api/method/horizon_erp.api.inventory.get_inventory_snapshot \
+curl -s -X POST $BASE/api/method/get_inventory_snapshot \
   -H "$AUTH" -H "Content-Type: application/json" -d '{"warehouse":"HQ Raw Materials","_simulate_failure":1}'
 # -> {"message":{"error":"temporary_failure","message":"Inventory data is temporarily unavailable, please retry",
 #      "timestamp":"...","retry_after_seconds":30}}
@@ -251,7 +251,7 @@ curl -s -X POST $BASE/api/method/horizon_erp.api.inventory.get_inventory_snapsho
 # rate limit demo: the 101st call within the hour
 for i in $(seq 1 101); do
   curl -s -o /dev/null -w "%{http_code}\n" -X POST \
-    $BASE/api/method/horizon_erp.api.inventory.get_inventory_snapshot \
+    $BASE/api/method/get_inventory_snapshot \
     -H "$AUTH" -H "Content-Type: application/json" -d '{"warehouse":"HQ Raw Materials"}'
 done | sort | uniq -c
 # -> 100 200 / 1 429 ; the 429 carries:
@@ -267,11 +267,11 @@ bench --site horizon.local execute frappe.get_all --kwargs \
 
 ## 8. Sync client with retry
 
-`horizon_erp/client/inventory_sync_client.py` is standalone (only `requests`; no frappe import).
+`horizon_erp/horizon_integrations/client/inventory_sync_client.py` is standalone (only `requests`; no frappe import).
 
 ```bash
 pip install requests
-python horizon_erp/client/inventory_sync_client.py --url http://horizon.local:8000 \
+python horizon_erp/horizon_integrations/client/inventory_sync_client.py --url http://horizon.local:8000 \
     --key KEY --secret SECRET --warehouse "Delhi DC" --criticality [--json] [--log-file inventory_sync.log]
 ```
 
@@ -289,10 +289,10 @@ Behaviour:
 ## 9. Tests
 
 ```bash
-bench --site horizon.local run-tests --app horizon_erp --module horizon_erp.api.test_inventory_api --skip-test-records
+bench --site horizon.local run-tests --app horizon_erp --module horizon_erp.horizon_integrations.tests.test_inventory_api --skip-test-records
 ```
 
-`horizon_erp/api/test_inventory_api.py` creates its own `APITEST-*` warehouses, items and Bin rows
+`horizon_erp/horizon_integrations/tests/test_inventory_api.py` creates its own `APITEST-*` warehouses, items and Bin rows
 (deleted again in `tearDownClass`) and covers: lenient warehouse resolution and group aggregation,
 field math (`available_qty`, reorder fallback, `below_reorder`, valuation, summary), criticality
 filter parsing, 400 / 404 / 503 bodies and log rows, 403 log row surviving a rollback, 429 after the

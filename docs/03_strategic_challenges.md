@@ -86,7 +86,7 @@ single party acting on both sides; the link is the supported pattern.
 4. The remaining 5 L is collected by a Payment Entry against the Sales Invoice.
 5. TDS / TCS obligations are unaffected by the set-off and are computed on the gross invoices.
 
-**Report.** *Net Party Position* (`horizon_finance/report/net_party_position`): for every Party
+**Report.** *Net Party Position* (`horizon_accounts/report/net_party_position`): for every Party
 Link pair (optionally same-name pairs too) it shows receivable, open sales invoices, payable, open
 purchase invoices, net, direction (Net Receivable / Net Payable) and the suggested settlement amount,
 with totals. Use it in the settlement negotiation.
@@ -119,9 +119,9 @@ early and record who decided what, at what estimated cost.
 
 | Where | Rule | Code |
 | --- | --- | --- |
-| Quality Inspection on a Job Card / Stock Entry | `qc_result = Rework` creates a draft rework Work Order (`rework_of`), `Fail` opens a Non Conformance | `horizon_quality/inspection.py` |
+| Quality Inspection on a Job Card / Stock Entry | `qc_result = Rework` creates a draft rework Work Order (`rework_of`), `Fail` opens a Non Conformance | `horizon_quality_management/inspection.py` |
 | Production Audit | score < 70 notifies the Operations Head, opens a Quality Action and blocks the Manufacture Stock Entry until the audit is *Action Closed* | `production_audit.py`, `production_audit_hooks.py` |
-| Daily job `detect_quality_deadline_conflicts` | Sales Orders due within 3 days (or overdue), not fully delivered, with an unfinished WO, an open audit < 70 or a rejected QI, and **no submitted Shipment Decision** -> one alert per SO per day to Sales Manager, Operations Head, Quality Manager | `tasks/daily.py` |
+| Daily job `detect_quality_deadline_conflicts` | Sales Orders due within 3 days (or overdue), not fully delivered, with an unfinished WO, an open audit < 70 or a rejected QI, and **no submitted Shipment Decision** -> one alert per SO per day to Sales Manager, Operations Head, Quality Manager | `horizon_quality_management/tasks.py` |
 | Delivery Note validate | Same blockers at delivery time -> submit is refused until a submitted Shipment Decision for that Sales Order exists; the decision is linked on the Delivery Note | `selling.enforce_quality_gate` |
 
 **The decision point - `Shipment Decision` (SD-YYYY-#####).** Pre-filled from the Sales Order and
@@ -139,7 +139,7 @@ and writes a Comment on the Sales Order ("Shipment Decision SD-... : Delay Deliv
 date moved from ... to ... Reason: ..."). Cancelling a decision re-opens it and comments again. That
 is the audit trail: who, when, which option, why, at what estimated cost.
 
-**Report - Quality vs Deadline Conflicts** (`horizon_quality/report/quality_vs_deadline_conflicts`):
+**Report - Quality vs Deadline Conflicts** (`horizon_quality_management/report/quality_vs_deadline_conflicts`):
 near-due Sales Orders with their Work Orders, WO status, open audits < 70, rejected QIs, the linked
 decision, estimated costs and a status of *OK*, *Conflict - Undecided* or *Decided: <option>*;
 summary cards for undecided, decided, OK, Cost of Poor Quality (period) and Cost of Delay.
@@ -187,7 +187,7 @@ submitted Delivery Note - remains the safe path.
 | 100 items with negative stock | **Auto-fix for the posting, human review for the cause** | Physical count of the 100 items; opening Stock Reconciliation at counted quantities and agreed valuation; the difference is posted to the dedicated account `Stock Adjustment - Migration - HML` so operational stock adjustments are not polluted; items with no count are imported at zero and flagged | Stock Settings `allow_negative_stock = 0`; Purchase Receipt mandatory before invoice (`pr_required`); hourly stock-accuracy check flags Bin vs ledger drift and count variances > 2 % |
 | Purchase Invoices without a linked PO | **Human review** by category: recurring utilities / rent (legitimate, convert to Auto Repeat journals), one-off direct purchases (document and close), everything else (match to a PO or raise a retrospective one) | Import historical invoices as opening balances per supplier (not line by line) so no unlinked documents enter the new ledger; keep the legacy register as an attachment | Buying Settings `po_required = Yes` and `pr_required = Yes`; PO approval workflow by amount; budget check on Purchase Order (Warn) and on actual expense (Stop) |
 
-**Data Validation Report** (`horizon_finance/report/data_validation_report`): one row per issue
+**Data Validation Report** (`horizon_accounts/report/data_validation_report`): one row per issue
 with Entity Type, Name, Issue, Severity (High / Medium / Low) and Suggested Action, bar chart by
 entity type and severity counts. Checks implemented:
 - Customer / Supplier: GST category Registered Regular with empty GSTIN; GSTIN failing checksum;

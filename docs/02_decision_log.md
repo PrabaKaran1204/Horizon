@@ -43,12 +43,12 @@ i.e. a fourth document after the receipt.
 2. **Purchase Receipt is the GRN**; inspection is forced before submit (Stock Settings Stop / Stop)
    and the physical state "received but not released" is a warehouse (`HQ QC Hold - HML`).
 
-**Decision.** Option 2. `buying.on_submit_purchase_receipt` moves accepted qty from QC Hold to the
+**Decision.** Option 2. `purchase_receipt.on_submit_purchase_receipt` moves accepted qty from QC Hold to the
 item's default warehouse and raises the Purchase Return / Debit Note for `rejected_qty`.
 
 **Consequences.** Stock is visible (and valued) in QC Hold between receipt and release, which is
 the truth. Material in QC Hold is not available to Work Orders because it is not in Raw Materials.
-The receipt warehouse must be QC Hold: `buying.validate_purchase_receipt` enforces it - every
+The receipt warehouse must be QC Hold: `purchase_receipt.validate_purchase_receipt` enforces it - every
 Purchase Receipt row whose Item requires inspection before purchase is routed to `HQ QC Hold - HML`
 (with `HQ Rejected - HML` defaulted as the rejected warehouse) and the user is told which rows were
 moved; rows for items without inspection keep their warehouse (follow-up closed).
@@ -64,8 +64,9 @@ DocType".
 
 **Options.** New DocTypes versus Custom Fields + hooks on the standard ones.
 
-**Decision.** Custom Fields in code (`setup/custom_fields.py`, applied on install / migrate, not as
-fixtures) plus `doc_events` hooks. Quotation Item gets `available_qty`, `mfg_lead_days`,
+**Decision.** Custom Fields plus `doc_events` hooks. Originally defined in code (`setup/custom_fields.py`,
+applied on install / migrate, not as fixtures); since ADR-15 they are Frappe customization JSON files
+in `<module>/custom/<doctype>.json`. Quotation Item gets `available_qty`, `mfg_lead_days`,
 `expected_delivery_date`, `rule_rate`, `discount_over_rule_pct`; Delivery Note gets
 `customer_signature`, `received_by`, `deviation_notes`, `shipment_decision`; Quality Inspection
 gets `qc_result`, `rejection_reason`, `evidence_required`, `rework_work_order`.
@@ -73,7 +74,7 @@ gets `qc_result`, `rejection_reason`, `evidence_required`, `rework_work_order`.
 **Consequences.** Pricing rules, taxes, stock ledger, GST e-invoicing, print formats and every
 standard report keep working. Fields sit on a "Horizon" tab so standard layouts are untouched.
 Trade-off: custom fields on busy DocTypes must be re-verified at each ERPNext minor upgrade
-(`after_migrate` re-applies them idempotently).
+(`bench migrate` re-syncs them idempotently).
 
 **Status.** Accepted.
 
@@ -156,14 +157,14 @@ Governance: netting needs a written agreement because it changes the legal set-o
 1. `frappe.rate_limiter.rate_limit` decorator - keys on IP or a form field, raises HTTP **417**, no
    `Retry-After`, no hook to log the rejected call.
 2. Site-wide `frappe.conf.rate_limit` - one CPU-time budget for the whole site, not per client.
-3. **Own decorator** `api/rate_limit.py`: client = authenticated user (API key owner), Redis
+3. **Own decorator** `horizon_integrations/rate_limit.py`: client = authenticated user (API key owner), Redis
    `INCR` + `EXPIRE`, 429 JSON body, `Retry-After` / `X-RateLimit-*` headers through a duck-typed
    `frappe.local.rate_limiter`, `on_exceed` callback writes the *Inventory API Log* row.
 
 **Decision.** Option 3. Limit configurable via `site_config.json` `horizon_api_rate_limit`.
 
 **Consequences.** About 170 lines to own; Frappe upgrades that change `process_response` header
-handling must be re-tested (`api/test_inventory_api.py` covers it).
+handling must be re-tested (`horizon_integrations/tests/test_inventory_api.py` covers it).
 
 **Status.** Accepted.
 
@@ -330,5 +331,40 @@ check passes. Limitation: on a Delivery Note / Sales Invoice that carries Sales 
 added by hand without an order reference is priced at list price (the engine is off for the whole
 document) - add the item to the Sales Order instead. Returns are untouched. Price changes after
 order confirmation are made on the Sales Order (amend) and flow from there.
+
+**Status.** Accepted.
+
+---
+
+## ADR-15 Domain modules mirroring the kaynes app; Custom Fields as module custom/ JSON
+
+**Context.** The app grew inside four broad modules (Horizon Operations, Quality, Finance,
+Integration) plus `setup/`, `tasks/`, `api/` and `client/` packages. Horizon Operations alone held
+buying, selling, stock, manufacturing and projects code, and Custom Fields were a 440-line Python
+dict. The team's reference app (kaynes) uses one Frappe module per ERPNext domain, each owning its
+`custom/` customization JSON, doctypes, reports, print formats and scheduler jobs.
+
+**Options.** Keep the layout; split only Horizon Operations; or adopt the kaynes layout fully.
+
+**Decision.** Adopt the kaynes layout. Fifteen modules (`modules.txt`): Horizon Setup, Core, Buying,
+Selling, CRM, Stock, Manufacturing, Quality Management, Projects, HR, Payroll, Accounts, Assets,
+Integrations, Workflow. Files moved with `git mv`. Custom Fields are Export-Customizations JSON per
+DocType in the owning module's `custom/` (`sync_on_migrate: 1`, `custom_perms: []`, every field
+carries its `module`); `horizon_setup.custom_fields.setup_custom_fields()` calls
+`frappe.modules.utils.sync_customizations("horizon_erp")` on install because Frappe only syncs them
+after `after_install`. Scheduler jobs sit in `<module>/tasks.py` (stock, buying,
+quality_management, accounts, core) with the shared `@horizon_job` wrapper in
+`horizon_core/jobs.py`. Purchase Receipt QC-hold hooks moved from buying to
+`horizon_stock/purchase_receipt.py` (kaynes keeps receipt logic in stock). The Approvals workspace
+lives in Horizon Accounts (it is the Finance Director's queue). Existing sites are migrated by
+`patches/v1_0/restructure_modules.py` (`[pre_model_sync]`). The public API keeps the short alias
+`get_inventory_snapshot` (now pointing at `horizon_erp.horizon_integrations.inventory_api`) and
+re-export shims at `horizon_erp.api.inventory` / `horizon_erp.api` so published URLs do not change.
+
+**Consequences.** Code is found where an ERPNext consultant expects it; customizations can be
+re-exported from Customize Form into the right module; the module filter on desk lists is
+meaningful. Costs: one-time migration patch, longer dotted paths, and the legacy `api/` shim
+package must stay until every integration uses the short alias. `tests/test_module_structure.py`
+guards module/file/DB agreement, hook paths and the API aliases.
 
 **Status.** Accepted.

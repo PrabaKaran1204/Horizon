@@ -24,7 +24,7 @@ bench --site horizon.local install-app erpnext
 bench --site horizon.local install-app payments
 bench --site horizon.local install-app hrms
 bench --site horizon.local install-app india_compliance
-bench --site horizon.local install-app horizon_erp         # after_install: roles + custom fields
+bench --site horizon.local install-app horizon_erp         # after_install: custom/ JSON fields, roles, workflows, print formats, notifications
 
 # 4. company
 # Run the Setup Wizard once (Company "Horizon Manufacturing Ltd", abbr HML, country India,
@@ -32,25 +32,25 @@ bench --site horizon.local install-app horizon_erp         # after_install: role
 # Select "India" so India Compliance creates GST accounts; otherwise demo_data creates them.
 
 # 5. configuration + demo data (idempotent, re-runnable; prints a per-step summary)
-bench --site horizon.local execute horizon_erp.setup.demo_data.setup_all
+bench --site horizon.local execute horizon_erp.horizon_setup.demo_data.setup_all
 #   -> settings, Branch dimension, addresses/GSTINs, cost centres + allocation, accounts, warehouses,
 #      item groups + GST templates, items, parties (ABC Corp Party Link, ABC Supplies blacklisted),
 #      pricing, workstations/operations/QI templates/BOMs, opening stock, users (Horizon@123),
-#      CSV export, then optional modules: setup.workflows.setup_workflows and
-#      setup.demo_hr_finance.setup_hr_finance (HR, payroll, project, asset, budgets, bank, recurring JEs)
+#      CSV export, then optional modules: horizon_workflow.workflows.setup_workflows and
+#      horizon_setup.demo_hr_finance.setup_hr_finance (HR, payroll, project, asset, budgets, bank, recurring JEs)
 
 # optional: run HR/finance alone or again
-bench --site horizon.local execute horizon_erp.setup.demo_hr_finance.setup_hr_finance
-bench --site horizon.local execute horizon_erp.setup.demo_hr_finance.verify
+bench --site horizon.local execute horizon_erp.horizon_setup.demo_hr_finance.setup_hr_finance
+bench --site horizon.local execute horizon_erp.horizon_setup.demo_hr_finance.verify
 
 # 6. notifications, print formats, client scripts (not part of setup_all)
-bench --site horizon.local execute horizon_erp.setup.notifications.setup_notifications
-bench --site horizon.local execute horizon_erp.setup.print_formats.setup_print_formats
+bench --site horizon.local execute horizon_erp.horizon_setup.notifications.setup_notifications
+bench --site horizon.local execute horizon_erp.horizon_setup.print_formats.setup_print_formats
 bench build --app horizon_erp
 #   hooks.py wires the form scripts through doctype_js (public/js/*.js), so they need the asset
 #   build. setup_client_scripts is only a fallback that installs the same files as Client Script
 #   records; do not run it on a site that serves them via doctype_js.
-bench --site horizon.local execute horizon_erp.setup.dashboards.setup_dashboards   # workspace sanity check
+bench --site horizon.local execute horizon_erp.horizon_setup.dashboards.setup_dashboards   # workspace sanity check
 
 # 7. scheduler and services
 bench --site horizon.local enable-scheduler
@@ -65,7 +65,7 @@ placeholder so workflow / notification / scheduler e-mails can be queued; replac
 TLS and login with the client's SMTP relay before go-live (the step never overwrites an existing
 account's connection settings). Without a default outgoing account every `frappe.sendmail` raises and
 ERPNext logs one Error Log per notification; Horizon's own mails go through
-`tasks.safe_sendmail` and never block a transaction either way.
+`horizon_core.jobs.safe_sendmail` and never block a transaction either way.
 
 ### Reaching the site from Windows (WSL2)
 
@@ -90,21 +90,44 @@ bench --site horizon.local enable-scheduler
 bench restart
 ```
 
+### Upgrading a site from the pre-restructure layout
+
+Sites installed before the domain-module restructure have their Horizon records under the modules
+Horizon Operations / Horizon Quality / Horizon Finance / Horizon Integration. `bench migrate` runs
+`horizon_erp.patches.v1_0.restructure_modules` (`[pre_model_sync]`, idempotent): it creates the 15
+new Module Defs, re-homes every DocType, Report, Workspace, Number Card, Dashboard Chart, Print Format,
+Notification and Custom Field to its domain module, rewrites the Number Card `method` paths
+(`horizon_erp.setup.dashboards.*` -> `horizon_erp.horizon_setup.dashboards.*`), moves anything else
+still on an old module to the closest new one and deletes the four old Module Defs once nothing
+references them. Scheduled Job Types are re-synced from `hooks.py` by migrate itself. Run
+`bench --site <site> clear-cache` first (Frappe caches the app -> modules map in Redis). Orphan check
+after migrate (expect 0 rows from every table that has a `module` column):
+
+```sql
+select table_name from information_schema.columns
+where table_schema = database() and column_name = 'module';
+-- then for each table: select count(*) from `<table>` where module in
+--   ('Horizon Operations', 'Horizon Quality', 'Horizon Finance', 'Horizon Integration');
+```
+
+`bench --site <site> run-tests --app horizon_erp --module horizon_erp.tests.test_module_structure`
+asserts the same (plus file / DB module agreement for every shipped JSON).
+
 ### Post-restore checklist
 
 | # | Check | How |
 | --- | --- | --- |
 | 1 | App versions match | `bench version` shows frappe 15.96, erpnext 15.94, hrms 15.55, india_compliance 15.25, horizon_erp |
-| 2 | Custom fields and roles present | `bench --site horizon.local execute horizon_erp.setup.install.after_migrate` (idempotent) |
+| 2 | Custom fields and roles present | Custom Fields come from `horizon_erp/<module>/custom/*.json` and are synced by `bench --site horizon.local migrate`; re-sync on demand with `bench --site horizon.local execute horizon_erp.horizon_setup.custom_fields.setup_custom_fields`; roles / permissions / workflows with `bench --site horizon.local execute horizon_erp.horizon_setup.install.after_migrate` (idempotent) |
 | 3 | Workflows active | Workflow list: Horizon PO Approval, Horizon Discount Approval, Horizon Discount Approval - Sales Order, Horizon Production Audit, Horizon Payment Approval |
 | 4 | Notifications enabled | Notification list filter `Horizon%` (4 records) |
 | 5 | Print formats render | Open a Sales Invoice, choose *Horizon Sales Invoice*; a Delivery Note with *Horizon Packing Slip Thermal* |
-| 6 | Scheduler running | `bench --site horizon.local scheduler status`; Scheduled Job Log shows `horizon_erp.tasks.*` |
-| 7 | Workspaces consistent | `bench --site horizon.local execute horizon_erp.setup.dashboards.setup_dashboards` |
-| 7b | Role matrix applied | `bench --site horizon.local execute horizon_erp.setup.roles.setup_role_permissions` (also runs on every `bench migrate`); Custom DocPerm rows for Batch, Serial No, Serial and Batch Bundle, Address, Contact, Supplier, Customer, Quality Inspection, Sales Invoice, Delivery Note |
+| 6 | Scheduler running | `bench --site horizon.local scheduler status`; Scheduled Job Log shows `horizon_erp.horizon_*.tasks.*` (stock, buying, quality_management, accounts, core) |
+| 7 | Workspaces consistent | `bench --site horizon.local execute horizon_erp.horizon_setup.dashboards.setup_dashboards` |
+| 7b | Role matrix applied | `bench --site horizon.local execute horizon_erp.horizon_setup.roles.setup_role_permissions` (also runs on every `bench migrate`); Custom DocPerm rows for Batch, Serial No, Serial and Batch Bundle, Address, Contact, Supplier, Customer, Quality Inspection, Sales Invoice, Delivery Note |
 | 8 | API keys regenerated | Backups do not carry usable secrets for new users; regenerate on the integration user |
 | 9 | Email account and site URL | Replace the placeholder SMTP settings of Email Account *Horizon Notifications*; `host_name` in `site_config.json` so links in emails resolve |
-| 10 | Redis counters | Rate-limit buckets live in Redis, not the DB: `bench --site horizon.local execute horizon_erp.api.rate_limit.reset_rate_limit --args '["<client>"]'` if needed |
+| 10 | Redis counters | Rate-limit buckets live in Redis, not the DB: `bench --site horizon.local execute horizon_erp.horizon_integrations.rate_limit.reset_rate_limit --args '["<client>"]'` if needed |
 | 11 | Demo passwords | Change `Horizon@123` on the eight demo users before any shared environment |
 | 12 | Developer mode off | `developer_mode 0` in production (disables `_simulate_failure`) |
 
@@ -142,7 +165,7 @@ Tool), and run the *Data Validation Report* after each batch.
 | GST rates | 5 / 12 / 18 % templates are per the brief; confirm per HSN with the CA. 12 % slab was withdrawn in Sept 2025. |
 | Payroll per branch | Because Branch is mandatory for P&L, run Payroll Entry once per branch (the demo script does this). |
 | Workstation hours | Second window starts 14:01 (ERPNext inclusive overlap check); HRMS shifts use 14:00. |
-| Client scripts | `doctype_js` is active in `hooks.py` (Quotation, Sales Order, Purchase Order, Delivery Note, Work Order); run `bench build --app horizon_erp` after pulling. `setup/client_scripts.py` is only a fallback installer (Client Script records) for benches that cannot build assets - never enable both. |
-| Fixtures | `hooks.py` fixture filters list Workflows, Workflow States and Workflow Action Masters by name; the lists match the five workflows and their states / actions (`test_fixtures` keeps them in step). Add any new workflow, state or action to the lists before `bench export-fixtures`. |
+| Client scripts | `doctype_js` is active in `hooks.py` (Quotation, Sales Order, Purchase Order, Delivery Note, Work Order); run `bench build --app horizon_erp` after pulling. `horizon_setup/client_scripts.py` is only a fallback installer (Client Script records) for benches that cannot build assets - never enable both. |
+| Fixtures | `hooks.py` fixture filters list Workflows, Workflow States and Workflow Action Masters by name; the lists match the five workflows and their states / actions. Add any new workflow, state or action to the lists, then `bench --site horizon.local export-fixtures --app horizon_erp` (writes `horizon_erp/fixtures/*.json`). Custom Fields / Property Setters are **not** fixtures: they live in `<module>/custom/<doctype>.json` (`sync_on_migrate: 1`). |
 | Bare API URL | `/api/method/get_inventory_snapshot` needs `override_whitelisted_methods` in `hooks.py` (see `docs/api.md`); the full dotted path works without it. |
 | Email in demos | With `frappe.flags.mute_emails` set by the setup scripts, nothing is sent during setup; scheduler emails need an outgoing account. |

@@ -35,7 +35,7 @@ second user where the table says so.
 | 7 | Chart of accounts | `/app/account/view/tree?company=Horizon%20Manufacturing%20Ltd` | Administrator | Standard Indian CoA; GST input/output heads per registration, no custom accounts needed |
 | 8 | Item with criticality and reorder level | `/app/item/RM-WELD-ROD` (Inventory tab, *Auto re-order* table) | Administrator | Custom field *Criticality* (A/B/C) drives API filtering and reorder; reorder level 50 / qty 100 at HQ Raw Materials; batch-tracked |
 | 9 | Serialised item | `/app/item/HZ-PUMP-100` | Administrator | Finished pumps are serialised; `use_serial_batch_fields` on; BOM-HZ-PUMP-100-001 is default |
-| 10 | Role matrix | `/app/role-permission-manager` (DocType *Delivery Note*, then *Sales Invoice*) | Administrator | Custom DocPerm rows from `setup/roles.py`: Warehouse Manager submits Delivery Notes and reads the invoice the hook creates (QA OBS-R2-1) |
+| 10 | Role matrix | `/app/role-permission-manager` (DocType *Delivery Note*, then *Sales Invoice*) | Administrator | Custom DocPerm rows from `horizon_setup/roles.py`: Warehouse Manager submits Delivery Notes and reads the invoice the hook creates (QA OBS-R2-1) |
 
 ## B. Purchasing - approvals and the blacklisted sole supplier (Demo 1)
 
@@ -103,7 +103,7 @@ second user where the table says so.
 | 50 | Inventory Obsolescence Analysis | `/app/query-report/Inventory%20Obsolescence%20Analysis` | Administrator | Stock on hand aged by last sale (or first receipt) into 0-30 / 31-90 / 91-180 / 180+ day buckets with value per item / warehouse |
 | 51 | Inventory API Log | `/app/inventory-api-log?status=Rate%20Limited` then `/app/inventory-api-log` | Administrator | Every call logged with client, parameters, status, HTTP code and response time; 429 and 503 rows visible |
 | 52 | API Usage Report | `/app/query-report/API%20Usage%20Report` | Administrator | One row per client and endpoint: success / rate-limited / failed counts and p95 response time |
-| 53 | API response (terminal) | `curl -s -H "Authorization: token <key>:<secret>" "http://localhost:8001/api/method/horizon_erp.api.inventory.get_inventory_snapshot?warehouse=Delhi%20DC&filter_by_criticality=1" \| python3 -m json.tool` | API key of Administrator (User form > Settings > API Access) | JSON snapshot: items, available / projected qty, reorder point, low-stock alerts, `X-RateLimit-*` headers (`curl -i`) |
+| 53 | API response (terminal) | `curl -s -H "Authorization: token <key>:<secret>" "http://localhost:8001/api/method/get_inventory_snapshot?warehouse=Delhi%20DC&filter_by_criticality=1" \| python3 -m json.tool` | API key of Administrator (User form > Settings > API Access) | JSON snapshot: items, available / projected qty, reorder point, low-stock alerts, `X-RateLimit-*` headers (`curl -i`) |
 
 ## G. HR and finance (docs/01 section 6-7)
 
@@ -137,7 +137,7 @@ talking points follow the 12-minute outline in [README.md](README.md).
    `procure`: tick *Blacklist Override*, give the reason, save; show that the required level jumps to
    3 and that a Supplier Exception Log appears. Approve as `rajesh`. Talking point: legitimate
    exceptions are allowed, visible and audited; the 24 h reminder / 48 h escalation jobs
-   (`horizon_erp.tasks`) make the queue age visible in the Approvals workspace.
+   (`horizon_erp.horizon_buying.tasks`) make the queue age visible in the Approvals workspace.
 2. **Demo 2 - weld QC fail -> rework -> Shipment Decision** (screens 22 -> 23 -> 24 -> 25 -> 28).
    Open MAT-QA-2026-00005 and the draft rework Work Order it created; open PA-2026-00002 and
    explain photo mandatory / Operations Head alert / blocked Manufacture entry. Try to submit a
@@ -149,7 +149,7 @@ talking points follow the 12-minute outline in [README.md](README.md).
    `for i in $(seq 1 101); do curl -s -o /dev/null -w "%{http_code}\n" ...; done | sort | uniq -c`
    to reach the 429 with `Retry-After`; open the Inventory API Log and the API Usage Report. Talking
    point: secure (token + Bin permission + warehouse User Permission), rate-limited, logged, with a
-   retrying client in `horizon_erp/client/inventory_sync_client.py`.
+   retrying client in `horizon_erp/horizon_integrations/client/inventory_sync_client.py`.
 
 Close with screens 10, 27 and 62 for the "Standard / Configuration / Custom" slide (docs/01 section
 5) and the challenged requirements in docs/04.

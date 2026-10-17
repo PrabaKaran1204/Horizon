@@ -19,7 +19,8 @@ Note before Invoice, Work Order capacity, quality gates, timesheet / task rules)
 Permissions (`warehouses_excluded` / 403 `warehouse_not_permitted`), Purchase Receipt rows for
 inspection items are forced into QC Hold on save, and the monthly budget email carries the year-end
 forecast columns (the standard *Budget Variance Report* stays untouched). Design documents and the
-full API contract are in `docs/` (`docs/api.md` for the endpoint).
+full API contract are in `docs/` (`docs/api.md` for the endpoint). The folder layout mirrors the
+`kaynes` app: one Frappe module per ERPNext domain (see *Folder structure*).
 
 ## Setup
 
@@ -29,17 +30,18 @@ Run from the bench root (`frappe-bench/`). The site used throughout is `horizon.
 # 0. fetch the app (skip if already in apps/)
 bench get-app horizon_erp <git-url>
 
-# 1. install (after_install creates roles, custom fields, workflows, print formats, notifications)
+# 1. install (after_install syncs <module>/custom/*.json, then roles, role permissions,
+#    workflows, print formats, notifications)
 bench --site horizon.local install-app horizon_erp
 
 # 2. demo masters, settings, opening stock; also runs setup_workflows + setup_hr_finance
-bench --site horizon.local execute horizon_erp.setup.demo_data.setup_all
+bench --site horizon.local execute horizon_erp.horizon_setup.demo_data.setup_all
 
 # 3. HR / finance demo data (idempotent; already called by setup_all, safe to re-run alone)
-bench --site horizon.local execute horizon_erp.setup.demo_hr_finance.setup_hr_finance
+bench --site horizon.local execute horizon_erp.horizon_setup.demo_hr_finance.setup_hr_finance
 
 # 4. validate workspaces / number cards / charts after migrate synced them
-bench --site horizon.local execute horizon_erp.setup.dashboards.setup_dashboards
+bench --site horizon.local execute horizon_erp.horizon_setup.dashboards.setup_dashboards
 
 # 5. assets (public/js form scripts) and caches
 bench build --app horizon_erp
@@ -49,8 +51,10 @@ bench --site horizon.local clear-cache
 bench --site horizon.local enable-scheduler
 ```
 
-After every pull: `bench --site horizon.local migrate` (DocTypes, fixtures, after_migrate sync),
-`bench build --app horizon_erp` when `public/` changed, `bench restart` after Python changes.
+After every pull: `bench --site horizon.local migrate` (patches, DocTypes, `custom/` JSON, fixtures,
+after_migrate sync), `bench build --app horizon_erp` when `public/` changed, `bench restart` after
+Python changes. Sites installed before the module restructure are converted by the
+`patches/v1_0/restructure_modules.py` patch on that migrate (see docs/06).
 
 On this development bench `bench start` serves another site on port 8000; `horizon.local` is
 served by a separate `bench serve --port 8001` process (with reload). Use
@@ -60,8 +64,10 @@ served by a separate `bench serve --port 8001` process (with reload). Use
 
 The integration contract is `POST /api/method/get_inventory_snapshot`. `hooks.py` maps that short
 name through `override_whitelisted_methods` to
-`horizon_erp.api.inventory.get_inventory_snapshot`, which is also reachable as
-`horizon_erp.api.get_inventory_snapshot`. Authenticate with `Authorization: token KEY:SECRET`.
+`horizon_erp.horizon_integrations.inventory_api.get_inventory_snapshot`. The pre-restructure paths
+`horizon_erp.api.inventory.get_inventory_snapshot` and `horizon_erp.api.get_inventory_snapshot`
+keep working through re-export shims in `horizon_erp/api/`. Authenticate with
+`Authorization: token KEY:SECRET`.
 
 ```bash
 curl -s -X POST http://127.0.0.1:8001/api/method/get_inventory_snapshot \
@@ -73,13 +79,17 @@ curl -s -X POST http://127.0.0.1:8001/api/method/get_inventory_snapshot \
 
 ```bash
 bench --site horizon.local run-tests --app horizon_erp --skip-test-records
+# one module, e.g. the layout guard or the selling rules
+bench --site horizon.local run-tests --app horizon_erp --module horizon_erp.tests.test_module_structure
+bench --site horizon.local run-tests --app horizon_erp --module horizon_erp.horizon_selling.tests.test_selling --skip-test-records
 ```
 
 `--skip-test-records` is required: Frappe would otherwise try to create ERPNext's generic
 `test_records` for every dependency DocType (Company `_Test Company`, items, warehouses, ...),
 which collide with the Horizon demo masters and the India Compliance validations on this site.
 Every Horizon test module builds its own fixtures (prefixes `BRTEST-`, `APITEST-`, `SCHTEST-`,
-`RPTTEST-`, `GAPTEST-`) inside the test transaction, so nothing else is needed.
+`RPTTEST-`, `GAPTEST-`) inside the test transaction; shared builders are in
+`horizon_core/tests/fixtures.py`.
 
 Development checks (run from `apps/horizon_erp`):
 
@@ -87,74 +97,127 @@ Development checks (run from `apps/horizon_erp`):
 ../../env/bin/python -m compileall -q horizon_erp
 ../../env/bin/python -c "import horizon_erp.hooks"
 ruff check horizon_erp && ruff format --check horizon_erp
-for f in horizon_erp/public/js/*.js horizon_erp/*/report/*/*.js; do node --check "$f"; done
+for f in horizon_erp/public/js/*.js horizon_erp/*/report/*/*.js horizon_erp/*/doctype/*/*.js; do node --check "$f"; done
 ```
 
-## App layout
+## Folder structure
+
+Same convention as the `kaynes` app (`apps/kaynes/kaynes`): `modules.txt` lists one module per
+ERPNext domain, and every module folder owns everything of that domain.
+
+| kaynes | horizon_erp | Holds |
+| --- | --- | --- |
+| `kaynes_<domain>/custom/<doctype>.json` | `horizon_<domain>/custom/<doctype>.json` | Custom Fields / Property Setters ("Export Customizations" shape, `sync_on_migrate: 1`) |
+| `kaynes_<domain>/doctype/`, `report/`, `print_format/`, `workspace/` | `horizon_<domain>/doctype/`, `report/`, `print_format/`, `workspace/`, `number_card/`, `dashboard_chart/` | standard Frappe records of the domain |
+| `kaynes_<domain>/*.py`, `utils.py`, `api.py` | `horizon_<domain>/<domain>.py`, `tasks.py` | `doc_events` handlers, whitelisted methods, scheduler jobs of the domain |
+| `kaynes_<domain>/tests/` | `horizon_<domain>/tests/` (+ `doctype/*/test_*.py`, `report/*/test_*.py`) | tests next to the code |
+| `kaynes_setup/install.py` | `horizon_setup/install.py` | `after_install` / `after_migrate` |
+| `kaynes_core/` | `horizon_core/` | shared config, job wrapper, cross-domain jobs |
+| `overrides/`, `patches/` + `patches.txt`, `fixtures/`, `tests/`, `utils/`, `config/`, `public/`, `templates/`, `www/` | same | app-wide pieces |
 
 ```
 horizon_erp/
-  hooks.py                      doc_events, scheduler_events, doctype_js, jinja, fixtures,
-                                override_whitelisted_methods, after_install / after_migrate
-  modules.txt                   Horizon Quality | Horizon Integration | Horizon Operations | Horizon Finance
-  utils/__init__.py             Jinja helper implementations + get_setting()
-  utils/jinja_methods.py        re-exports the helpers; target of the `jinja` hook (every function
-                                in the module becomes a Jinja global in print formats / emails)
-  api/inventory.py              @frappe.whitelist get_inventory_snapshot (logs to Inventory API Log)
-  api/rate_limit.py             @rate_limited decorator (per API key / user, Redis backed)
-  client/inventory_sync_client.py  reference consumer of the API
-  setup/install.py              after_install / after_migrate -> roles, custom fields, workflows,
-                                print formats, notifications (idempotent)
-  setup/roles.py                HORIZON_ROLES, setup_roles()
-  setup/custom_fields.py        get_custom_fields(), setup_custom_fields()  (NOT fixtures)
-  setup/workflows.py            setup_workflows() - workflow definitions as code
-  setup/print_formats.py        setup_print_formats() - HTML in horizon_operations/print_format/
-  setup/notifications.py        setup_notifications()
-  setup/client_scripts.py       fallback installer as Client Script records (not needed with doctype_js)
-  setup/dashboards.py           number card sources + setup_dashboards() consistency check
-  setup/demo_data.py            setup_all(): company settings, masters, opening stock, users, CSV export
-  setup/demo_hr_finance.py      setup_hr_finance(): HR, payroll, projects, assets, budgets, bank
-  tasks/hourly.py daily.py monthly.py budget.py   scheduler entry points
-  public/js/*.js                form scripts (Quotation, Sales Order, Purchase Order, Delivery Note, Work Order)
-  templates/emails/             daily_summary.html, budget_report.html
+  hooks.py  modules.txt  patches.txt
+  api/                          legacy alias shims -> horizon_integrations.inventory_api (do not extend)
+  config/  www/                 Frappe app scaffolding (empty)
   data/*.csv                    exported demo masters (items, customers, suppliers, BOM lines, ...)
-  horizon_quality/              inspection.py, production_audit_hooks.py, doctype/, report/, workspace/
-  horizon_operations/           buying.py, selling.py, manufacturing.py, projects.py, scrap.py, config.py,
-                                doctype/, report/, workspace/, number_card/, dashboard_chart/, print_format/
-  horizon_integration/          doctype/inventory_api_log, report/api_usage_report
-  horizon_finance/              doctype/budget_override_request, bank_reconciliation_sign_off, report/, number_card/
-  patches/ + patches.txt        data / schema patches
+  fixtures/*.json               bench export-fixtures: roles, custom docperm, workflows, workflow
+                                states / actions, print formats, notifications, workspaces,
+                                number cards, dashboard charts (no Custom Field / Property Setter)
+  overrides/                    override_doctype_class targets (none yet)
+  patches/v1_0/restructure_modules.py   re-homes records from the four pre-restructure modules
+  public/js/*.js                doctype_js form scripts (Quotation, Sales Order, Purchase Order,
+                                Delivery Note, Work Order)
+  templates/emails/             daily_summary.html, budget_report.html
+  tests/                        cleanup.py (residue purge), test_tasks.py (all scheduler jobs, print
+                                formats, notifications), test_module_structure.py (layout guard)
+  utils/                        Jinja helpers + get_setting(); jinja_methods.py is the jinja hook
+  horizon_setup/                install.py, roles.py, custom_fields.py (sync wrapper), demo_data.py,
+                                demo_hr_finance.py, print_formats.py, notifications.py,
+                                client_scripts.py, dashboards.py (custom number card sources), tests/
+  horizon_core/                 config.py (thresholds, roles, warehouses), jobs.py (@horizon_job,
+                                notify_users, safe_sendmail), tasks.py (18:00 daily summary),
+                                tests/fixtures.py (shared test builders)
+  horizon_workflow/             workflows.py (5 workflows as code), custom/
+  horizon_buying/               buying.py (PO approval level, blacklist override), tasks.py (PO SLA
+                                reminders), custom/, doctype/ (supplier_exception_log,
+                                quarterly_purchase_plan[_item]), report/approval_audit_report,
+                                number_card/, dashboard_chart/, tests/
+  horizon_selling/              selling.py (discount governance, availability, DN / SI rules),
+                                custom/, report/ (order_status_report, price_list_comparison),
+                                print_format/horizon_sales_invoice, workspace/horizon_sales_pipeline,
+                                number_card/, dashboard_chart/, tests/
+  horizon_crm/                  number_card/ (open leads, leads > 14 days), dashboard_chart/
+  horizon_stock/                purchase_receipt.py (QC Hold routing / release), scrap.py,
+                                tasks.py (reorder + accuracy, reorder recompute), custom/item.json,
+                                report/ (inventory_obsolescence_analysis, forecast_vs_actual_demand),
+                                print_format/horizon_packing_slip_thermal, workspace/ (horizon_warehouse,
+                                horizon_inventory_health), number_card/, dashboard_chart/, tests/
+  horizon_manufacturing/        manufacturing.py (capacity check), custom/, report/
+                                (capacity_utilisation_and_sequence, bom_explosion_with_lead_time),
+                                workspace/horizon_production, number_card/, dashboard_chart/, tests/
+  horizon_quality_management/   inspection.py, production_audit_hooks.py, tasks.py (quality vs
+                                deadline), custom/, doctype/ (production_audit[_photo],
+                                shipment_decision), report/ (4), workspace/horizon_quality,
+                                number_card/, dashboard_chart/, tests/
+  horizon_projects/             projects.py (timesheet / milestone rules), custom/, report/project_profitability, tests/
+  horizon_hr/                   report/leave_balance_with_carry_forward_expiry
+  horizon_payroll/              report/salary_cost_analysis
+  horizon_accounts/             tasks.py (budget alerts, monthly budget report), budget.py, custom/,
+                                doctype/ (budget_override_request, bank_reconciliation_sign_off),
+                                report/ (4), workspace/horizon_approvals, number_card/
+  horizon_assets/               report/asset_register_with_maintenance
+  horizon_integrations/         inventory_api.py (get_inventory_snapshot), rate_limit.py,
+                                client/inventory_sync_client.py, doctype/inventory_api_log,
+                                report/api_usage_report, tests/
 docs/                           design documents (business rules, API contract, data model, test plan)
 ```
 
 ## Module map
 
-| Module | DocTypes | Hooks / code | Reports |
-| --- | --- | --- | --- |
-| Horizon Quality | Production Audit (+ Photo), Shipment Decision | `horizon_quality.inspection`, `horizon_quality.production_audit_hooks` | Audit Findings Dashboard, Quality Metrics (first-pass yield, rework cost %, defect reasons, 4 h inspection SLA), Quality vs Deadline Conflicts, Supplier Quality Scorecard |
-| Horizon Operations | Supplier Exception Log, Quarterly Purchase Plan (+ Item) | `horizon_operations.buying / selling / manufacturing / projects / scrap`, `public/js/*.js` | Approval Audit, BOM Explosion with Lead Time, Capacity Utilisation and Sequence, Forecast vs Actual Demand, Inventory Obsolescence Analysis, Order Status, Price List Comparison, Project Profitability |
-| Horizon Integration | Inventory API Log | `api.inventory`, `api.rate_limit`, `client.inventory_sync_client` | API Usage Report |
-| Horizon Finance | Budget Override Request, Bank Reconciliation Sign-off | `tasks.daily.budget_threshold_alerts`, `tasks.budget`, `tasks.monthly.send_budget_report` (budget vs actual with the year-end run-rate forecast: YTD actual / months elapsed x 12, variance to annual budget, rows forecast > budget + 10 % flagged red) | Asset Register with Maintenance, Bank Unmatched Aging, Cost Center-wise P&L, Data Validation, Leave Balance with Carry Forward Expiry, Net Party Position, Salary Cost Analysis |
+| Module | DocTypes | Hooks / code | Reports | Workspace |
+| --- | --- | --- | --- | --- |
+| Horizon Setup | - | `horizon_setup.install`, `roles`, `custom_fields`, `demo_data`, `demo_hr_finance`, `print_formats`, `notifications`, `dashboards` | - | - |
+| Horizon Core | - | `horizon_core.config`, `horizon_core.jobs`, `horizon_core.tasks.send_daily_summary` | - | - |
+| Horizon Workflow | - | `horizon_workflow.workflows.setup_workflows` | - | - |
+| Horizon Buying | Supplier Exception Log, Quarterly Purchase Plan (+ Item) | `horizon_buying.buying`, `horizon_buying.tasks.po_approval_reminders`, `public/js/purchase_order.js` | Approval Audit | - |
+| Horizon Selling | - | `horizon_selling.selling`, `public/js/{quotation,sales_order,delivery_note}.js` | Order Status, Price List Comparison | Horizon Sales Pipeline |
+| Horizon CRM | - | lead / opportunity cards and charts | - | (cards on Sales Pipeline) |
+| Horizon Stock | - | `horizon_stock.purchase_receipt`, `horizon_stock.scrap`, `horizon_stock.tasks` | Forecast vs Actual Demand, Inventory Obsolescence Analysis | Horizon Warehouse, Horizon Inventory Health |
+| Horizon Manufacturing | - | `horizon_manufacturing.manufacturing`, `public/js/work_order.js` | BOM Explosion with Lead Time, Capacity Utilisation and Sequence | Horizon Production |
+| Horizon Quality Management | Production Audit (+ Photo), Shipment Decision | `horizon_quality_management.inspection`, `production_audit_hooks`, `tasks.detect_quality_deadline_conflicts` | Audit Findings Dashboard, Quality Metrics, Quality vs Deadline Conflicts, Supplier Quality Scorecard | Horizon Quality |
+| Horizon Projects | - | `horizon_projects.projects` | Project Profitability | - |
+| Horizon HR | - | - | Leave Balance with Carry-forward Expiry | - |
+| Horizon Payroll | - | - | Salary Cost Analysis | - |
+| Horizon Accounts | Budget Override Request, Bank Reconciliation Sign-off | `horizon_accounts.tasks` (budget alerts, monthly budget report with year-end run-rate forecast), `horizon_accounts.budget` | Bank Unmatched Aging, Cost Center-wise P&L, Data Validation, Net Party Position | Horizon Approvals (Finance Director's queue) |
+| Horizon Assets | - | - | Asset Register with Maintenance | - |
+| Horizon Integrations | Inventory API Log | `horizon_integrations.inventory_api`, `rate_limit`, `client.inventory_sync_client` | API Usage Report | - |
 
 Shared helpers: `utils/` (Jinja globals `horizon_customer_outstanding`, `horizon_similar_items_in_stock`,
 `horizon_due_date`, `horizon_company_gst`, `horizon_dn_row_serials`, `horizon_pan_from_gstin`).
 
 ## Conventions
 
-- Custom Fields on standard DocTypes are defined in `setup/custom_fields.py` and applied on
-  install / migrate. Do not export them as fixtures.
-- Workflows, Workflow States, Workflow Action Masters, Print Formats, Notifications, Workspaces,
-  Number Cards and Dashboard Charts are fixtures. Prefix names with `Horizon` and add new
-  Workflow States / Actions to the name lists in `hooks.py` before `bench export-fixtures`.
-  Workflows / print formats / notifications are *also* created in code (`setup/*.py`) so a fresh
-  site is complete right after `install-app`.
+- New code goes into the module of its ERPNext domain (`horizon_<domain>/`), never into a
+  catch-all package. Scheduler jobs go into that module's `tasks.py`, decorated with
+  `horizon_core.jobs.horizon_job`, and are registered in `hooks.py` `scheduler_events`.
+- Custom Fields on standard DocTypes live in `horizon_<domain>/custom/<doctype>.json` (Frappe
+  Export Customizations shape, `sync_on_migrate: 1`, `custom_perms` always empty, `module` set to the
+  folder's module). `bench migrate` syncs them; `install-app` syncs them in `after_install`. Do not
+  export them as fixtures.
+- Workflows, Workflow States, Workflow Action Masters, Roles, Custom DocPerm, Print Formats,
+  Notifications, Workspaces, Number Cards and Dashboard Charts are fixtures
+  (`bench --site horizon.local export-fixtures --app horizon_erp`). Prefix names with `Horizon` and
+  add new Workflow States / Actions to the name lists in `hooks.py` before exporting.
+  Workflows / print formats / notifications are *also* created in code (`horizon_workflow/`,
+  `horizon_setup/`) so a fresh site is complete right after `install-app`.
 - Selling Settings `so_required` / `dn_required` are kept at `No`: ERPNext's all-or-nothing check
   would block the audited Finance Director bypass and reject service / milestone invoices. The
   "Delivery Note before Invoice" rule for stock items is enforced by
-  `horizon_operations.selling.validate_sales_invoice`. Buying Settings `po_required` /
+  `horizon_selling.selling.validate_sales_invoice`. Buying Settings `po_required` /
   `pr_required` stay `Yes`.
 - Roles: Department Head, Procurement Manager, Finance Director, Operations Head, Sales Manager,
-  Warehouse Manager, Quality Inspector, HR Manager (`setup/roles.py`).
+  Warehouse Manager, Quality Inspector, HR Manager (`horizon_setup/roles.py`).
 - Style: tabs, double quotes, line length 110, ruff-sorted imports (`pre-commit run --all-files`).
 
 ## License

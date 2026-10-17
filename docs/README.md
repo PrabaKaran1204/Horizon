@@ -8,7 +8,7 @@ ERPNext 15.94, HRMS 15.55, India Compliance 15.25; site `horizon.local`; custom 
 | File | Content | Read it if you want to know |
 | --- | --- | --- |
 | [01_configuration_design.md](01_configuration_design.md) | Company / branch / warehouse structure, CoA and cost-centre design with two worked cost flows, permission model, Mermaid workflows (Purchasing, Manufacturing, Projects), requirement matrix with Standard / Configuration / Custom code / Designed only for every numbered requirement | What was built, how, and where in the code |
-| [02_decision_log.md](02_decision_log.md) | 12 ADRs: company structure, GRN = Purchase Receipt, extend standard DocTypes, MTO/MTS trigger, mandatory Branch dimension, Party Link, custom rate limiter, fixed window, Moving Average, inter-branch transfer at cost with IGST, impeller BOM per 5, 14:01 shift | Why each architectural choice was made and what it costs |
+| [02_decision_log.md](02_decision_log.md) | 15 ADRs: company structure, GRN = Purchase Receipt, extend standard DocTypes, MTO/MTS trigger, mandatory Branch dimension, Party Link, custom rate limiter, fixed window, Moving Average, inter-branch transfer at cost with IGST, impeller BOM per 5, 14:01 shift, employee permissions, price lock at SO, domain modules mirroring kaynes | Why each architectural choice was made and what it costs |
 | [03_strategic_challenges.md](03_strategic_challenges.md) | Four one-page memos: multi-company vs cost centre, ABC Corp customer-supplier overlap, quality vs deadline (Shipment Decision, report, KPI, Ind AS 115 caution), data migration clean-up | How the four strategic challenges are handled |
 | [04_requirements_challenged.md](04_requirements_challenged.md) | 13 requirements that were questioned, why, and the alternative built | Where the brief and good practice diverge |
 | [05_test_plan_and_evidence.md](05_test_plan_and_evidence.md) | 60 test scenarios across purchasing, quality, selling, manufacturing, API, jobs, permissions, HR, finance; evidence column for the test run | How to verify the critical flows |
@@ -16,10 +16,13 @@ ERPNext 15.94, HRMS 15.55, India Compliance 15.25; site `horizon.local`; custom 
 | [api.md](api.md) | Inventory Sync API contract, rate limiting, logging, retry client, curl examples | How to integrate |
 
 Code entry points: `horizon_erp/hooks.py` (doc_events, scheduler_events, fixtures),
-`horizon_erp/setup/` (configuration as code), `horizon_erp/horizon_operations/` (buying, selling,
-manufacturing, projects, config), `horizon_erp/horizon_quality/` (inspection, production audit,
-shipment decision), `horizon_erp/api/` (inventory API, rate limiter), `horizon_erp/tasks/`
-(hourly / daily / monthly jobs), `horizon_erp/*/report/` (19 script reports + the API Usage Report = 20;
+`horizon_erp/horizon_setup/` (install, roles, demo data, print formats, notifications, dashboards),
+`horizon_erp/horizon_<domain>/` (one module per ERPNext domain like the kaynes app: buying, selling,
+crm, stock, manufacturing, quality_management, projects, hr, payroll, accounts, assets, integrations,
+workflow - each with `custom/` Custom Field JSON, doctypes, reports, workspaces and its scheduler
+jobs in `tasks.py`), `horizon_erp/horizon_core/` (config, `@horizon_job`, daily summary),
+`horizon_erp/horizon_integrations/` (inventory API, rate limiter, sync client; legacy
+`horizon_erp/api/` alias shims), `horizon_erp/*/report/` (19 script reports + the API Usage Report = 20;
 6 workspaces: Horizon Quality, Warehouse, Approvals, Inventory Health, Sales Pipeline, Production).
 
 ## 12-minute presentation outline
@@ -57,7 +60,7 @@ customers, never in a public JSON), stock quantities banded for guests, rate lim
 API keys never issued to browsers (session auth only), credit-limit and blacklist checks remain
 server-side, and GSTIN capture on the portal address form validated by India Compliance.
 Implementation sketch: enable Webshop, publish items, configure Webshop Settings, add the stock
-endpoint next to `api/inventory.py`, add the quote-from-cart button as a portal page, UAT with two
+endpoint next to `horizon_integrations/inventory_api.py`, add the quote-from-cart button as a portal page, UAT with two
 customer users (Premium, Standard).
 
 ### BI and profitability dashboard
