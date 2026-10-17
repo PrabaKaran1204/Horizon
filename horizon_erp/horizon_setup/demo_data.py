@@ -96,6 +96,10 @@ COMPANY_ADDRESSES = [
 		"pincode": "400093",
 		"gstin": "27AABCU9602H1Z9",
 		"branch": "Mumbai HQ",
+		# Registered office + factory: the default company address (and company GSTIN) on every
+		# transaction. Without a primary flag ERPNext picks either address by row order, so a
+		# quotation could show the Delhi GSTIN. Delhi dispatches select the Delhi address.
+		"primary": 1,
 	},
 	{
 		"address_title": "Horizon DC Delhi",
@@ -1337,6 +1341,8 @@ def setup_addresses():
 					"gstin": row["gstin"],
 					"gst_category": "Registered Regular",
 					"is_your_company_address": 1,
+					"is_primary_address": row.get("primary", 0),
+					"is_shipping_address": row.get("primary", 0),
 				},
 				[{"link_doctype": "Company", "link_name": COMPANY}],
 			)
