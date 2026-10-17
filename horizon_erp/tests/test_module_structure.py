@@ -13,6 +13,7 @@ import os
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from horizon_erp.horizon_setup.custom_fields import get_customization_files
 from horizon_erp.horizon_setup.print_formats import PRINT_FORMATS, get_template_path
 from horizon_erp.patches.v1_0 import restructure_modules
 from horizon_erp.tests.cleanup import purge_test_residue
@@ -59,6 +60,32 @@ class TestModuleStructure(FrappeTestCase):
 			if isinstance(data, dict) and data.get("module"):
 				folder = os.path.relpath(path, app_root()).split(os.sep)[0]
 				self.assertEqual(frappe.scrub(data["module"]), folder, path)
+
+	def test_custom_json_shape_and_sync(self):
+		files = get_customization_files()
+		self.assertTrue(files)
+		for path in files:
+			with open(path, encoding="utf-8") as f:
+				data = json.load(f)
+			folder_module = os.path.relpath(path, app_root()).split(os.sep)[0]
+			self.assertEqual(
+				sorted(data),
+				["custom_fields", "custom_perms", "doctype", "links", "property_setters", "sync_on_migrate"],
+				path,
+			)
+			self.assertEqual(data["sync_on_migrate"], 1, path)
+			# custom_perms would replace every Custom DocPerm of the DocType on sync: never ship any
+			self.assertEqual(data["custom_perms"], [], path)
+			self.assertEqual(os.path.basename(path), frappe.scrub(data["doctype"]) + ".json")
+			for field in data["custom_fields"]:
+				self.assertEqual(field["dt"], data["doctype"], path)
+				self.assertEqual(frappe.scrub(field["module"]), folder_module, field["name"])
+				self.assertEqual(
+					frappe.db.get_value("Custom Field", field["name"], "module"),
+					field["module"],
+					field["name"],
+				)
+				self.assertTrue(frappe.get_meta(data["doctype"]).has_field(field["fieldname"]), field["name"])
 
 	def test_print_format_templates_resolve_from_module(self):
 		for spec in PRINT_FORMATS:

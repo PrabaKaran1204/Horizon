@@ -99,7 +99,8 @@ def shipped_records():
 
 
 def setup_records():
-	"""Print Formats and Notifications created from code."""
+	"""Print Formats, Notifications and Custom Fields created from code / custom JSON."""
+	from horizon_erp.horizon_setup.custom_fields import get_customization_files
 	from horizon_erp.horizon_setup.notifications import get_notifications
 	from horizon_erp.horizon_setup.print_formats import PRINT_FORMATS
 
@@ -108,6 +109,13 @@ def setup_records():
 	for spec in get_notifications():
 		if spec.get("module"):
 			yield "Notification", spec["name"], spec["module"]
+	for path in get_customization_files():
+		with open(path, encoding="utf-8") as f:
+			data = json.load(f)
+		for field in data.get("custom_fields") or []:
+			yield "Custom Field", field["name"], field["module"]
+		for ps in data.get("property_setters") or []:
+			yield "Property Setter", ps["name"], ps["module"]
 
 
 def set_module(doctype, name, module):

@@ -13,11 +13,13 @@ required_apps = ["erpnext"]
 # modules.txt - horizon_setup, horizon_core, horizon_buying, horizon_selling, horizon_crm,
 # horizon_stock, horizon_manufacturing, horizon_quality_management, horizon_projects, horizon_hr,
 # horizon_payroll, horizon_accounts, horizon_assets, horizon_integrations, horizon_workflow.
-# Each module keeps its own doctype/, report/, workspace/,
+# Each module keeps its own custom/ (Custom Fields as JSON), doctype/, report/, workspace/,
 # number_card/, dashboard_chart/, print_format/, tests/ and domain hook modules.
 
 # Installation / Migration
 # ------------------------
+# install.py syncs <module>/custom/*.json first (Frappe only syncs them *after* after_install on a
+# fresh site), then roles, role permissions, workflows, print formats and notifications.
 after_install = "horizon_erp.horizon_setup.install.after_install"
 after_migrate = "horizon_erp.horizon_setup.install.after_migrate"
 
@@ -120,9 +122,9 @@ scheduler_events = {
 
 # Fixtures
 # --------
-# Custom Fields are NOT fixtures: they are created in code by
-# horizon_erp.horizon_setup.custom_fields.setup_custom_fields (after_install / after_migrate).
-# Workflow State and Workflow Action Master are shared DocTypes,
+# Custom Fields and Property Setters are NOT fixtures: they are Frappe "Export Customizations"
+# files in <module>/custom/<doctype>.json (sync_on_migrate = 1), synced by bench migrate and by
+# horizon_setup.install on install. Workflow State and Workflow Action Master are shared DocTypes,
 # so they are filtered by explicit name lists; add every new Horizon state / action to these lists.
 horizon_roles = [
 	"Department Head",
@@ -206,7 +208,6 @@ fixtures = [
 	{"dt": "Workflow", "filters": [["name", "in", horizon_workflows]]},
 	{"dt": "Workflow State", "filters": [["name", "in", horizon_workflow_states]]},
 	{"dt": "Workflow Action Master", "filters": [["name", "in", horizon_workflow_actions]]},
-	{"dt": "Property Setter", "filters": [["module", "like", "Horizon%"]]},
 	# Print formats and notifications (source of truth: horizon_setup/print_formats.py, notifications.py)
 	{"dt": "Print Format", "filters": [["name", "like", "Horizon%"]]},
 	{"dt": "Notification", "filters": [["name", "like", "Horizon%"]]},

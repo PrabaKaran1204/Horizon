@@ -15,19 +15,23 @@ from horizon_erp.horizon_setup.roles import setup_role_permissions, setup_roles
 
 
 def after_install():
-	"""Run once when the app is installed on a site. Failures abort the install."""
-	_run_setup(raise_on_error=True)
+	"""Run once when the app is installed on a site. Failures abort the install.
+
+	Frappe syncs ``<module>/custom/*.json`` only *after* ``after_install`` on install-app, so the
+	custom fields are synced here first (workflows / notifications reference them)."""
+	_run_setup(raise_on_error=True, sync_custom_fields=True)
 
 
 def after_migrate():
-	"""Run after every ``bench migrate`` to keep roles, custom fields, workflows, print formats
-	and notifications in sync. Failures are logged (Error Log) but do not abort the migration."""
-	_run_setup(raise_on_error=False)
+	"""Run after every ``bench migrate`` to keep roles, workflows, print formats and notifications in
+	sync. Custom fields are already synced by ``bench migrate`` itself (``sync_customizations`` runs
+	before ``after_migrate``). Failures are logged (Error Log) but do not abort the migration."""
+	_run_setup(raise_on_error=False, sync_custom_fields=False)
 
 
-def _run_setup(raise_on_error):
+def _run_setup(raise_on_error, sync_custom_fields):
 	# Roles and Custom Fields first: workflows and notifications reference both.
-	_run("roles and custom fields", _setup_roles_and_fields, raise_on_error)
+	_run("roles and custom fields", lambda: _setup_roles_and_fields(sync_custom_fields), raise_on_error)
 	_run("workflows", _setup_workflows, raise_on_error)
 	_run("print formats", _setup_print_formats, raise_on_error)
 	_run("notifications", _setup_notifications, raise_on_error)
@@ -42,9 +46,10 @@ def _run(label, fn, raise_on_error):
 			raise
 
 
-def _setup_roles_and_fields():
+def _setup_roles_and_fields(sync_custom_fields):
 	setup_roles()
-	setup_custom_fields()
+	if sync_custom_fields:
+		setup_custom_fields()
 	setup_role_permissions()
 
 

@@ -1,0 +1,92 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "ok-sign",
+  "modified": "2026-10-16 13:08:18.564173",
+  "name": "Approved",
+  "style": "Success",
+  "workflow_state_name": "Approved"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "remove",
+  "modified": "2026-10-16 13:08:18.566587",
+  "name": "Rejected",
+  "style": "Danger",
+  "workflow_state_name": "Rejected"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-10-16 13:39:46.726897",
+  "name": "Action Closed",
+  "style": "Success",
+  "workflow_state_name": "Action Closed"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-10-16 13:39:46.863253",
+  "name": "Draft",
+  "style": "",
+  "workflow_state_name": "Draft"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-10-16 13:39:46.866173",
+  "name": "Pending Dept Head",
+  "style": "Warning",
+  "workflow_state_name": "Pending Dept Head"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-10-16 13:39:46.871143",
+  "name": "Pending Discount Approval",
+  "style": "Warning",
+  "workflow_state_name": "Pending Discount Approval"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-10-16 13:39:46.873850",
+  "name": "Pending Finance Director",
+  "style": "Warning",
+  "workflow_state_name": "Pending Finance Director"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-10-16 13:39:46.876820",
+  "name": "Pending Procurement Manager",
+  "style": "Warning",
+  "workflow_state_name": "Pending Procurement Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-10-16 13:39:46.879500",
+  "name": "Reviewed",
+  "style": "Info",
+  "workflow_state_name": "Reviewed"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-10-16 13:39:46.881666",
+  "name": "Submitted",
+  "style": "Primary",
+  "workflow_state_name": "Submitted"
+ }
+]
