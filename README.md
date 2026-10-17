@@ -10,7 +10,8 @@ any bench: 7 custom DocTypes (Production Audit, Shipment Decision, Supplier Exce
 Quarterly Purchase Plan, Inventory API Log, Budget Override Request, Bank Reconciliation Sign-off,
 plus two child tables), 4 approval workflows (PO approval, discount approval for Quotation and
 Sales Order, production audit review, payment approval - 5 Workflow records), 19 tested Script
-Reports (+ the API Usage Report = 20), 6 workspaces backed by 22 number cards and 8 dashboard charts,
+Reports (+ the API Usage Report = 20), 11 workspaces (a *Horizon ERP* home + one per assignment section) backed by 23 number cards and
+7 dashboard charts (1 custom chart source),
 2 Jinja print formats, 4 notifications, 7 scheduler jobs, 1 REST API
 (`get_inventory_snapshot`, rate limited and logged) and 5 form client scripts loaded through
 `doctype_js`. Business rules (PO approval limits, blacklisted suppliers, discount caps, Delivery
@@ -123,9 +124,11 @@ horizon_erp/
   data/*.csv                    exported demo masters (items, customers, suppliers, BOM lines, ...)
   fixtures/*.json               bench export-fixtures: roles, custom docperm, workflows, workflow
                                 states / actions, print formats, notifications, workspaces,
-                                number cards, dashboard charts (no Custom Field / Property Setter)
+                                number cards (no Custom Field / Property Setter; Dashboard Charts
+                                ship only as module JSON, see ADR-16)
   overrides/                    override_doctype_class targets (none yet)
   patches/v1_0/restructure_modules.py   re-homes records from the four pre-restructure modules
+  patches/v1_0/redesign_workspaces.py   deletes the workspaces / chart replaced by ADR-16
   public/js/*.js                doctype_js form scripts (Quotation, Sales Order, Purchase Order,
                                 Delivery Note, Work Order)
   templates/emails/             daily_summary.html, budget_report.html
@@ -145,17 +148,18 @@ horizon_erp/
                                 number_card/, dashboard_chart/, tests/
   horizon_selling/              selling.py (discount governance, availability, DN / SI rules),
                                 custom/, report/ (order_status_report, price_list_comparison),
-                                print_format/horizon_sales_invoice, workspace/horizon_sales_pipeline,
+                                print_format/horizon_sales_invoice, workspace/horizon_selling,
                                 number_card/, dashboard_chart/, tests/
   horizon_crm/                  number_card/ (open leads, leads > 14 days), dashboard_chart/
   horizon_stock/                purchase_receipt.py (QC Hold routing / release), scrap.py,
                                 tasks.py (reorder + accuracy, reorder recompute), custom/item.json,
                                 report/ (inventory_obsolescence_analysis, forecast_vs_actual_demand),
-                                print_format/horizon_packing_slip_thermal, workspace/ (horizon_warehouse,
-                                horizon_inventory_health), number_card/, dashboard_chart/, tests/
+                                print_format/horizon_packing_slip_thermal, workspace/horizon_inventory,
+                                number_card/, dashboard_chart/, dashboard_chart_source/
+                                (stock value by warehouse), tests/
   horizon_manufacturing/        manufacturing.py (capacity check), custom/, report/
                                 (capacity_utilisation_and_sequence, bom_explosion_with_lead_time),
-                                workspace/horizon_production, number_card/, dashboard_chart/, tests/
+                                workspace/horizon_manufacturing, number_card/, dashboard_chart/, tests/
   horizon_quality_management/   inspection.py, production_audit_hooks.py, tasks.py (quality vs
                                 deadline), custom/, doctype/ (production_audit[_photo],
                                 shipment_decision), report/ (4), workspace/horizon_quality,
@@ -165,7 +169,7 @@ horizon_erp/
   horizon_payroll/              report/salary_cost_analysis
   horizon_accounts/             tasks.py (budget alerts, monthly budget report), budget.py, custom/,
                                 doctype/ (budget_override_request, bank_reconciliation_sign_off),
-                                report/ (4), workspace/horizon_approvals, number_card/
+                                report/ (4), workspace/horizon_accounts_&_finance, number_card/
   horizon_assets/               report/asset_register_with_maintenance
   horizon_integrations/         inventory_api.py (get_inventory_snapshot), rate_limit.py,
                                 client/inventory_sync_client.py, doctype/inventory_api_log,
@@ -177,24 +181,49 @@ docs/                           design documents (business rules, API contract, 
 
 | Module | DocTypes | Hooks / code | Reports | Workspace |
 | --- | --- | --- | --- | --- |
-| Horizon Setup | - | `horizon_setup.install`, `roles`, `custom_fields`, `demo_data`, `demo_hr_finance`, `print_formats`, `notifications`, `dashboards` | - | - |
-| Horizon Core | - | `horizon_core.config`, `horizon_core.jobs`, `horizon_core.tasks.send_daily_summary` | - | - |
+| Horizon Setup | - | `horizon_setup.install`, `roles`, `custom_fields`, `demo_data`, `demo_hr_finance`, `print_formats`, `notifications`, `dashboards` | - | Horizon Setup & Masters |
+| Horizon Core | - | `horizon_core.config`, `horizon_core.jobs`, `horizon_core.tasks.send_daily_summary` | - | Horizon ERP (home, parent of all) |
 | Horizon Workflow | - | `horizon_workflow.workflows.setup_workflows` | - | - |
-| Horizon Buying | Supplier Exception Log, Quarterly Purchase Plan (+ Item) | `horizon_buying.buying`, `horizon_buying.tasks.po_approval_reminders`, `public/js/purchase_order.js` | Approval Audit | - |
-| Horizon Selling | - | `horizon_selling.selling`, `public/js/{quotation,sales_order,delivery_note}.js` | Order Status, Price List Comparison | Horizon Sales Pipeline |
-| Horizon CRM | - | lead / opportunity cards and charts | - | (cards on Sales Pipeline) |
-| Horizon Stock | - | `horizon_stock.purchase_receipt`, `horizon_stock.scrap`, `horizon_stock.tasks` | Forecast vs Actual Demand, Inventory Obsolescence Analysis | Horizon Warehouse, Horizon Inventory Health |
-| Horizon Manufacturing | - | `horizon_manufacturing.manufacturing`, `public/js/work_order.js` | BOM Explosion with Lead Time, Capacity Utilisation and Sequence | Horizon Production |
+| Horizon Buying | Supplier Exception Log, Quarterly Purchase Plan (+ Item) | `horizon_buying.buying`, `horizon_buying.tasks.po_approval_reminders`, `public/js/purchase_order.js` | Approval Audit | Horizon Buying |
+| Horizon Selling | - | `horizon_selling.selling`, `public/js/{quotation,sales_order,delivery_note}.js` | Order Status, Price List Comparison | Horizon Selling |
+| Horizon CRM | - | lead / opportunity cards and charts | - | (cards on Horizon Selling) |
+| Horizon Stock | - | `horizon_stock.purchase_receipt`, `horizon_stock.scrap`, `horizon_stock.tasks` | Forecast vs Actual Demand, Inventory Obsolescence Analysis | Horizon Inventory |
+| Horizon Manufacturing | - | `horizon_manufacturing.manufacturing`, `public/js/work_order.js` | BOM Explosion with Lead Time, Capacity Utilisation and Sequence | Horizon Manufacturing |
 | Horizon Quality Management | Production Audit (+ Photo), Shipment Decision | `horizon_quality_management.inspection`, `production_audit_hooks`, `tasks.detect_quality_deadline_conflicts` | Audit Findings Dashboard, Quality Metrics, Quality vs Deadline Conflicts, Supplier Quality Scorecard | Horizon Quality |
-| Horizon Projects | - | `horizon_projects.projects` | Project Profitability | - |
-| Horizon HR | - | - | Leave Balance with Carry-forward Expiry | - |
+| Horizon Projects | - | `horizon_projects.projects` | Project Profitability | Horizon Projects & Assets |
+| Horizon HR | - | - | Leave Balance with Carry-forward Expiry | Horizon HR & Payroll |
 | Horizon Payroll | - | - | Salary Cost Analysis | - |
-| Horizon Accounts | Budget Override Request, Bank Reconciliation Sign-off | `horizon_accounts.tasks` (budget alerts, monthly budget report with year-end run-rate forecast), `horizon_accounts.budget` | Bank Unmatched Aging, Cost Center-wise P&L, Data Validation, Net Party Position | Horizon Approvals (Finance Director's queue) |
+| Horizon Accounts | Budget Override Request, Bank Reconciliation Sign-off | `horizon_accounts.tasks` (budget alerts, monthly budget report with year-end run-rate forecast), `horizon_accounts.budget` | Bank Unmatched Aging, Cost Center-wise P&L, Data Validation, Net Party Position | Horizon Accounts & Finance (Finance Director's queue) |
 | Horizon Assets | - | - | Asset Register with Maintenance | - |
-| Horizon Integrations | Inventory API Log | `horizon_integrations.inventory_api`, `rate_limit`, `client.inventory_sync_client` | API Usage Report | - |
+| Horizon Integrations | Inventory API Log | `horizon_integrations.inventory_api`, `rate_limit`, `client.inventory_sync_client` | API Usage Report | Horizon Integrations |
 
 Shared helpers: `utils/` (Jinja globals `horizon_customer_outstanding`, `horizon_similar_items_in_stock`,
 `horizon_due_date`, `horizon_company_gst`, `horizon_dn_row_serials`, `horizon_pan_from_gstin`).
+
+## Workspaces
+
+The desk sidebar starts with **Horizon ERP** (`/app/horizon-erp`): headline KPIs, a link to every
+module workspace and the three demo flows with their document names. Its ten children follow the
+assignment sections in order, each with a one-paragraph scope, the process flow, KPIs, shortcuts in
+process order and Transactions / Masters / Reports cards (ADR-16):
+
+| # | Workspace | Module | Route |
+| --- | --- | --- | --- |
+| 0 | Horizon ERP | Horizon Core | `/app/horizon-erp` |
+| 1 | Horizon Setup & Masters | Horizon Setup | `/app/horizon-setup-&-masters` |
+| 2 | Horizon Selling | Horizon Selling | `/app/horizon-selling` |
+| 3 | Horizon Buying | Horizon Buying | `/app/horizon-buying` |
+| 4 | Horizon Inventory | Horizon Stock | `/app/horizon-inventory` |
+| 5 | Horizon Manufacturing | Horizon Manufacturing | `/app/horizon-manufacturing` |
+| 6 | Horizon Quality | Horizon Quality Management | `/app/horizon-quality` |
+| 7 | Horizon Projects & Assets | Horizon Projects | `/app/horizon-projects-&-assets` |
+| 8 | Horizon HR & Payroll | Horizon HR | `/app/horizon-hr-&-payroll` |
+| 9 | Horizon Accounts & Finance | Horizon Accounts | `/app/horizon-accounts-&-finance` |
+| 10 | Horizon Integrations | Horizon Integrations | `/app/horizon-integrations` |
+
+`bench --site horizon.local execute horizon_erp.horizon_setup.dashboards.setup_dashboards` checks
+icons, parents, every referenced card / chart / DocType / Report / Page / child-workspace URL and
+that every content block resolves (the desk matches blocks by the child row *label*).
 
 ## Conventions
 
@@ -206,8 +235,9 @@ Shared helpers: `utils/` (Jinja globals `horizon_customer_outstanding`, `horizon
   folder's module). `bench migrate` syncs them; `install-app` syncs them in `after_install`. Do not
   export them as fixtures.
 - Workflows, Workflow States, Workflow Action Masters, Roles, Custom DocPerm, Print Formats,
-  Notifications, Workspaces, Number Cards and Dashboard Charts are fixtures
-  (`bench --site horizon.local export-fixtures --app horizon_erp`). Prefix names with `Horizon` and
+  Notifications, Workspaces and Number Cards are fixtures
+  (`bench --site horizon.local export-fixtures --app horizon_erp`). Dashboard Charts are module JSON
+  only (fixture import would validate them and fail without developer mode). Prefix names with `Horizon` and
   add new Workflow States / Actions to the name lists in `hooks.py` before exporting.
   Workflows / print formats / notifications are *also* created in code (`horizon_workflow/`,
   `horizon_setup/`) so a fresh site is complete right after `install-app`.

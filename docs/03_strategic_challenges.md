@@ -38,7 +38,7 @@ electricity) carry cost centre and branch on every line and repeat monthly (Auto
 | Finance (Rajesh) | Is Delhi profitable? | Profit and Loss Statement, filter Branch = Delhi DC |
 | Finance | Department performance for bonus | Cost Center Wise P and L (monthly / YTD), Budget Variance Report |
 | Finance | Product-line margin | Cost Center Wise P and L on Mfg - Equipment / Spares / Components plus Sales - <line> accounts |
-| Operations (Priya) | Where is stock, what is short? | Horizon Inventory Health workspace, Stock Balance (all warehouses), Inventory API for Delhi |
+| Operations (Priya) | Where is stock, what is short? | Horizon Inventory workspace, Stock Balance (all warehouses), Inventory API for Delhi |
 | Operations | Can we make it by Friday? | Capacity Utilisation and Sequence, Quality vs Deadline Conflicts |
 | Delhi warehouse | My stock only | Same reports, restricted by User Permission on `Delhi DC - HML` |
 

@@ -23,7 +23,9 @@ workflow - each with `custom/` Custom Field JSON, doctypes, reports, workspaces 
 jobs in `tasks.py`), `horizon_erp/horizon_core/` (config, `@horizon_job`, daily summary),
 `horizon_erp/horizon_integrations/` (inventory API, rate limiter, sync client; legacy
 `horizon_erp/api/` alias shims), `horizon_erp/*/report/` (19 script reports + the API Usage Report = 20;
-6 workspaces: Horizon Quality, Warehouse, Approvals, Inventory Health, Sales Pipeline, Production).
+11 workspaces: the *Horizon ERP* home plus one child per assignment section - Setup & Masters,
+Selling, Buying, Inventory, Manufacturing, Quality, Projects & Assets, HR & Payroll, Accounts &
+Finance, Integrations; ADR-16).
 
 ## 12-minute presentation outline
 
@@ -31,10 +33,10 @@ jobs in `tasks.py`), `horizon_erp/horizon_core/` (config, `@horizon_job`, daily 
 | --- | --- | --- | --- |
 | 0-1 | Problem | Horizon's four tensions: location P&L vs one inventory; purchasing control vs a blacklisted sole supplier; quality vs Friday; spreadsheets vs statutory compliance | The brief is about forcing decisions, not hiding them |
 | 1-3 | Structure decision | Company tree, Branch dimension (mandatory for P&L), cost-centre tree with the 50/30/20 allocation, warehouse tree with QC Hold / Rejected / Transit | One company, two GSTINs, three dimensions; and why not two companies (ADR-1) |
-| 3-6 | Demo 1 - INR 7 L PO for ABC Supplies | As dept.head: blocked (blacklisted). As procure: Blacklist Override + reason -> Supplier Exception Log, Finance Director notified, Level 3 forced. Walk Pending Dept Head -> Procurement Manager -> Finance Director. Show *Horizon Approvals* workspace and Approval Audit Report; mention 24 h reminders / 48 h escalation | Legitimate exceptions are allowed, visible and audited |
+| 3-6 | Demo 1 - INR 7 L PO for ABC Supplies | As dept.head: blocked (blacklisted). As procure: Blacklist Override + reason -> Supplier Exception Log, Finance Director notified, Level 3 forced. Walk Pending Dept Head -> Procurement Manager -> Finance Director. Show the *Horizon Buying* workspace and Approval Audit Report; mention 24 h reminders / 48 h escalation | Legitimate exceptions are allowed, visible and audited |
 | 6-9 | Demo 2 - weld QC fail -> rework -> Shipment Decision | Quality Inspection on the weld Job Card with `qc_result = Rework` -> draft rework Work Order (`rework_of`). Production Audit score 65 -> photo mandatory, Operations Head alerted, Quality Action, Manufacture entry blocked. Delivery Note refused until a Shipment Decision; record *Ship Partial* with estimated costs; Delivery Note now links the decision. Open *Quality vs Deadline Conflicts* | The conflict becomes a documented business decision with a cost on each side |
 | 9-10 | Demo 3 - Inventory API | curl the snapshot for Delhi DC (criticality filter), show headers; loop to the 101st call -> 429 with `Retry-After`; open *Inventory API Log* and *API Usage Report* | Secure, rate-limited, logged, with a retrying client |
-| 10-11 | Standard / Configuration / Custom matrix | Section 5 of the configuration design: count per type, highlight the honest "Designed only" rows; show *Quality Metrics* (FPY, rework cost %, defect trend, inspection SLA), *Bank Unmatched Aging*, the budget forecast email and the *Horizon Production* workspace | Most value came from configuration; custom code is small, tested and sits behind hooks |
+| 10-11 | Standard / Configuration / Custom matrix | Section 5 of the configuration design: count per type, highlight the honest "Designed only" rows; show *Quality Metrics* (FPY, rework cost %, defect trend, inspection SLA), *Bank Unmatched Aging*, the budget forecast email and the *Horizon Manufacturing* workspace (open everything from the *Horizon ERP* home) | Most value came from configuration; custom code is small, tested and sits behind hooks |
 | 11-12 | Challenged requirements, risks, Phase 2 | GRN step, reversed MTO/MTS, invalid GSTIN, 12 % slab, GSTR-2, "Integration Log", invoice-before-ship. Risks: inter-branch GST document, payroll per branch. Phase 2: Quarterly Purchase Plan logic, Budget Override application, bank sign-off lock, units-of-production depreciation, portal, BI | A consultant's answer: what is live, what is designed, what needs the client's CA |
 
 ## Bonus designs (Designed only)

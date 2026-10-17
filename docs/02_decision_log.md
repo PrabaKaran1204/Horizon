@@ -355,8 +355,8 @@ carries its `module`); `horizon_setup.custom_fields.setup_custom_fields()` calls
 after `after_install`. Scheduler jobs sit in `<module>/tasks.py` (stock, buying,
 quality_management, accounts, core) with the shared `@horizon_job` wrapper in
 `horizon_core/jobs.py`. Purchase Receipt QC-hold hooks moved from buying to
-`horizon_stock/purchase_receipt.py` (kaynes keeps receipt logic in stock). The Approvals workspace
-lives in Horizon Accounts (it is the Finance Director's queue). Existing sites are migrated by
+`horizon_stock/purchase_receipt.py` (kaynes keeps receipt logic in stock). The Finance Director's
+queue workspace lives in Horizon Accounts (see ADR-16 for the current workspace set). Existing sites are migrated by
 `patches/v1_0/restructure_modules.py` (`[pre_model_sync]`). The public API keeps the short alias
 `get_inventory_snapshot` (now pointing at `horizon_erp.horizon_integrations.inventory_api`) and
 re-export shims at `horizon_erp.api.inventory` / `horizon_erp.api` so published URLs do not change.
@@ -366,5 +366,42 @@ re-exported from Customize Form into the right module; the module filter on desk
 meaningful. Costs: one-time migration patch, longer dotted paths, and the legacy `api/` shim
 package must stay until every integration uses the short alias. `tests/test_module_structure.py`
 guards module/file/DB agreement, hook paths and the API aliases.
+
+**Status.** Accepted.
+
+## ADR-16 Workspaces mirror the assignment sections
+
+**Context.** Six unrelated top-level workspaces (Horizon Quality, Warehouse, Approvals, Inventory
+Health, Sales Pipeline, Production) sat between the standard ones in the sidebar; one had no icon,
+card titles repeated a "HORIZON" prefix and truncated, the Stock Value by Warehouse bar chart cut
+its labels to "HQ ..." and a Stock Movement chart summed signed quantities into a meaningless spike.
+Nothing told a reviewer what each workspace was for or in which order to read them.
+
+**Options.** Polish the six; fold everything into the standard ERPNext workspaces; or one Horizon
+home with one child workspace per assignment section.
+
+**Decision.** One public parent *Horizon ERP* (Horizon Core, sequence 0.5 so it is first in the
+sidebar) and ten children (`parent_page = "Horizon ERP"`), in brief order: Setup & Masters, Selling,
+Buying, Inventory, Manufacturing, Quality, Projects & Assets, HR & Payroll, Accounts & Finance,
+Integrations. Every workspace has an icon from the desk sprite, a header, a paragraph naming the
+assignment section and docs/01 matrix IDs, the process flow line, its KPIs, shortcuts in process
+order and link cards grouped Transactions / Masters / Reports. The home carries the six headline
+KPIs, a URL shortcut to every child and the three demo flows with their document names. Number Card
+`label`s are short Title Case without the prefix (names stay `Horizon ...` for the fixture filter);
+at most two charts per workspace and only ones that draw something with the demo data. Stock Value
+by Warehouse became a `Custom` chart backed by the `Horizon Stock Value by Warehouse` Dashboard Chart
+Source (labels = `warehouse_name`, empty warehouses skipped, read through `frappe.get_list` so
+Warehouse User Permissions apply) shown full width; Stock Movement 90d was dropped; Audit Score Trend
+is a monthly bar (a line through empty days read as a drop to 0). `patches/v1_0/redesign_workspaces.py`
+(`[post_model_sync]`) deletes the five replaced workspaces and the dropped chart on existing sites.
+Dashboard Charts are no longer fixtures: fixture import validates and `DashboardChart.validate`
+rejects a standard chart whenever `developer_mode` is off (production, and any migrate that runs a
+patch); they ship only as module JSON, which `bench migrate` syncs without validation.
+
+**Consequences.** A reviewer can walk the implementation module by module from one page; each
+workspace explains itself. Costs: child titles keep the `Horizon` prefix (a workspace title must not
+clash with the standard *Selling*, *Buying*, ... routes), so the longest ones are truncated in the
+sidebar; the content blocks resolve cards / charts by the child-row *label* (desk
+`blocks/block.js`), which `setup_dashboards` and `test_dashboards` now check.
 
 **Status.** Accepted.
