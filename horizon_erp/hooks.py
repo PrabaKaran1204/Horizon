@@ -33,6 +33,7 @@ after_tests = ["horizon_erp.tests.cleanup.after_tests"]
 # -----------
 # Form scripts (public/js, built by ``bench build --app horizon_erp``)
 doctype_js = {
+	"Opportunity": "public/js/opportunity.js",
 	"Quotation": "public/js/quotation.js",
 	"Sales Order": "public/js/sales_order.js",
 	"Purchase Order": "public/js/purchase_order.js",
@@ -80,8 +81,15 @@ doc_events = {
 	"Stock Entry": {
 		"validate": "horizon_erp.horizon_quality_management.production_audit_hooks.validate_stock_entry"
 	},
+	# CRM: Customer created from the qualified Opportunity (ADR-17)
+	"Opportunity": {"validate": "horizon_erp.horizon_crm.opportunity.validate_opportunity"},
 	# Selling
-	"Quotation": {"validate": "horizon_erp.horizon_selling.selling.validate_discounts"},
+	"Quotation": {
+		# before_validate runs ahead of the controller's validate -> set_missing_values -> pricing
+		# rules, so a Lead quotation is moved to its Customer before Premium (Customer Group) pricing
+		"before_validate": "horizon_erp.horizon_crm.opportunity.switch_quotation_to_customer",
+		"validate": "horizon_erp.horizon_selling.selling.validate_discounts",
+	},
 	"Sales Order": {"validate": "horizon_erp.horizon_selling.selling.validate_discounts"},
 	# before_validate runs ahead of the ERPNext controller's validate (pricing engine, totals,
 	# "maintain same rate" check): rates of rows mapped from a Sales Order are locked there
