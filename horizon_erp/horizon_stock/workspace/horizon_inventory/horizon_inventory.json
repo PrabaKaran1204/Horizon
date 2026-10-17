@@ -240,7 +240,26 @@
  "public": 1,
  "quick_lists": [],
  "restrict_to_domain": "",
- "roles": [],
+ "roles": [
+  {
+   "role": "Warehouse Manager"
+  },
+  {
+   "role": "Stock Manager"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Operations Head"
+  },
+  {
+   "role": "Finance Director"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
  "sequence_id": 0.54,
  "shortcuts": [
   {

@@ -185,7 +185,38 @@
  "public": 1,
  "quick_lists": [],
  "restrict_to_domain": "",
- "roles": [],
+ "roles": [
+  {
+   "role": "Finance Director"
+  },
+  {
+   "role": "Operations Head"
+  },
+  {
+   "role": "Sales Manager"
+  },
+  {
+   "role": "Sales User"
+  },
+  {
+   "role": "HR Manager"
+  },
+  {
+   "role": "Warehouse Manager"
+  },
+  {
+   "role": "Department Head"
+  },
+  {
+   "role": "Procurement Manager"
+  },
+  {
+   "role": "Quality Inspector"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
  "sequence_id": 0.5,
  "shortcuts": [
   {

@@ -178,7 +178,26 @@
  "public": 1,
  "quick_lists": [],
  "restrict_to_domain": "",
- "roles": [],
+ "roles": [
+  {
+   "role": "Projects Manager"
+  },
+  {
+   "role": "Projects User"
+  },
+  {
+   "role": "Finance Director"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Operations Head"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
  "sequence_id": 0.57,
  "shortcuts": [
   {

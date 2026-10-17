@@ -414,7 +414,38 @@
   "public": 1,
   "quick_lists": [],
   "restrict_to_domain": "",
-  "roles": [],
+  "roles": [
+   {
+    "parent": "Horizon Accounts & Finance",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Finance Director"
+   },
+   {
+    "parent": "Horizon Accounts & Finance",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "Horizon Accounts & Finance",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Accounts User"
+   },
+   {
+    "parent": "Horizon Accounts & Finance",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Department Head"
+   },
+   {
+    "parent": "Horizon Accounts & Finance",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
   "sequence_id": 0.59,
   "shortcuts": [
    {
@@ -919,7 +950,38 @@
   "public": 1,
   "quick_lists": [],
   "restrict_to_domain": "",
-  "roles": [],
+  "roles": [
+   {
+    "parent": "Horizon Selling",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "Horizon Selling",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Sales User"
+   },
+   {
+    "parent": "Horizon Selling",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Finance Director"
+   },
+   {
+    "parent": "Horizon Selling",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Operations Head"
+   },
+   {
+    "parent": "Horizon Selling",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
   "sequence_id": 0.52,
   "shortcuts": [
    {
@@ -1381,7 +1443,44 @@
   "public": 1,
   "quick_lists": [],
   "restrict_to_domain": "",
-  "roles": [],
+  "roles": [
+   {
+    "parent": "Horizon Quality",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Quality Inspector"
+   },
+   {
+    "parent": "Horizon Quality",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Quality Manager"
+   },
+   {
+    "parent": "Horizon Quality",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Operations Head"
+   },
+   {
+    "parent": "Horizon Quality",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "Horizon Quality",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Finance Director"
+   },
+   {
+    "parent": "Horizon Quality",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
   "sequence_id": 0.56,
   "shortcuts": [
    {
@@ -1782,7 +1881,44 @@
   "public": 1,
   "quick_lists": [],
   "restrict_to_domain": "",
-  "roles": [],
+  "roles": [
+   {
+    "parent": "Horizon Projects & Assets",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Projects Manager"
+   },
+   {
+    "parent": "Horizon Projects & Assets",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Projects User"
+   },
+   {
+    "parent": "Horizon Projects & Assets",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Finance Director"
+   },
+   {
+    "parent": "Horizon Projects & Assets",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Accounts Manager"
+   },
+   {
+    "parent": "Horizon Projects & Assets",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Operations Head"
+   },
+   {
+    "parent": "Horizon Projects & Assets",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
   "sequence_id": 0.57,
   "shortcuts": [
    {
@@ -2248,7 +2384,38 @@
   "public": 1,
   "quick_lists": [],
   "restrict_to_domain": "",
-  "roles": [],
+  "roles": [
+   {
+    "parent": "Horizon Manufacturing",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Operations Head"
+   },
+   {
+    "parent": "Horizon Manufacturing",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Manufacturing Manager"
+   },
+   {
+    "parent": "Horizon Manufacturing",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Manufacturing User"
+   },
+   {
+    "parent": "Horizon Manufacturing",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Finance Director"
+   },
+   {
+    "parent": "Horizon Manufacturing",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
   "sequence_id": 0.55,
   "shortcuts": [
    {
@@ -2758,7 +2925,44 @@
   "public": 1,
   "quick_lists": [],
   "restrict_to_domain": "",
-  "roles": [],
+  "roles": [
+   {
+    "parent": "Horizon Inventory",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Warehouse Manager"
+   },
+   {
+    "parent": "Horizon Inventory",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Stock Manager"
+   },
+   {
+    "parent": "Horizon Inventory",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Stock User"
+   },
+   {
+    "parent": "Horizon Inventory",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Operations Head"
+   },
+   {
+    "parent": "Horizon Inventory",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Finance Director"
+   },
+   {
+    "parent": "Horizon Inventory",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
   "sequence_id": 0.54,
   "shortcuts": [
    {
@@ -3033,7 +3237,20 @@
   "public": 1,
   "quick_lists": [],
   "restrict_to_domain": "",
-  "roles": [],
+  "roles": [
+   {
+    "parent": "Horizon Integrations",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Finance Director"
+   },
+   {
+    "parent": "Horizon Integrations",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
   "sequence_id": 0.6,
   "shortcuts": [
    {
@@ -3436,7 +3653,32 @@
   "public": 1,
   "quick_lists": [],
   "restrict_to_domain": "",
-  "roles": [],
+  "roles": [
+   {
+    "parent": "Horizon HR & Payroll",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "HR Manager"
+   },
+   {
+    "parent": "Horizon HR & Payroll",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "HR User"
+   },
+   {
+    "parent": "Horizon HR & Payroll",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Finance Director"
+   },
+   {
+    "parent": "Horizon HR & Payroll",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
   "sequence_id": 0.58,
   "shortcuts": [
    {
@@ -3878,7 +4120,68 @@
   "public": 1,
   "quick_lists": [],
   "restrict_to_domain": "",
-  "roles": [],
+  "roles": [
+   {
+    "parent": "Horizon ERP",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Finance Director"
+   },
+   {
+    "parent": "Horizon ERP",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Operations Head"
+   },
+   {
+    "parent": "Horizon ERP",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Sales Manager"
+   },
+   {
+    "parent": "Horizon ERP",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Sales User"
+   },
+   {
+    "parent": "Horizon ERP",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "HR Manager"
+   },
+   {
+    "parent": "Horizon ERP",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Warehouse Manager"
+   },
+   {
+    "parent": "Horizon ERP",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Department Head"
+   },
+   {
+    "parent": "Horizon ERP",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Procurement Manager"
+   },
+   {
+    "parent": "Horizon ERP",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Quality Inspector"
+   },
+   {
+    "parent": "Horizon ERP",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
   "sequence_id": 0.5,
   "shortcuts": [
    {
@@ -4394,7 +4697,44 @@
   "public": 1,
   "quick_lists": [],
   "restrict_to_domain": "",
-  "roles": [],
+  "roles": [
+   {
+    "parent": "Horizon Buying",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Procurement Manager"
+   },
+   {
+    "parent": "Horizon Buying",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Department Head"
+   },
+   {
+    "parent": "Horizon Buying",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Purchase Manager"
+   },
+   {
+    "parent": "Horizon Buying",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Purchase User"
+   },
+   {
+    "parent": "Horizon Buying",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Finance Director"
+   },
+   {
+    "parent": "Horizon Buying",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
   "sequence_id": 0.53,
   "shortcuts": [
    {
@@ -4885,7 +5225,26 @@
   "public": 1,
   "quick_lists": [],
   "restrict_to_domain": "",
-  "roles": [],
+  "roles": [
+   {
+    "parent": "Horizon Setup & Masters",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Finance Director"
+   },
+   {
+    "parent": "Horizon Setup & Masters",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Operations Head"
+   },
+   {
+    "parent": "Horizon Setup & Masters",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
   "sequence_id": 0.51,
   "shortcuts": [
    {

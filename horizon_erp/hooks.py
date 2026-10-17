@@ -61,7 +61,12 @@ jinja = {"methods": ["horizon_erp.utils.jinja_methods"]}
 # stay valid through the re-export shims in horizon_erp/api/.
 override_whitelisted_methods = {
 	"get_inventory_snapshot": "horizon_erp.horizon_integrations.inventory_api.get_inventory_snapshot",
+	# Horizon modules own no DocTypes, so the standard module gate refused their workspaces to
+	# everyone but Administrator; access now follows the workspace roles (overrides/desktop.py)
+	"frappe.desk.desktop.get_desktop_page": "horizon_erp.overrides.desktop.get_desktop_page",
+	"frappe.desk.desktop.get_workspace_sidebar_items": "horizon_erp.overrides.desktop.get_workspace_sidebar_items",
 }
+extend_bootinfo = "horizon_erp.overrides.desktop.extend_bootinfo"
 
 # Document Events
 # ---------------
