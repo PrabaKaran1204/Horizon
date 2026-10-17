@@ -1,26 +1,49 @@
 {
- "aggregate_function_based_on": "stock_value",
  "chart_name": "Horizon Stock Value by Warehouse",
- "chart_type": "Group By",
+ "chart_type": "Custom",
  "creation": "2026-10-16 13:50:55.748880",
- "custom_options": "",
+ "custom_options": "{\"fieldtype\": \"Currency\", \"barOptions\": {\"spaceRatio\": 0.5}}",
  "docstatus": 0,
  "doctype": "Dashboard Chart",
  "document_type": "Bin",
  "dynamic_filters_json": "[]",
- "filters_json": "[[\"Bin\", \"actual_qty\", \">\", 0, false]]",
- "group_by_based_on": "warehouse",
- "group_by_type": "Sum",
+ "filters_json": "{}",
  "idx": 0,
  "is_public": 1,
  "is_standard": 1,
- "modified": "2026-10-16 13:50:55.748880",
+ "modified": "2026-10-17 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Horizon Stock",
  "name": "Horizon Stock Value by Warehouse",
- "number_of_groups": 10,
+ "number_of_groups": 0,
  "owner": "Administrator",
- "show_values_over_chart": 0,
+ "roles": [
+  {
+   "role": "Stock Manager"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Warehouse Manager"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Manufacturing Manager"
+  },
+  {
+   "role": "Purchase Manager"
+  },
+  {
+   "role": "Sales Manager"
+  }
+ ],
+ "source": "Horizon Stock Value by Warehouse",
  "timeseries": 0,
  "type": "Bar",
  "use_report_chart": 0,

@@ -1,0 +1,257 @@
+{
+ "charts": [
+  {
+   "chart_name": "Horizon Work Orders by Status",
+   "label": "Work Orders by Status"
+  }
+ ],
+ "content": "[{\"id\": \"9ceb33af6c\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>5. Manufacturing</b></span>\", \"col\": 12}}, {\"id\": \"8ec258bd84\", \"type\": \"paragraph\", \"data\": {\"text\": \"Assignment: BOM and multi-level manufacturing, production planning and capacity (docs/01 matrix 5.9-5.10: BOM-1..5, PP-1..5; diagram 4.2). A Work Order is refused when it would push its line's booked machine hours past the workstation capacity.\", \"col\": 12}}, {\"id\": \"0c196e6674\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>Flow:</b> Sales Order → Production Plan → Work Order (capacity check) → Job Card + Quality Inspection → Production Audit → Finished Goods\", \"col\": 12}}, {\"id\": \"94ca49d98e\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"9f4d514577\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Key figures</b></span>\", \"col\": 12}}, {\"id\": \"cfbaf7fb69\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Work Orders In Progress\", \"col\": 4}}, {\"id\": \"02a8be9bee\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Work Orders Overdue\", \"col\": 4}}, {\"id\": \"21d4473979\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Line Utilisation Today %\", \"col\": 4}}, {\"id\": \"43501a8f8d\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Work Orders by Status\", \"col\": 12}}, {\"id\": \"58cc0c0b33\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"67cdce3827\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Shortcuts (process order)</b></span>\", \"col\": 12}}, {\"id\": \"8f595bf67c\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"BOM\", \"col\": 3}}, {\"id\": \"9fabd0f790\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Production Plan\", \"col\": 3}}, {\"id\": \"fcb246788e\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Work Order\", \"col\": 3}}, {\"id\": \"52d5edd9ff\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Job Card\", \"col\": 3}}, {\"id\": \"3055a830ee\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Workstation\", \"col\": 3}}, {\"id\": \"bab5b175e9\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"05a2880095\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Transactions, masters and reports</b></span>\", \"col\": 12}}, {\"id\": \"2fbce08751\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"5c85de3b5b\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"1b207003db\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "creation": "2026-10-17 22:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "tool",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Horizon Manufacturing",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Production Plan",
+   "link_count": 0,
+   "link_to": "Production Plan",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Work Order",
+   "link_count": 0,
+   "link_to": "Work Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Job Card",
+   "link_count": 0,
+   "link_to": "Job Card",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Stock Entry",
+   "link_count": 0,
+   "link_to": "Stock Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "BOM",
+   "link_count": 0,
+   "link_to": "BOM",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Workstation",
+   "link_count": 0,
+   "link_to": "Workstation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Operation",
+   "link_count": 0,
+   "link_to": "Operation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Routing",
+   "link_count": 0,
+   "link_to": "Routing",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item",
+   "link_count": 0,
+   "link_to": "Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Capacity Utilisation and Sequence",
+   "link_count": 0,
+   "link_to": "Capacity Utilisation and Sequence",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "BOM Explosion with Lead Time",
+   "link_count": 0,
+   "link_to": "BOM Explosion with Lead Time",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Work Order Summary",
+   "link_count": 0,
+   "link_to": "Work Order Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Job Card Summary",
+   "link_count": 0,
+   "link_to": "Job Card Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Production Planning Report",
+   "link_count": 0,
+   "link_to": "Production Planning Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-17 22:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Horizon Manufacturing",
+ "name": "Horizon Manufacturing",
+ "number_cards": [
+  {
+   "label": "Work Orders In Progress",
+   "number_card_name": "Horizon Work Orders In Progress"
+  },
+  {
+   "label": "Work Orders Overdue",
+   "number_card_name": "Horizon Work Orders Overdue"
+  },
+  {
+   "label": "Line Utilisation Today %",
+   "number_card_name": "Horizon Line Utilisation Today Pct"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "Horizon ERP",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 0.55,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "BOM",
+   "link_to": "BOM",
+   "stats_filter": "{\"is_active\": [\"=\", 1], \"docstatus\": [\"=\", 1]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "format": "{} Draft",
+   "label": "Production Plan",
+   "link_to": "Production Plan",
+   "stats_filter": "{\"docstatus\": [\"=\", 0]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "Work Order",
+   "link_to": "Work Order",
+   "stats_filter": "{\"docstatus\": [\"=\", 1], \"status\": [\"in\", [\"Not Started\", \"In Process\"]]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "Job Card",
+   "link_to": "Job Card",
+   "stats_filter": "{\"status\": [\"in\", [\"Open\", \"Work In Progress\"]]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Workstation",
+   "link_to": "Workstation",
+   "type": "DocType"
+  }
+ ],
+ "title": "Horizon Manufacturing"
+}

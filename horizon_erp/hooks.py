@@ -211,8 +211,11 @@ fixtures = [
 	# Print formats and notifications (source of truth: horizon_setup/print_formats.py, notifications.py)
 	{"dt": "Print Format", "filters": [["name", "like", "Horizon%"]]},
 	{"dt": "Notification", "filters": [["name", "like", "Horizon%"]]},
-	# UI (also shipped as module JSON under <module>/workspace|number_card|dashboard_chart/)
+	# UI (also shipped as module JSON under <module>/workspace|number_card/). Dashboard Charts are
+	# NOT fixtures: fixture import validates the record, and DashboardChart.validate refuses a
+	# standard chart whenever developer_mode is off - which is always the case on production and
+	# inside any migrate that runs a patch (patch_handler.run_single sets developer_mode = 0). They
+	# ship only as <module>/dashboard_chart/ JSON, synced by bench migrate (sync_dashboards).
 	{"dt": "Workspace", "filters": [["name", "like", "Horizon%"]]},
 	{"dt": "Number Card", "filters": [["name", "like", "Horizon%"]]},
-	{"dt": "Dashboard Chart", "filters": [["name", "like", "Horizon%"]]},
 ]

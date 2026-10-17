@@ -1,0 +1,290 @@
+{
+ "charts": [
+  {
+   "chart_name": "Horizon Quotation Value Trend",
+   "label": "Quotation Value Trend"
+  }
+ ],
+ "content": "[{\"id\": \"257b6ea608\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>2. Selling</b></span>\", \"col\": 12}}, {\"id\": \"f767983fe1\", \"type\": \"paragraph\", \"data\": {\"text\": \"Assignment: lead-to-quote, pricing and discounts, order to delivery (docs/01 matrix 5.3-5.5: LQ-1..4, PR-1..5, OD-1..4). Discounts above the cap go through the Horizon Discount Approval workflow, Delivery Note and Sales Invoice rates are locked to the Sales Order, and a stock Sales Invoice needs a Delivery Note first.\", \"col\": 12}}, {\"id\": \"630f6ab232\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>Flow:</b> Lead → Opportunity → Quotation → Sales Order → Delivery Note → Sales Invoice\", \"col\": 12}}, {\"id\": \"c313a36ce1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"00e73d4d04\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Key figures</b></span>\", \"col\": 12}}, {\"id\": \"95980d3eff\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Leads\", \"col\": 4}}, {\"id\": \"d184db9f5c\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Leads Older Than 14 Days\", \"col\": 4}}, {\"id\": \"24dd2963c7\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Quotation Value\", \"col\": 4}}, {\"id\": \"f6d11ec696\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Quote to Order % (90d)\", \"col\": 4}}, {\"id\": \"1aa9bda97a\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Avg Days Quote to SO (90d)\", \"col\": 4}}, {\"id\": \"4cd7e989fd\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Deliveries Due Today\", \"col\": 4}}, {\"id\": \"fc2c5571fd\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Quotation Value Trend\", \"col\": 12}}, {\"id\": \"7337529bd1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"fee496592b\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Shortcuts (process order)</b></span>\", \"col\": 12}}, {\"id\": \"3b550754be\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lead\", \"col\": 3}}, {\"id\": \"239669d8b4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Opportunity\", \"col\": 3}}, {\"id\": \"6b7458da90\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Quotation\", \"col\": 3}}, {\"id\": \"31695eb0a3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sales Order\", \"col\": 3}}, {\"id\": \"dbe9569ac0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Delivery Note\", \"col\": 3}}, {\"id\": \"b36727c4c6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sales Invoice\", \"col\": 3}}, {\"id\": \"b470013184\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"b0b45a4965\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Transactions, masters and reports</b></span>\", \"col\": 12}}, {\"id\": \"e49bd15b45\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"5baa0ca298\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"1606cd8bde\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "creation": "2026-10-17 22:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "sell",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Horizon Selling",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Lead",
+   "link_count": 0,
+   "link_to": "Lead",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Opportunity",
+   "link_count": 0,
+   "link_to": "Opportunity",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quotation",
+   "link_count": 0,
+   "link_to": "Quotation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales Order",
+   "link_count": 0,
+   "link_to": "Sales Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Delivery Note",
+   "link_count": 0,
+   "link_to": "Delivery Note",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales Invoice",
+   "link_count": 0,
+   "link_to": "Sales Invoice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Customer",
+   "link_count": 0,
+   "link_to": "Customer",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Price List",
+   "link_count": 0,
+   "link_to": "Price List",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item Price",
+   "link_count": 0,
+   "link_to": "Item Price",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pricing Rule",
+   "link_count": 0,
+   "link_to": "Pricing Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Order Status Report",
+   "link_count": 0,
+   "link_to": "Order Status Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Price List Comparison",
+   "link_count": 0,
+   "link_to": "Price List Comparison",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales Funnel",
+   "link_count": 0,
+   "link_to": "sales-funnel",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Quotation Trends",
+   "link_count": 0,
+   "link_to": "Quotation Trends",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Sales Order Analysis",
+   "link_count": 0,
+   "link_to": "Sales Order Analysis",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-17 22:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Horizon Selling",
+ "name": "Horizon Selling",
+ "number_cards": [
+  {
+   "label": "Open Leads",
+   "number_card_name": "Horizon Open Leads"
+  },
+  {
+   "label": "Leads Older Than 14 Days",
+   "number_card_name": "Horizon Leads Over 14 Days Old"
+  },
+  {
+   "label": "Open Quotation Value",
+   "number_card_name": "Horizon Open Quotation Value"
+  },
+  {
+   "label": "Quote to Order % (90d)",
+   "number_card_name": "Horizon Quote to Order Conversion Pct (90d)"
+  },
+  {
+   "label": "Avg Days Quote to SO (90d)",
+   "number_card_name": "Horizon Avg Days Quote to SO (90d)"
+  },
+  {
+   "label": "Deliveries Due Today",
+   "number_card_name": "Horizon Deliveries Due Today"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "Horizon ERP",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 0.52,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "Lead",
+   "link_to": "Lead",
+   "stats_filter": "{\"status\": [\"in\", [\"Lead\", \"Open\", \"Replied\", \"Interested\"]]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "Opportunity",
+   "link_to": "Opportunity",
+   "stats_filter": "{\"status\": [\"=\", \"Open\"]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "Quotation",
+   "link_to": "Quotation",
+   "stats_filter": "{\"status\": [\"=\", \"Open\"], \"docstatus\": [\"=\", 1]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} To Deliver",
+   "label": "Sales Order",
+   "link_to": "Sales Order",
+   "stats_filter": "{\"status\": [\"in\", [\"To Deliver\", \"To Deliver and Bill\"]]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "format": "{} Draft",
+   "label": "Delivery Note",
+   "link_to": "Delivery Note",
+   "stats_filter": "{\"docstatus\": [\"=\", 0]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "format": "{} Unpaid",
+   "label": "Sales Invoice",
+   "link_to": "Sales Invoice",
+   "stats_filter": "{\"docstatus\": [\"=\", 1], \"outstanding_amount\": [\">\", 0]}",
+   "type": "DocType"
+  }
+ ],
+ "title": "Horizon Selling"
+}

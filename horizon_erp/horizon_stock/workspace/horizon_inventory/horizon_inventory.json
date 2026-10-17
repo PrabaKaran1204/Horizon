@@ -1,0 +1,293 @@
+{
+ "charts": [
+  {
+   "chart_name": "Horizon Stock Value by Warehouse",
+   "label": "Stock Value by Warehouse"
+  }
+ ],
+ "content": "[{\"id\": \"71375c5cef\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>4. Inventory</b></span>\", \"col\": 12}}, {\"id\": \"b379c244fd\", \"type\": \"paragraph\", \"data\": {\"text\": \"Assignment: receipt, inspection and GRN, reorder and MRP, the consolidated inventory dashboard and the Inventory Obsolescence report (docs/01 matrix 5.7-5.8 and 5.19: RQ-1..5, RM-1..5, MC-5, OB-1..3). The Purchase Receipt is the GRN (ADR-2).\", \"col\": 12}}, {\"id\": \"dbec9c4048\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>Flow:</b> Purchase Receipt → HQ QC Hold → Quality Inspection → HQ Raw Materials (accepted) / HQ Rejected (rejected, Purchase Return)\", \"col\": 12}}, {\"id\": \"84a57fc729\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>Reorder level</b> = ceil(daily usage over 90 days × lead time × (1 + safety factor A 0.5 / B 0.3 / C 0.1)), × 1.5 in Q4 for seasonal items; recomputed daily, Material Requests raised hourly.\", \"col\": 12}}, {\"id\": \"dd6e396198\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"6e9de8d9fd\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Key figures</b></span>\", \"col\": 12}}, {\"id\": \"a3504208f2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Items Below Reorder\", \"col\": 3}}, {\"id\": \"37d62e93b8\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Aging Stock Value (90d+)\", \"col\": 3}}, {\"id\": \"1f8936060f\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Stock Turnover (90d)\", \"col\": 3}}, {\"id\": \"e94ffd9679\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Pick Lists\", \"col\": 3}}, {\"id\": \"710c9259b6\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Stock Value by Warehouse\", \"col\": 12}}, {\"id\": \"58d3d5c348\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"1769b8169f\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Shortcuts (process order)</b></span>\", \"col\": 12}}, {\"id\": \"ec11e36db8\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Purchase Receipt\", \"col\": 3}}, {\"id\": \"023d324e75\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Quality Inspection\", \"col\": 3}}, {\"id\": \"455575b3c4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Stock Entry\", \"col\": 3}}, {\"id\": \"1b0a545c9f\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Pick List\", \"col\": 3}}, {\"id\": \"6e15fac032\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Material Request\", \"col\": 3}}, {\"id\": \"625920394f\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"be10744757\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Transactions, masters and reports</b></span>\", \"col\": 12}}, {\"id\": \"7f4402cd37\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"58d5d2daf4\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"141dfe610c\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "creation": "2026-10-17 22:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "stock",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Horizon Inventory",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 7,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Purchase Receipt",
+   "link_count": 0,
+   "link_to": "Purchase Receipt",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quality Inspection",
+   "link_count": 0,
+   "link_to": "Quality Inspection",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Stock Entry",
+   "link_count": 0,
+   "link_to": "Stock Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Stock Reconciliation",
+   "link_count": 0,
+   "link_to": "Stock Reconciliation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Pick List",
+   "link_count": 0,
+   "link_to": "Pick List",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Delivery Note",
+   "link_count": 0,
+   "link_to": "Delivery Note",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Material Request",
+   "link_count": 0,
+   "link_to": "Material Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item",
+   "link_count": 0,
+   "link_to": "Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Warehouse",
+   "link_count": 0,
+   "link_to": "Warehouse",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Batch",
+   "link_count": 0,
+   "link_to": "Batch",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Serial No",
+   "link_count": 0,
+   "link_to": "Serial No",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Inventory Obsolescence Analysis",
+   "link_count": 0,
+   "link_to": "Inventory Obsolescence Analysis",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Forecast vs Actual Demand",
+   "link_count": 0,
+   "link_to": "Forecast vs Actual Demand",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Stock Balance",
+   "link_count": 0,
+   "link_to": "Stock Balance",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Stock Ageing",
+   "link_count": 0,
+   "link_to": "Stock Ageing",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Stock Projected Qty",
+   "link_count": 0,
+   "link_to": "Stock Projected Qty",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Stock Ledger",
+   "link_count": 0,
+   "link_to": "Stock Ledger",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-17 22:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Horizon Stock",
+ "name": "Horizon Inventory",
+ "number_cards": [
+  {
+   "label": "Items Below Reorder",
+   "number_card_name": "Horizon Items Below Reorder"
+  },
+  {
+   "label": "Aging Stock Value (90d+)",
+   "number_card_name": "Horizon Aging Stock Value Over 90d"
+  },
+  {
+   "label": "Stock Turnover (90d)",
+   "number_card_name": "Horizon Stock Turnover (90d)"
+  },
+  {
+   "label": "Open Pick Lists",
+   "number_card_name": "Horizon Open Pick Lists"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "Horizon ERP",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 0.54,
+ "shortcuts": [
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "format": "{} Draft",
+   "label": "Purchase Receipt",
+   "link_to": "Purchase Receipt",
+   "stats_filter": "{\"docstatus\": [\"=\", 0]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Pending",
+   "label": "Quality Inspection",
+   "link_to": "Quality Inspection",
+   "stats_filter": "{\"docstatus\": [\"=\", 0]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "format": "{} Draft",
+   "label": "Stock Entry",
+   "link_to": "Stock Entry",
+   "stats_filter": "{\"docstatus\": [\"=\", 0]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "Pick List",
+   "link_to": "Pick List",
+   "stats_filter": "{\"docstatus\": [\"=\", 1], \"status\": [\"in\", [\"Open\", \"Partly Delivered\"]]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "format": "{} Pending",
+   "label": "Material Request",
+   "link_to": "Material Request",
+   "stats_filter": "{\"docstatus\": [\"=\", 1], \"status\": [\"=\", \"Pending\"]}",
+   "type": "DocType"
+  }
+ ],
+ "title": "Horizon Inventory"
+}

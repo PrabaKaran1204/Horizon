@@ -1,0 +1,247 @@
+{
+ "charts": [
+  {
+   "chart_name": "Horizon Pending PO by State",
+   "label": "Pending PO by State"
+  }
+ ],
+ "content": "[{\"id\": \"9f5d5db9e3\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>3. Buying</b></span>\", \"col\": 12}}, {\"id\": \"cb4fb5af5c\", \"type\": \"paragraph\", \"data\": {\"text\": \"Assignment: supplier quality and purchase approval (docs/01 matrix 5.6: PA-1..5; workflow diagram 4.1). The receipt and inspection side is in <i>4. Inventory</i>.\", \"col\": 12}}, {\"id\": \"44e6932c2a\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>Approval rule (Horizon PO Approval):</b> below ₹1 L Department Head · ₹1-5 L + Procurement Manager · above ₹5 L or a blacklisted supplier + Finance Director. A blacklisted supplier needs a Blacklist Override with a reason, logged in Supplier Exception Log; a PO pending over 24 h gets reminders, over 48 h it is escalated.\", \"col\": 12}}, {\"id\": \"f247208ec0\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>Flow:</b> Material Request → Purchase Order (approval workflow) → Purchase Receipt (QC Hold) → Purchase Invoice\", \"col\": 12}}, {\"id\": \"d51db8f5e0\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"215d372eea\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Key figures</b></span>\", \"col\": 12}}, {\"id\": \"2ffbb6d9e8\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"POs Awaiting Approval\", \"col\": 4}}, {\"id\": \"f3e849b266\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"POs Pending Over 24h\", \"col\": 4}}, {\"id\": \"8f66e9b725\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Blacklist Overrides (30d)\", \"col\": 4}}, {\"id\": \"9da66b84e5\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Pending PO by State\", \"col\": 12}}, {\"id\": \"7ac4d337d5\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"591cbd6d4d\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Shortcuts (process order)</b></span>\", \"col\": 12}}, {\"id\": \"62c3942aef\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Material Request\", \"col\": 3}}, {\"id\": \"a953e85378\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Purchase Order\", \"col\": 3}}, {\"id\": \"737402b6be\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Supplier\", \"col\": 3}}, {\"id\": \"7be35a16f6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Supplier Exception Log\", \"col\": 3}}, {\"id\": \"1d821ebbb9\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Purchase Receipt\", \"col\": 3}}, {\"id\": \"467fcb330d\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"00d204cb55\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Transactions, masters and reports</b></span>\", \"col\": 12}}, {\"id\": \"113c0aa290\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"90765b886c\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"6d475a9fce\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "creation": "2026-10-17 22:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "buying",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Horizon Buying",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Material Request",
+   "link_count": 0,
+   "link_to": "Material Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Request for Quotation",
+   "link_count": 0,
+   "link_to": "Request for Quotation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Supplier Quotation",
+   "link_count": 0,
+   "link_to": "Supplier Quotation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Purchase Order",
+   "link_count": 0,
+   "link_to": "Purchase Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Purchase Receipt",
+   "link_count": 0,
+   "link_to": "Purchase Receipt",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Purchase Invoice",
+   "link_count": 0,
+   "link_to": "Purchase Invoice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Supplier",
+   "link_count": 0,
+   "link_to": "Supplier",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Supplier Exception Log",
+   "link_count": 0,
+   "link_to": "Supplier Exception Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quarterly Purchase Plan",
+   "link_count": 0,
+   "link_to": "Quarterly Purchase Plan",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Supplier Scorecard",
+   "link_count": 0,
+   "link_to": "Supplier Scorecard",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Approval Audit Report",
+   "link_count": 0,
+   "link_to": "Approval Audit Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Supplier Quality Scorecard",
+   "link_count": 0,
+   "link_to": "Supplier Quality Scorecard",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Purchase Order Analysis",
+   "link_count": 0,
+   "link_to": "Purchase Order Analysis",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-17 22:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Horizon Buying",
+ "name": "Horizon Buying",
+ "number_cards": [
+  {
+   "label": "POs Awaiting Approval",
+   "number_card_name": "Horizon POs Pending Approval"
+  },
+  {
+   "label": "POs Pending Over 24h",
+   "number_card_name": "Horizon POs Pending Over 24h"
+  },
+  {
+   "label": "Blacklist Overrides (30d)",
+   "number_card_name": "Horizon Blacklist Overrides (30d)"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "Horizon ERP",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 0.53,
+ "shortcuts": [
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "format": "{} Pending",
+   "label": "Material Request",
+   "link_to": "Material Request",
+   "stats_filter": "{\"docstatus\": [\"=\", 1], \"status\": [\"=\", \"Pending\"]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Awaiting Approval",
+   "label": "Purchase Order",
+   "link_to": "Purchase Order",
+   "stats_filter": "{\"docstatus\": [\"=\", 0], \"workflow_state\": [\"like\", \"Pending%\"]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "format": "{} Blacklisted",
+   "label": "Supplier",
+   "link_to": "Supplier",
+   "stats_filter": "{\"is_blacklisted\": [\"=\", 1]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Supplier Exception Log",
+   "link_to": "Supplier Exception Log",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "format": "{} Draft",
+   "label": "Purchase Receipt",
+   "link_to": "Purchase Receipt",
+   "stats_filter": "{\"docstatus\": [\"=\", 0]}",
+   "type": "DocType"
+  }
+ ],
+ "title": "Horizon Buying"
+}

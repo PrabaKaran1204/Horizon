@@ -1,0 +1,137 @@
+{
+ "charts": [],
+ "content": "[{\"id\": \"4a38756c4f\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>10. Integrations</b></span>\", \"col\": 12}}, {\"id\": \"626ffea730\", \"type\": \"paragraph\", \"data\": {\"text\": \"Assignment: Inventory Sync API and scheduled jobs (docs/01 matrix 5.19: API-1..6, SJ-1..4; contract in docs/api.md).\", \"col\": 12}}, {\"id\": \"3d7f2576e7\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>Endpoint:</b> <code>POST /api/method/get_inventory_snapshot</code> with <code>Authorization: token KEY:SECRET</code>. <b>Rate limit:</b> 100 requests per hour per API client (429 + Retry-After). Warehouse User Permissions apply; every call is written to Inventory API Log.\", \"col\": 12}}, {\"id\": \"755379c298\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>Flow:</b> API client → get_inventory_snapshot → Inventory API Log → API Usage Report\", \"col\": 12}}, {\"id\": \"6eb06337d4\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"4a582df7d3\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Shortcuts (process order)</b></span>\", \"col\": 12}}, {\"id\": \"8d13757691\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Inventory API Log\", \"col\": 3}}, {\"id\": \"2a1c96eb51\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"API Usage Report\", \"col\": 3}}, {\"id\": \"f693142567\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Scheduled Job Log\", \"col\": 3}}, {\"id\": \"3dedbd8ffe\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"306750a773\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Transactions, masters and reports</b></span>\", \"col\": 12}}, {\"id\": \"91f003729c\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"df9a4de863\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"150252a301\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "creation": "2026-10-17 22:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "integration",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Horizon Integrations",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Inventory API Log",
+   "link_count": 0,
+   "link_to": "Inventory API Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Scheduled Job Log",
+   "link_count": 0,
+   "link_to": "Scheduled Job Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Error Log",
+   "link_count": 0,
+   "link_to": "Error Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "User (API keys)",
+   "link_count": 0,
+   "link_to": "User",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Scheduled Job Type",
+   "link_count": 0,
+   "link_to": "Scheduled Job Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 1,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "API Usage Report",
+   "link_count": 0,
+   "link_to": "API Usage Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-17 22:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Horizon Integrations",
+ "name": "Horizon Integrations",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Horizon ERP",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 0.6,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Inventory API Log",
+   "link_to": "Inventory API Log",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "API Usage Report",
+   "link_to": "API Usage Report",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Scheduled Job Log",
+   "link_to": "Scheduled Job Log",
+   "type": "DocType"
+  }
+ ],
+ "title": "Horizon Integrations"
+}

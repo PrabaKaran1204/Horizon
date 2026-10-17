@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Horizon Manufacturing Ltd and contributors
 # For license information, please see license.txt
 
-"""Custom Number Card sources for the Horizon workspaces.
+"""Custom Number Card sources for the Horizon workspaces and the workspace consistency check.
 
 Number Cards / Dashboard Charts / Workspaces themselves are standard JSON records under
 ``horizon_erp/<module>/{number_card,dashboard_chart,workspace}/`` (synced by ``bench migrate`` and
@@ -207,27 +207,80 @@ def get_line_utilisation_today(filters=None):
 	return {"value": flt(booked / capacity * 100, 1) if capacity else 0, "fieldtype": "Percent"}
 
 
-def setup_dashboards():
-	"""Validate that every Horizon workspace only references existing cards, charts, reports and
-	DocTypes. Standard JSON records are created by ``bench migrate``; this helper is a post-migrate
-	sanity check that can be run with ``bench --site <site> execute horizon_erp.horizon_setup.dashboards.setup_dashboards``."""
+PARENT_WORKSPACE = "Horizon ERP"
+LINK_DOCTYPES = ("DocType", "Report", "Page")
+
+
+def get_workspace_problems():
+	"""Every inconsistency of the Horizon workspaces as a list of strings (empty = consistent).
+
+	Checks: icon set, parent (*Horizon ERP* is the only top-level one, every other workspace is its
+	child), every Number Card / Dashboard Chart / DocType / Report / Page they reference exists,
+	every ``/app/<route>`` URL shortcut resolves to a Horizon workspace and every content block
+	points at a row of the matching child table."""
 	problems = []
-	for name in frappe.get_all("Workspace", filters={"name": ["like", "Horizon%"]}, pluck="name"):
+	names = frappe.get_all("Workspace", filters={"name": ["like", "Horizon%"]}, pluck="name")
+	routes = {n.lower().replace(" ", "-"): n for n in names}  # frappe.router.slug of the title
+	if PARENT_WORKSPACE not in names:
+		problems.append(f"missing parent Workspace {PARENT_WORKSPACE}")
+	for name in names:
 		ws = frappe.get_doc("Workspace", name)
+		if not ws.icon:
+			problems.append(f"{name}: no icon")
+		expected_parent = "" if name == PARENT_WORKSPACE else PARENT_WORKSPACE
+		if (ws.parent_page or "") != expected_parent:
+			problems.append(f"{name}: parent_page {ws.parent_page!r}, expected {expected_parent!r}")
 		for card in ws.number_cards:
 			if not frappe.db.exists("Number Card", card.number_card_name):
 				problems.append(f"{name}: missing Number Card {card.number_card_name}")
 		for chart in ws.charts:
 			if not frappe.db.exists("Dashboard Chart", chart.chart_name):
 				problems.append(f"{name}: missing Dashboard Chart {chart.chart_name}")
-		for link in list(ws.links) + list(ws.shortcuts):
-			link_type = link.get("link_type") or link.get("type")
-			if (
-				link_type in ("DocType", "Report")
-				and link.link_to
-				and not frappe.db.exists(link_type, link.link_to)
+		for link in ws.links:
+			if link.type == "Link" and not (
+				link.link_type in LINK_DOCTYPES and frappe.db.exists(link.link_type, link.link_to)
 			):
-				problems.append(f"{name}: missing {link_type} {link.link_to}")
+				problems.append(f"{name}: missing {link.link_type} {link.link_to}")
+		for shortcut in ws.shortcuts:
+			if shortcut.type == "URL":
+				route = (shortcut.url or "").removeprefix("/app/")
+				if route not in routes:
+					problems.append(f"{name}: shortcut {shortcut.label} points to unknown {shortcut.url}")
+			elif not frappe.db.exists(shortcut.type, shortcut.link_to):
+				problems.append(f"{name}: missing {shortcut.type} {shortcut.link_to}")
+		problems.extend(_content_problems(ws))
+	return problems
+
+
+def _content_problems(ws):
+	# The desk resolves number_card / chart / shortcut / card blocks by the *label* of the child row
+	# (frappe/public/js/frappe/views/workspace/blocks/block.js make()), not by the record name.
+	rows = {
+		"number_card": ("number_card_name", {c.label or c.number_card_name for c in ws.number_cards}),
+		"chart": ("chart_name", {c.label or c.chart_name for c in ws.charts}),
+		"shortcut": ("shortcut_name", {s.label for s in ws.shortcuts}),
+		"card": ("card_name", {lnk.label for lnk in ws.links if lnk.type == "Card Break"}),
+	}
+	problems = []
+	used = {kind: set() for kind in rows}
+	for block in frappe.parse_json(ws.content or "[]"):
+		if block.get("type") in rows:
+			key, available = rows[block["type"]]
+			value = block["data"].get(key)
+			used[block["type"]].add(value)
+			if value not in available:
+				problems.append(f"{ws.name}: {block['type']} block {value!r} has no matching row")
+	for kind, (_key, available) in rows.items():
+		for missing in available - used[kind]:
+			problems.append(f"{ws.name}: {kind} {missing!r} is not placed in the content")
+	return problems
+
+
+def setup_dashboards():
+	"""Validate the Horizon workspaces (see ``get_workspace_problems``). Standard JSON records are
+	created by ``bench migrate``; this helper is a post-migrate sanity check that can be run with
+	``bench --site <site> execute horizon_erp.horizon_setup.dashboards.setup_dashboards``."""
+	problems = get_workspace_problems()
 	if problems:
 		frappe.throw(_("Horizon workspace validation failed:\n{0}").format("\n".join(problems)))
 	return _("All Horizon workspaces are consistent.")

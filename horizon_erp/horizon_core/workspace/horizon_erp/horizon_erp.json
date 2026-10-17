@@ -1,0 +1,263 @@
+{
+ "charts": [],
+ "content": "[{\"id\": \"18ef58a044\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Horizon Manufacturing Ltd – ERPNext implementation</b></span>\", \"col\": 12}}, {\"id\": \"99994381ae\", \"type\": \"paragraph\", \"data\": {\"text\": \"ERPNext v15 implementation of the Horizon Manufacturing Ltd assignment, shipped as the <b>horizon_erp</b> app. One company (<b>Horizon Manufacturing Ltd</b>, abbreviation HML) with two GST registrations - <b>Mumbai HQ</b> (factory, head office) and <b>Delhi DC</b> (distribution) - separated by the mandatory <b>Branch</b> accounting dimension.\", \"col\": 12}}, {\"id\": \"c90846af2a\", \"type\": \"paragraph\", \"data\": {\"text\": \"Each module below is one section of the assignment, in the order of the brief. Every workspace says which section it covers, shows the process flow, its KPIs, shortcuts in process order and the reports. <b>Start with 1. Setup &amp; Masters</b>, then follow the numbers.\", \"col\": 12}}, {\"id\": \"bc142ce81d\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"b539eb21fb\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Today at a glance</b></span>\", \"col\": 12}}, {\"id\": \"00628d2d8e\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Sales Orders To Deliver\", \"col\": 4}}, {\"id\": \"3f486da93b\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"POs Awaiting Approval\", \"col\": 4}}, {\"id\": \"4831907b70\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Items Below Reorder\", \"col\": 4}}, {\"id\": \"9374bfe9da\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Low-Score Audits\", \"col\": 4}}, {\"id\": \"8bfbdc1aea\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Work Orders In Progress\", \"col\": 4}}, {\"id\": \"c354b4c1d0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Payments Awaiting Approval\", \"col\": 4}}, {\"id\": \"a17f66bcd8\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"8c521ddf6a\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Modules (assignment order)</b></span>\", \"col\": 12}}, {\"id\": \"03b5c9f1d4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"1. Setup & Masters\", \"col\": 3}}, {\"id\": \"75178017d5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"2. Selling\", \"col\": 3}}, {\"id\": \"c920474a52\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"3. Buying\", \"col\": 3}}, {\"id\": \"ca30cf3ce9\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"4. Inventory\", \"col\": 3}}, {\"id\": \"e8116730b1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"5. Manufacturing\", \"col\": 3}}, {\"id\": \"1cd613b7b2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"6. Quality\", \"col\": 3}}, {\"id\": \"df263cc249\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"7. Projects & Assets\", \"col\": 3}}, {\"id\": \"47e8b52422\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"8. HR & Payroll\", \"col\": 3}}, {\"id\": \"5497694fc8\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"9. Accounts & Finance\", \"col\": 3}}, {\"id\": \"64805ac9de\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"10. Integrations\", \"col\": 3}}, {\"id\": \"abf8777d1e\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"2098abb7a9\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Demo flows</b></span>\", \"col\": 12}}, {\"id\": \"cac3a43948\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>1. PO approval and blacklist override</b> - <a href=\\\"/app/purchase-order/PUR-ORD-2026-00003\\\">PUR-ORD-2026-00003</a> (₹7 L, Department Head → Procurement Manager → Finance Director) and <a href=\\\"/app/purchase-order/PUR-ORD-2026-00005\\\">PUR-ORD-2026-00005</a> (blacklisted ABC Supplies, Blacklist Override with reason) logged in <a href=\\\"/app/supplier-exception-log\\\">Supplier Exception Log</a>; see <i>3. Buying</i> and the Approval Audit Report.\", \"col\": 12}}, {\"id\": \"606c980fe9\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>2. Quality vs deadline</b> - <a href=\\\"/app/purchase-receipt/PR-26-00001\\\">PR-26-00001</a> (receipt into HQ QC Hold, Quality Inspection) → <a href=\\\"/app/production-audit/PA-2026-00002\\\">PA-2026-00002</a> (audit score 65: photo, Quality Action, Manufacture entry blocked) → <a href=\\\"/app/shipment-decision/SD-2026-00001\\\">SD-2026-00001</a> (Shipment Decision before the Delivery Note); see <i>6. Quality</i> and Quality vs Deadline Conflicts.\", \"col\": 12}}, {\"id\": \"c8b9ec6696\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>3. Inventory API</b> - <code>POST /api/method/get_inventory_snapshot</code> with an API token; the 101st call in an hour returns 429 with Retry-After; every call is in <a href=\\\"/app/inventory-api-log\\\">Inventory API Log</a> and the API Usage Report; see <i>10. Integrations</i>.\", \"col\": 12}}, {\"id\": \"20d530f463\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"c0e4e88c98\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Reference</b></span>\", \"col\": 12}}, {\"id\": \"8f29b1c36c\", \"type\": \"card\", \"data\": {\"card_name\": \"Custom DocTypes\", \"col\": 4}}, {\"id\": \"56a53de2dd\", \"type\": \"card\", \"data\": {\"card_name\": \"Configuration\", \"col\": 4}}]",
+ "creation": "2026-10-17 22:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "organization",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Horizon ERP",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Custom DocTypes",
+   "link_count": 7,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Production Audit",
+   "link_count": 0,
+   "link_to": "Production Audit",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Shipment Decision",
+   "link_count": 0,
+   "link_to": "Shipment Decision",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Supplier Exception Log",
+   "link_count": 0,
+   "link_to": "Supplier Exception Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quarterly Purchase Plan",
+   "link_count": 0,
+   "link_to": "Quarterly Purchase Plan",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Inventory API Log",
+   "link_count": 0,
+   "link_to": "Inventory API Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Budget Override Request",
+   "link_count": 0,
+   "link_to": "Budget Override Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Bank Reconciliation Sign-off",
+   "link_count": 0,
+   "link_to": "Bank Reconciliation Sign-off",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Configuration",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Workflow",
+   "link_count": 0,
+   "link_to": "Workflow",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Notification",
+   "link_count": 0,
+   "link_to": "Notification",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Print Format",
+   "link_count": 0,
+   "link_to": "Print Format",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Number Card",
+   "link_count": 0,
+   "link_to": "Number Card",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Scheduled Job Type",
+   "link_count": 0,
+   "link_to": "Scheduled Job Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-17 22:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Horizon Core",
+ "name": "Horizon ERP",
+ "number_cards": [
+  {
+   "label": "Sales Orders To Deliver",
+   "number_card_name": "Horizon Sales Orders To Deliver"
+  },
+  {
+   "label": "POs Awaiting Approval",
+   "number_card_name": "Horizon POs Pending Approval"
+  },
+  {
+   "label": "Items Below Reorder",
+   "number_card_name": "Horizon Items Below Reorder"
+  },
+  {
+   "label": "Open Low-Score Audits",
+   "number_card_name": "Horizon Open Low-Score Audits"
+  },
+  {
+   "label": "Work Orders In Progress",
+   "number_card_name": "Horizon Work Orders In Progress"
+  },
+  {
+   "label": "Payments Awaiting Approval",
+   "number_card_name": "Horizon Pending Payments"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 0.5,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "1. Setup & Masters",
+   "type": "URL",
+   "url": "/app/horizon-setup-&-masters"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "2. Selling",
+   "type": "URL",
+   "url": "/app/horizon-selling"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "3. Buying",
+   "type": "URL",
+   "url": "/app/horizon-buying"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "4. Inventory",
+   "type": "URL",
+   "url": "/app/horizon-inventory"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "5. Manufacturing",
+   "type": "URL",
+   "url": "/app/horizon-manufacturing"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "6. Quality",
+   "type": "URL",
+   "url": "/app/horizon-quality"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "7. Projects & Assets",
+   "type": "URL",
+   "url": "/app/horizon-projects-&-assets"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "8. HR & Payroll",
+   "type": "URL",
+   "url": "/app/horizon-hr-&-payroll"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "9. Accounts & Finance",
+   "type": "URL",
+   "url": "/app/horizon-accounts-&-finance"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "10. Integrations",
+   "type": "URL",
+   "url": "/app/horizon-integrations"
+  }
+ ],
+ "title": "Horizon ERP"
+}
