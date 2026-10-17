@@ -20,7 +20,11 @@ Wiring (hooks.py ``doc_events``):
   GSTIN state code vs State, contact prefilled from the Lead.
 - ``Quotation.before_validate`` -> ``switch_quotation_to_customer``: a Quotation addressed to a Lead
   whose Opportunity carries the details is moved to the (created or existing) Customer before the
-  controller's ``validate`` runs ``set_missing_values`` and the pricing engine.
+  controller's ``validate`` runs ``set_missing_values`` and the pricing engine. Rows still priced by
+  the Lead's pricing rules are re-priced for the Customer (``reset_rule_priced_rows``).
+- ``override_whitelisted_methods`` -> ``make_quotation``: ERPNext's Opportunity -> Quotation mapper
+  copies the Opportunity Item ``rate`` (a free-typed estimate) onto the Quotation row; rows the price
+  list prices are re-priced from the price list + pricing rules (DEF-23).
 
 The Opportunity itself keeps ``opportunity_from = "Lead"`` (funnel reports stay Lead -> Opportunity
 -> Quotation; ERPNext's Opportunity -> Quotation mapper copies it into ``quotation_to``, which the
@@ -35,6 +39,8 @@ this Customer by ``lead_name`` instead of creating a second one.
 import frappe
 from frappe import _
 from frappe.utils import cstr, flt, get_link_to_form
+
+from horizon_erp.horizon_selling.selling import get_rule_rate
 
 # Roles that may trigger Customer creation from an Opportunity even without Customer "create"
 # permission; the Customer, Address and Contact links are then written with ignore_permissions.
@@ -477,6 +483,7 @@ def move_quotation_to_customer(doc, customer):
 	from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
 	old_template = doc.get("taxes_and_charges")
+	reset_rule_priced_rows(doc)
 	doc.quotation_to = "Customer"
 	doc.party_name = customer
 	for fieldname in LEAD_DERIVED_QUOTATION_FIELDS:
@@ -499,3 +506,126 @@ def move_quotation_to_customer(doc, customer):
 		doc.set("taxes", [])
 		for tax in get_taxes_and_charges("Sales Taxes and Charges Template", new_template):
 			doc.append("taxes", tax)
+
+
+# Quotation Item pricing fields cleared so the controller's ``set_missing_values`` (pricing engine,
+# ``for_validate``) fills them again: a row without ``pricing_rules`` gets the rules found for the
+# Customer instead of re-applying the rules stored on the row
+ROW_PRICING_FIELDS = (
+	"price_list_rate",
+	"base_price_list_rate",
+	"pricing_rules",
+	"discount_percentage",
+	"discount_amount",
+	"margin_type",
+	"margin_rate_or_amount",
+	"rate",
+)
+# Rate difference (in transaction currency) still treated as "priced by the rules"
+RATE_TOLERANCE = 0.01
+
+
+def reset_rule_priced_rows(doc):
+	"""Re-price, for the Customer, the rows the Lead's pricing rules priced.
+
+	ERPNext re-applies the ``pricing_rules`` stored on a row during ``validate`` (``for_validate``)
+	instead of searching again, so a row priced on the Lead (no Customer Group: e.g. only the Q4 rule)
+	kept the Lead's price after the switch and missed the Customer's Premium rule; a changed default
+	price list also left the old ``price_list_rate`` on the row. Rows whose rate is exactly the rule
+	rate of their stored rules are cleared so the engine prices them again for the Customer. Rows with
+	a manual rate / discount are left alone: ``validate_discounts`` governs those.
+	"""
+	rule_cache = {}
+	for row in doc.get("items", []):
+		if not row.item_code or not flt(row.price_list_rate):
+			continue
+		if abs(flt(row.rate) - get_rule_rate(row, rule_cache)) > RATE_TOLERANCE:
+			continue
+		for fieldname in ROW_PRICING_FIELDS:
+			row.set(fieldname, None)
+
+
+# ---------------------------------------------------------------------------------------------
+# Opportunity -> Quotation mapper (override_whitelisted_methods)
+# ---------------------------------------------------------------------------------------------
+@frappe.whitelist()
+def make_quotation(source_name, target_doc=None):
+	"""ERPNext's ``erpnext.crm.doctype.opportunity.opportunity.make_quotation`` with the mapped rows
+	priced from the price list and pricing rules (DEF-23).
+
+	The standard mapper copies the Opportunity Item ``rate`` (mandatory on the Opportunity, typed as
+	an estimate) onto the Quotation row and only overwrites it when a pricing rule applies. A row
+	without a rule therefore kept e.g. 1,00,000 against a list price of 1,85,000 with Discount 0 %
+	on the form, and ``validate_discounts`` rightly asked for a discount reason the user never meant
+	to give. Used by the Opportunity's Create > Quotation and the Quotation's Get Items From >
+	Opportunity (both resolve the method through ``override_whitelisted_methods``).
+	"""
+	from erpnext.crm.doctype.opportunity.opportunity import make_quotation as erpnext_make_quotation
+
+	frappe.has_permission("Opportunity", "read", source_name, throw=True)
+	existing_rows = get_row_names(target_doc)
+	quotation = erpnext_make_quotation(source_name, target_doc)
+	price_mapped_rows(quotation, existing_rows)
+	return quotation
+
+
+def get_row_names(target_doc):
+	"""Names of the rows already on the target Quotation (Get Items From); those are not re-priced."""
+	if not target_doc:
+		return set()
+	if isinstance(target_doc, str):
+		target_doc = frappe.parse_json(target_doc)
+	return {row.get("name") for row in target_doc.get("items") or [] if row.get("name")}
+
+
+def price_mapped_rows(quotation, existing_rows=None):
+	"""Rows mapped from an Opportunity get ``rate = price list rate - pricing-rule discount``.
+
+	The mapper's ``set_missing_values`` already fetched ``price_list_rate`` / ``pricing_rules`` /
+	``discount_percentage`` from the price list and pricing engine; clearing ``rate`` lets ERPNext's
+	``calculate_taxes_and_totals`` derive it from them. Rows the price list does not price keep the
+	Opportunity rate (nothing better exists; ``validate_discounts`` ignores them).
+	"""
+	existing_rows = existing_rows or set()
+	repriced = []
+	for row in quotation.get("items", []):
+		if row.name in existing_rows or row.get("prevdoc_doctype") != "Opportunity":
+			continue
+		if not row.item_code or not flt(row.price_list_rate):
+			continue
+		opportunity_rate = flt(row.rate)
+		row.rate = 0
+		row.discount_amount = 0
+		if not row.get("pricing_rules"):
+			row.discount_percentage = 0
+			row.margin_type = None
+			row.margin_rate_or_amount = 0
+		repriced.append((row, opportunity_rate))
+
+	if not repriced:
+		return
+
+	quotation.calculate_taxes_and_totals()
+	changed = [
+		(row, opportunity_rate)
+		for row, opportunity_rate in repriced
+		if abs(flt(row.rate) - opportunity_rate) > RATE_TOLERANCE
+	]
+	if changed:
+		frappe.msgprint(
+			_(
+				"Rates priced from Price List {0} and the pricing rules instead of the Opportunity estimate: {1}"
+			).format(
+				frappe.bold(quotation.selling_price_list),
+				"; ".join(
+					_("{0} {1} (Opportunity {2})").format(
+						row.item_code,
+						frappe.format_value(row.rate, {"fieldtype": "Currency"}),
+						frappe.format_value(opportunity_rate, {"fieldtype": "Currency"}),
+					)
+					for row, opportunity_rate in changed
+				),
+			),
+			indicator="blue",
+			alert=True,
+		)

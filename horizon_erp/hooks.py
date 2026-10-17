@@ -65,6 +65,11 @@ override_whitelisted_methods = {
 	# everyone but Administrator; access now follows the workspace roles (overrides/desktop.py)
 	"frappe.desk.desktop.get_desktop_page": "horizon_erp.overrides.desktop.get_desktop_page",
 	"frappe.desk.desktop.get_workspace_sidebar_items": "horizon_erp.overrides.desktop.get_workspace_sidebar_items",
+	# Opportunity -> Quotation: rows priced from the price list + pricing rules, not the Opportunity
+	# estimate (DEF-23); also used by Quotation "Get Items From > Opportunity"
+	"erpnext.crm.doctype.opportunity.opportunity.make_quotation": (
+		"horizon_erp.horizon_crm.opportunity.make_quotation"
+	),
 }
 extend_bootinfo = "horizon_erp.overrides.desktop.extend_bootinfo"
 

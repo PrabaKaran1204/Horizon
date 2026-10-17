@@ -7,6 +7,8 @@ Run:  bench --site horizon.local run-tests --app horizon_erp --skip-test-records
 	--module horizon_erp.horizon_crm.tests.test_opportunity_customer
 """
 
+import json
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import nowdate
@@ -19,7 +21,7 @@ from horizon_erp.horizon_core.tests.fixtures import (
 	setup_common,
 	with_dimensions,
 )
-from horizon_erp.horizon_crm.opportunity import ensure_customer_from_opportunity
+from horizon_erp.horizon_crm.opportunity import ensure_customer_from_opportunity, make_quotation
 from horizon_erp.horizon_setup.demo_data import make_gstin
 from horizon_erp.tests.cleanup import purge_test_residue
 
@@ -29,6 +31,8 @@ ITEM = "LEADTEST-EQUIP"
 PRICE = 100000
 PREMIUM = "Premium"
 PREMIUM_PCT = 5
+ESTIMATE = 60000  # Opportunity Item rate typed as an estimate, 40 % below the list price (DEF-23)
+LEAD_ONLY = "eval:doc.opportunity_from=='Lead'"
 GSTIN_MH = make_gstin("27", "AAACL0001T")  # Maharashtra, checksum-valid
 SALES_MANAGER = "brtest-sm@horizon.local"
 NO_SALES_ROLE = "brtest-pu@horizon.local"
@@ -317,3 +321,168 @@ class TestOpportunityCustomer(FrappeTestCase):
 		self.assertNotIn(self.rule, qtn.items[0].pricing_rules or "")
 		messages = [m.get("message", "") for m in frappe.get_message_log()]
 		self.assertTrue(any("stays on Lead" in m for m in messages), messages)
+
+	# --- DEF-23: the Opportunity estimate never becomes the quotation rate ---------------------
+	def test_opportunity_estimate_rate_is_not_copied_to_quotation(self):
+		"""Root cause: ERPNext's mapper copies the Opportunity Item rate onto the Quotation row and only
+		overwrites it when a pricing rule applies. The form then posted exactly this row (captured in
+		the browser): price_list_rate = list price, rate = estimate, discount_percentage 0,
+		pricing_rules empty, and validate_discounts asked for a discount reason."""
+		from erpnext.crm.doctype.opportunity.opportunity import make_quotation as erpnext_make_quotation
+
+		lead = make_lead("LEADTEST Estimate Ltd", "LEADTEST Estimate")
+		opp = make_opportunity(lead.name, items=[{"item_code": ITEM, "qty": 2, "rate": ESTIMATE}])
+
+		standard = with_dimensions(erpnext_make_quotation(opp.name))
+		row = standard.items[0]
+		self.assertEqual((row.price_list_rate, row.rate), (PRICE, ESTIMATE))
+		self.assertFalse(row.discount_percentage)
+		self.assertFalse(row.pricing_rules)
+		self.assertRaisesRegex(frappe.ValidationError, "Discount Reason", standard.insert)
+
+		qtn = with_dimensions(make_quotation(opp.name))
+		row = qtn.items[0]
+		self.assertEqual((row.price_list_rate, row.rate, row.discount_percentage), (PRICE, PRICE, 0))
+		qtn.insert()
+		self.assertEqual(qtn.needs_discount_approval, 0)
+		self.assertEqual((qtn.items[0].rule_rate, qtn.items[0].discount_over_rule_pct), (PRICE, 0))
+
+	def test_opportunity_quotation_keeps_pricing_rule_discount(self):
+		lead = make_lead("LEADTEST Estimate Rule Ltd", "LEADTEST EstimateRule")
+		opp = make_opportunity(
+			lead.name, **qualified_details(), items=[{"item_code": ITEM, "qty": 1, "rate": ESTIMATE}]
+		)
+		qtn = with_dimensions(make_quotation(opp.name)).insert()
+
+		row = qtn.items[0]
+		self.assertEqual(qtn.quotation_to, "Customer")
+		self.assertIn(self.rule, row.pricing_rules)
+		self.assertEqual(row.rate, PRICE * (100 - PREMIUM_PCT) / 100)
+		self.assertEqual(qtn.needs_discount_approval, 0)
+
+	def test_get_items_from_opportunity_keeps_rows_already_on_the_quotation(self):
+		lead = make_lead("LEADTEST Get Items Ltd", "LEADTEST GetItems")
+		opp = make_opportunity(lead.name, items=[{"item_code": ITEM, "qty": 1, "rate": ESTIMATE}])
+		target = {
+			"doctype": "Quotation",
+			"quotation_to": "Lead",
+			"party_name": lead.name,
+			"company": COMPANY,
+			"transaction_date": nowdate(),
+			"selling_price_list": SELLING_PRICE_LIST,
+			"items": [
+				{
+					"doctype": "Quotation Item",
+					"name": "new-quotation-item-leadtest",
+					"item_code": ITEM,
+					"qty": 1,
+					"price_list_rate": PRICE,
+					"rate": 90000,  # mapped earlier, then edited by the user
+					"prevdoc_doctype": "Opportunity",
+					"prevdoc_docname": opp.name,
+				}
+			],
+		}
+		qtn = make_quotation(opp.name, json.dumps(target))
+
+		# ERPNext's map adds Opportunity rows only to an empty table ("add_if_empty"); the row already
+		# on the form is never re-priced
+		self.assertEqual(
+			[(row.name, row.rate) for row in qtn.items], [("new-quotation-item-leadtest", 90000)]
+		)
+
+	def test_genuine_manual_discount_still_needs_reason(self):
+		lead = make_lead("LEADTEST Manual Ltd", "LEADTEST Manual")
+		opp = make_opportunity(lead.name)
+		qtn = with_dimensions(make_quotation(opp.name))
+		qtn.items[0].discount_percentage = 20
+		qtn.items[0].rate = PRICE * 0.8
+		self.assertRaisesRegex(frappe.ValidationError, "Discount Reason", qtn.insert)
+
+		qtn.discount_reason = "LEADTEST launch pricing agreed with buyer"
+		qtn.insert()
+		self.assertEqual((qtn.needs_discount_approval, qtn.items[0].discount_over_rule_pct), (1, 20))
+
+	def test_switch_reprices_rows_priced_for_the_lead(self):
+		"""A row the form priced on the Lead (only a rule for everyone) gets the Customer's Premium rule
+		after the switch; ERPNext alone re-applies the rules stored on the row during validate."""
+		everyone = frappe.get_doc(
+			{
+				"doctype": "Pricing Rule",
+				"title": "LEADTEST Everyone 2",
+				"apply_on": "Item Group",
+				"item_groups": [{"item_group": ITEM_GROUP}],
+				"selling": 1,
+				"price_or_product_discount": "Price",
+				"rate_or_discount": "Discount Percentage",
+				"discount_percentage": 2,
+				"currency": "INR",
+				"company": COMPANY,
+				"apply_multiple_pricing_rules": 1,
+			}
+		)
+		everyone.flags.ignore_permissions = True
+		everyone.insert()
+		self.addCleanup(frappe.db.set_value, "Pricing Rule", everyone.name, "disable", 1)
+
+		lead = make_lead("LEADTEST Switch Ltd", "LEADTEST Switch")
+		opp = make_opportunity(lead.name, **qualified_details())
+		qtn = with_dimensions(
+			frappe.get_doc(
+				{
+					"doctype": "Quotation",
+					"quotation_to": "Lead",
+					"party_name": lead.name,
+					"opportunity": opp.name,
+					"company": COMPANY,
+					"transaction_date": nowdate(),
+					"selling_price_list": SELLING_PRICE_LIST,
+					"items": [
+						{  # as posted by the form for the Lead
+							"item_code": ITEM,
+							"qty": 1,
+							"price_list_rate": PRICE,
+							"discount_percentage": 2,
+							"rate": PRICE * 0.98,
+							"pricing_rules": json.dumps([everyone.name]),
+						}
+					],
+				}
+			)
+		).insert()
+
+		row = qtn.items[0]
+		self.assertEqual(qtn.quotation_to, "Customer")
+		self.assertEqual(set(json.loads(row.pricing_rules)), {self.rule, everyone.name})
+		self.assertEqual(row.discount_percentage, PREMIUM_PCT + 2)
+		self.assertEqual(row.rate, PRICE * (100 - PREMIUM_PCT - 2) / 100)
+		self.assertEqual((row.rule_rate, row.discount_over_rule_pct), (row.rate, 0))
+
+	# --- DEF-24: customer details asked on the Opportunity's main tab -------------------------
+	def test_lead_opportunity_customer_details_on_main_tab_and_required(self):
+		meta = frappe.get_meta("Opportunity")
+		fieldnames = [df.fieldname for df in meta.fields]
+		section = fieldnames.index("horizon_customer_details_section")
+		self.assertEqual(fieldnames[section - 1], "probability")  # right after the party block
+		first_tab = next(i for i, df in enumerate(meta.fields) if df.fieldtype == "Tab Break")
+		self.assertLess(section, first_tab)
+		self.assertEqual(meta.get_field("horizon_customer_details_section").depends_on, LEAD_ONLY)
+
+		for fieldname in (
+			"customer_group",
+			"horizon_gst_category",
+			"horizon_billing_address_line1",
+			"city",
+			"state",
+			"horizon_billing_pincode",
+		):
+			self.assertEqual(meta.get_field(fieldname).mandatory_depends_on, LEAD_ONLY, fieldname)
+		self.assertEqual(
+			meta.get_field("horizon_gstin").mandatory_depends_on,
+			LEAD_ONLY + " && doc.horizon_gst_category=='Registered Regular'",
+		)
+		for fieldname in ("horizon_credit_limit", "horizon_payment_terms"):
+			self.assertFalse(meta.get_field(fieldname).mandatory_depends_on, fieldname)
+			self.assertFalse(meta.get_field(fieldname).reqd, fieldname)
+		self.assertEqual(meta.get_field("horizon_payment_terms").default, "Net 30")
+		self.assertFalse(meta.quick_entry)  # Lead > Create > Opportunity opens the full form

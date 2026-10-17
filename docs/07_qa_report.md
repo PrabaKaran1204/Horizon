@@ -341,3 +341,50 @@ as rejected qty with a warning and a draft return. Standard Supplier Scorecards 
 demo suppliers. Live evidence (PUR-ORD-2026-00012, PR-26-00009, MAT-QA-2026-00007, PR-26-00010) and
 scores in `05_test_plan_and_evidence.md`; earlier receipts PR-26-00001 / -00004 / -00008 with their
 release Stock Entries remain as history of the former default.
+
+## 11. Defects from user reports (2026-10-18)
+
+### DEF-23 – Quotation from an Opportunity asks for a discount reason the user never gave
+*Severity* High · *Priority* P1 · *Risk* Medium · *Type* Functional
+*Evidence*: browser run as amit (`05`, UB-1): Lead -> Opportunity with HZ-PUMP-100 x 2 @ 1,00,000 ->
+Create > Quotation -> Save. Posted row: `price_list_rate 185000`, `rate 100000`,
+`discount_percentage 0`, `discount_amount 85000`, `pricing_rules null` -> "Discount exceeds 15.0% below
+the pricing-rule rate ...". The form shows Discount 0 %, so the user sees no discount.
+*Root cause*: ERPNext's `erpnext.crm.doctype.opportunity.opportunity.make_quotation` maps the
+Opportunity Item `rate` (mandatory on the Opportunity, typed as an estimate) onto the Quotation row;
+its `set_missing_values` only overwrites the rate when a pricing rule applies to the row. A row with no
+rule (pump for a non-Premium lead) kept the estimate, 45.9 % below the price list, and
+`validate_discounts` correctly flagged it. Client/server pricing-rule drift (Tata, Delhi Metro, qty
+toggling, row add/remove, late customer) was ruled out: the posted `pricing_rules` and rates matched
+the server's rule rate in every scenario.
+*Fix*: `horizon_erp.horizon_crm.opportunity.make_quotation` replaces the mapper through
+`override_whitelisted_methods` (also used by *Get Items From > Opportunity*): rows mapped from the
+Opportunity that the price list prices are re-priced from the price list + pricing rules (ERPNext's
+`calculate_taxes_and_totals` derives the rate); rows already on the form and rows without an Item Price
+keep their rate; an alert lists the replaced estimates. Related consistency fix in the Lead -> Customer
+switch: `reset_rule_priced_rows` clears the pricing of rows still at their Lead rule rate so the engine
+prices them for the Customer (ERPNext re-applies the stored rules on validate, so a Lead-priced row
+missed the Premium rule, 5,850 instead of 5,525). The 15 % governance is unchanged: a genuine manual
+discount still needs the reason (UB-4, `test_genuine_manual_discount_still_needs_reason`).
+*Status*: **Fixed-verified** (browser UB-2 / UB-3 / UB-5, unit UB-8). Note: the user's open
+CRM-OPP-2026-00002 still carries the 1,00,000 estimate; a new quotation from it is now priced at the
+list price.
+
+### DEF-24 – Opportunity does not ask for the customer details
+*Severity* Medium · *Priority* P2 · *Risk* Low · *Type* Usability
+*Evidence*: Lead > Create > Opportunity opens the full form (Opportunity has no quick entry), but the
+*Customer Details (for new customer)* section was inserted after `territory`, i.e. at the end of the
+*Organization* section, 807 px down on a 900 px viewport, and none of its fields (nor Customer Group /
+City / State) was mandatory, so saving never prompted for them (`bug2_before_full.png`).
+*Root cause*: placement (`insert_after: territory`) and no `mandatory_depends_on`.
+*Fix*: `horizon_crm/custom/opportunity.json`: section moved to `insert_after: probability` (Details
+tab, directly below the party block, top at 464 px); `mandatory_depends_on
+eval:doc.opportunity_from=='Lead'` on GST Category, Billing Address Line 1, Billing Pincode and, via
+Property Setters, on the standard Customer Group, City and State (Organization section, directly below
+the new section); GSTIN stays required for *Registered Regular* and the server-side GSTIN / state
+validation is unchanged; Credit Limit and Payment Terms (default Net 30) stay optional. The mandatory
+rule is a form rule (Frappe v15 evaluates `mandatory_depends_on` client-side only), so API / import
+paths keep ADR-17's light Lead path.
+*Status*: **Fixed-verified** (browser UB-6 / UB-7, unit
+`test_lead_opportunity_customer_details_on_main_tab_and_required`). Existing open Lead opportunities
+without details (e.g. CRM-OPP-2026-00002) now ask for them on their next save in the form.

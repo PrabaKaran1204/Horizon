@@ -192,6 +192,36 @@ group / item / Premium rule so the demo rules do not stack) and a live run as am
 | LC-5 | Trigger order | `before_validate` hook runs before the pricing engine | **PASS** - trace on a rolled-back Quotation: `before_validate hook start (Lead)` -> `hook end (Customer)` -> `apply_pricing_rule_on_items (Customer, PRLE-0005)` |
 | LC-6 | Live: Sundaram Pumps Pvt Ltd (amit) | Lead light -> Opportunity with details -> Quotation auto-switched, Premium + 23 %, IGST | **PASS** - Lead CRM-LEAD-2026-00003 (Karthik R, Exhibition, West) -> Opportunity CRM-OPP-2026-00003 (Premium, Registered Regular, 33AAFCS4521K1ZF, Chennai 600032 Tamil Nadu, credit 15,00,000, Net 30) -> Quotation SAL-QTN-2026-00004 mapped to the Lead with *Output GST In-state*, saved as Customer **Sundaram Pumps Pvt Ltd**: HZ-PUMP-100 x 1 @185,000 -5 % = 1,75,750 (PRLE-0001); SP-IMPELLER x 60 @6,500 -23 % = 5,005 (PRLE-0001 + PRLE-0003 + PRLE-0004), net 4,76,050; place of supply 33-Tamil Nadu, company GSTIN 27AABCU9602H1Z9 (Mumbai HQ), template *Output GST Out-state - HML*: one row IGST 44,823.50 (item tax 5 % pump + 12 % spares), grand 5,20,873.50; payment schedule Net 30 due 17-11-2026; workflow *Submit* -> Approved, docstatus 1. Customer: Premium / West / Company / Registered Regular, credit limit 15,00,000 HML, Address *Sundaram Pumps Pvt Ltd-Billing* (state code 33), primary contact Karthik R; Lead Converted. OBS: neither company address is flagged primary, so `get_default_address` may return Delhi DC on a server-side quotation (company GSTIN 07 seen once in a dry run); the sample sets Mumbai HQ explicitly. |
 
+### User-reported UI defects DEF-23 / DEF-24 (18-Oct-2026)
+
+Reproduced and re-tested in Chromium (Playwright) as **amit@horizon.local** against
+http://127.0.0.1:8001; the `savedocs` request payload was intercepted on every save. Unit tests in
+`horizon_erp.horizon_crm.tests.test_opportunity_customer` (prefix LEADTEST).
+
+| ID | Scenario | Expected | Evidence |
+| --- | --- | --- | --- |
+| UB-1 | DEF-23 reproduction: Lead -> Opportunity with HZ-PUMP-100 x 2 @ 1,00,000 (Opportunity Item rate is mandatory, typed as an estimate; same data as the user's CRM-OPP-2026-00002) -> Create > Quotation -> Save | - | **FAIL before fix** - posted row `price_list_rate 185000, rate 100000, discount_percentage 0, discount_amount 85000, pricing_rules null`; server `ValidationError` "Discount exceeds 15.0% below the pricing-rule rate ..." (45.9 % below list). Tata / Delhi Metro / qty 60 -> 10 -> 60 / add-remove row / customer picked after the items / Lead quotation switched to the Customer all saved cleanly (client and server rules identical), so the prompt only came from the Opportunity rate |
+| UB-2 | DEF-23 fix, same path (customer group Standard so no rule hits the pump) | Pump priced from Standard Selling, no prompt, submit -> Approved | **PASS** - quotation opens with pump 1,85,000 (impeller 5,330 = -18 % Volume + Q4); saved and moved to the new Customer, workflow *Submit* -> **Approved** (kept: SAL-QTN-2026-00019) |
+| UB-3 | Tata Precision Works, HZ-PUMP-100 x 1 + SP-IMPELLER x 60 | No prompt, submit -> Approved | **PASS** - posted rows 1,75,750 (PRLE-0001) and 5,005 (PRLE-0001 + 0003 + 0004), `rule_rate` = rate, `discount_over_rule_pct` 0, Approved (deleted after the run) |
+| UB-4 | Genuine 20 % discount typed on a row without a pricing rule (Delhi Metro, pump 1,90,550 -> 1,52,440) | Still asks for the reason | **PASS** - "Discount Reason Required" dialog. On a rule-priced row (Tata pump) a typed 25 % is reverted to the rule's 5 % by ERPNext on save (DEF-13, unchanged) |
+| UB-5 | Lead quotation priced on the Lead (SP-IMPELLER x 1: only Q4 -10 %, 5,850) then switched to a Premium Customer | Customer's Premium rule applied | **PASS** after fix - 5,525 (PRLE-0001 + PRLE-0004); before the fix the stored Lead rules were re-applied and the row stayed 5,850 |
+| UB-6 | DEF-24 Opportunity from Lead > Create > Opportunity | Full form (no quick entry); *Customer Details (for new customer)* on the Details tab right after the party block; save blocked until Customer Group, GST Category, Billing Address Line 1, City, State, Billing Pincode are filled; GSTIN required only for Registered Regular; Credit Limit / Payment Terms (default Net 30) optional | **PASS** - section top 464 px (was 807 px under *Organization*, below the fold, nothing mandatory); "Missing Fields" lists the six fields; saved CRM-OPP with Premium / Maharashtra (from GSTIN) / Net 30 |
+| UB-7 | DEF-24 Opportunity from a Customer (Tata) | Section hidden, nothing extra required | **PASS** - section hidden, saved |
+| UB-8 | Unit | Root cause + fixes | **PASS** - `test_opportunity_estimate_rate_is_not_copied_to_quotation` (ERPNext mapper -> rate 60,000 vs list 1,00,000 -> ValidationError; Horizon mapper -> 1,00,000, no approval), `test_opportunity_quotation_keeps_pricing_rule_discount`, `test_get_items_from_opportunity_keeps_rows_already_on_the_quotation`, `test_genuine_manual_discount_still_needs_reason`, `test_switch_reprices_rows_priced_for_the_lead` (fails without `reset_rule_priced_rows`), `test_lead_opportunity_customer_details_on_main_tab_and_required` |
+
+Screenshots (`uibug/`): `bug1_repro_quotation_opened.png`, `bug1_repro_error.png`,
+`bug1_fixed_quotation_opened.png`, `bug1_fixed_lead_saved.png`, `bug1_lead_path_quotation_opened.png`,
+`bug1_lead_path_submitted_final.png`, `bug1_tata_submitted_final.png`,
+`bug1_genuine_discount_still_prompts.png`, `bug1_tata_rule_row_discount_reverted_DEF13.png`,
+`bug2_before_full.png`, `bug2_lead_opportunity_section_main_tab.png`,
+`bug2_save_blocked_missing_fields.png`, `bug2_lead_opportunity_saved.png`,
+`bug2_customer_opportunity_no_section.png`.
+
+Suite: `bench --site horizon.local run-tests --app horizon_erp --skip-test-records` -> **Ran 187 tests - OK**,
+residue (`find_test_residue()`) = {}. Browser-created documents removed except the Lead -> Opportunity
+-> Quotation chain CRM-LEAD-2026-00017 / CRM-OPP-2026-00014 / Customer *UIBug Industries 011750* /
+SAL-QTN-2026-00019.
+
 ### Receipt -> QC -> GRN on the standard flow (17-Oct-2026)
 
 ADR-2 revised: Purchase Receipt draft = receipt, submit = GRN, QC Hold routing optional (off). Site
