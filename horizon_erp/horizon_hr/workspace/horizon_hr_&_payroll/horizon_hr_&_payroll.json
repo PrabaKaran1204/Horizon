@@ -1,7 +1,7 @@
 {
  "charts": [],
  "content": "[{\"id\": \"a342d72071\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>8. HR &amp; Payroll</b></span>\", \"col\": 12}}, {\"id\": \"3aea3f718d\", \"type\": \"paragraph\", \"data\": {\"text\": \"Assignment: attendance and leave, payroll (docs/01 matrix 5.14-5.15: AL-1..5, PY-1..6). Biometric check-ins become attendance through the Shift Type (late / early flags after 5 minutes); leave carry-forward expiry and salary cost per branch are custom reports.\", \"col\": 12}}, {\"id\": \"32b6ec1497\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>Flow:</b> Employee Checkin → Shift Type auto attendance → Attendance → Leave Application → Payroll Entry → Salary Slip\", \"col\": 12}}, {\"id\": \"9b75dec06c\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"5d83d6d797\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Shortcuts (process order)</b></span>\", \"col\": 12}}, {\"id\": \"dbf8a3d258\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Employee\", \"col\": 3}}, {\"id\": \"de1deaf1c0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Employee Checkin\", \"col\": 3}}, {\"id\": \"60f42c95d1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Attendance\", \"col\": 3}}, {\"id\": \"0f6e4e95cd\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Leave Application\", \"col\": 3}}, {\"id\": \"0c29da28f6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Shift Type\", \"col\": 3}}, {\"id\": \"fcd262a67b\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Payroll Entry\", \"col\": 3}}, {\"id\": \"1f63a0e9ae\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Salary Slip\", \"col\": 3}}, {\"id\": \"d9a01209e4\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"6f9bf510e1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Transactions, masters and reports</b></span>\", \"col\": 12}}, {\"id\": \"351bbacea3\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"620cfda326\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"2f68ac3331\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
- "creation": "2026-10-17 22:00:00.000000",
+ "creation": "2026-10-17 23:00:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -188,7 +188,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-17 22:00:00.000000",
+ "modified": "2026-10-17 23:00:00.000000",
  "modified_by": "Administrator",
  "module": "Horizon HR",
  "name": "Horizon HR & Payroll",

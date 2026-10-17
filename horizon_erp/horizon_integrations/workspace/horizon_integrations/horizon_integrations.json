@@ -1,7 +1,7 @@
 {
  "charts": [],
  "content": "[{\"id\": \"4a38756c4f\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>10. Integrations</b></span>\", \"col\": 12}}, {\"id\": \"626ffea730\", \"type\": \"paragraph\", \"data\": {\"text\": \"Assignment: Inventory Sync API and scheduled jobs (docs/01 matrix 5.19: API-1..6, SJ-1..4; contract in docs/api.md).\", \"col\": 12}}, {\"id\": \"3d7f2576e7\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>Endpoint:</b> <code>POST /api/method/get_inventory_snapshot</code> with <code>Authorization: token KEY:SECRET</code>. <b>Rate limit:</b> 100 requests per hour per API client (429 + Retry-After). Warehouse User Permissions apply; every call is written to Inventory API Log.\", \"col\": 12}}, {\"id\": \"755379c298\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>Flow:</b> API client → get_inventory_snapshot → Inventory API Log → API Usage Report\", \"col\": 12}}, {\"id\": \"6eb06337d4\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"4a582df7d3\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Shortcuts (process order)</b></span>\", \"col\": 12}}, {\"id\": \"8d13757691\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Inventory API Log\", \"col\": 3}}, {\"id\": \"2a1c96eb51\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"API Usage Report\", \"col\": 3}}, {\"id\": \"f693142567\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Scheduled Job Log\", \"col\": 3}}, {\"id\": \"3dedbd8ffe\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"306750a773\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Transactions, masters and reports</b></span>\", \"col\": 12}}, {\"id\": \"91f003729c\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"df9a4de863\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"150252a301\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
- "creation": "2026-10-17 22:00:00.000000",
+ "creation": "2026-10-17 23:00:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -98,7 +98,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-17 22:00:00.000000",
+ "modified": "2026-10-17 23:00:00.000000",
  "modified_by": "Administrator",
  "module": "Horizon Integrations",
  "name": "Horizon Integrations",
