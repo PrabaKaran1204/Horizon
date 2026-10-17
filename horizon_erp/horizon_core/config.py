@@ -20,6 +20,12 @@ REJECTED_WAREHOUSE_NAME = "HQ Rejected"
 FINISHED_GOODS_WAREHOUSE_NAME = "HQ Finished Goods"
 SCRAP_WAREHOUSE_NAME = "HQ Scrap"
 
+# --- Receipt / QC flow -------------------------------------------------------------------------
+# Off by default: Purchase Receipt draft = receipt, submit = GRN (ERPNext standard, ADR-2). On:
+# inspected items are received into QC Hold and released by an automatic Material Transfer.
+QC_HOLD_SITE_CONFIG_KEY = "horizon_use_qc_hold"
+QC_HOLD_SETTINGS_FIELD = "horizon_use_qc_hold"  # Custom Field on Stock Settings
+
 # --- Selling -----------------------------------------------------------------------------------
 DISCOUNT_AUTO_APPROVE_PCT = 15  # discount over pricing-rule rate above this needs Sales Manager
 DISCOUNT_REASON_MIN_LENGTH = 15
@@ -75,6 +81,20 @@ CAPACITY_OVERRIDE_ROLES = (ROLE_OPERATIONS_HEAD, ROLE_MANUFACTURING_MANAGER, ROL
 def get_threshold(key, default):
 	"""Read a numeric threshold, allowing a future Horizon Settings override."""
 	return frappe.utils.flt(get_setting(key, default))
+
+
+def use_qc_hold():
+	"""True when the optional QC Hold routing is switched on.
+
+	``site_config.json`` key ``horizon_use_qc_hold`` wins when present (ops override without a
+	deploy); otherwise the Stock Settings check ``horizon_use_qc_hold`` (default 0) decides.
+	"""
+	site_value = frappe.conf.get(QC_HOLD_SITE_CONFIG_KEY)
+	if site_value is not None:
+		return bool(frappe.utils.cint(site_value))
+	if not frappe.get_meta("Stock Settings").has_field(QC_HOLD_SETTINGS_FIELD):
+		return False
+	return bool(frappe.utils.cint(frappe.db.get_single_value("Stock Settings", QC_HOLD_SETTINGS_FIELD)))
 
 
 def get_company_abbr(company):

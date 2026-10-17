@@ -20,7 +20,8 @@ def on_submit_quality_inspection(doc, method=None):
 	    Work Order for ``sample_size`` (Quality Inspection carries no rejected-qty field) with
 	    ``rework_of`` = source Work Order and link it in ``rework_work_order``.
 	  * ``qc_result`` = Fail: raise a Non Conformance under the "Horizon Manufacturing QC" procedure.
-	- Purchase Receipt rejections are handled when the receipt is submitted (``buying``).
+	- Purchase Receipt rejections are handled when the receipt is submitted
+	  (``horizon_stock.purchase_receipt.on_submit_purchase_receipt``).
 	"""
 	validate_evidence(doc)
 

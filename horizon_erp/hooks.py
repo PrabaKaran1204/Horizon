@@ -69,6 +69,7 @@ doc_events = {
 	"Purchase Order": {"validate": "horizon_erp.horizon_buying.buying.validate_purchase_order"},
 	# Stock
 	"Purchase Receipt": {
+		"before_validate": "horizon_erp.horizon_stock.purchase_receipt.before_validate_purchase_receipt",
 		"validate": "horizon_erp.horizon_stock.purchase_receipt.validate_purchase_receipt",
 		"on_submit": "horizon_erp.horizon_stock.purchase_receipt.on_submit_purchase_receipt",
 	},

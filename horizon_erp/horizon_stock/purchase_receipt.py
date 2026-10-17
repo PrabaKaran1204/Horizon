@@ -1,8 +1,18 @@
 # Copyright (c) 2026, Horizon Manufacturing Ltd and contributors
 # For license information, please see license.txt
 
-"""Purchase Receipt document event handlers: QC Hold routing on receipt and release / rejection
-paperwork once Quality Inspections are accepted (ADR-2).
+"""Purchase Receipt document event handlers for the Receipt -> Quality Check -> GRN flow (ADR-2).
+
+Default flow (ERPNext standard, ``config.use_qc_hold()`` False): the Purchase Receipt *draft* is the
+receipt (its ``creation`` is the receipt time the inspection SLA is measured from), the Quality
+Inspection is raised against it, and *submitting* it is the GRN - the only step that posts stock.
+Stock Settings "Action if Quality Inspection is not Submitted = Stop" guarantees nothing is posted
+before inspection. These handlers only default the Rejected warehouse and raise the paperwork
+(draft Purchase Return, draft Debit Note) for rejected quantities.
+
+Optional flow (``horizon_use_qc_hold`` on Stock Settings or in site_config): rows of items that
+need inspection are received into the QC Hold warehouse and the accepted qty is moved to the item's
+default warehouse by an automatic Material Transfer on submit.
 
 Wired from ``hooks.py`` ``doc_events``. Every handler takes ``(doc, method=None)``.
 """
@@ -17,16 +27,29 @@ from horizon_erp.horizon_core import config
 # ---------------------------------------------------------------------------------------------
 # Purchase Receipt
 # ---------------------------------------------------------------------------------------------
-def validate_purchase_receipt(doc, method=None):
-	"""Purchase Receipt ``validate`` hook: enforce the QC Hold routing decided in ADR-2.
+def before_validate_purchase_receipt(doc, method=None):
+	"""Purchase Receipt ``before_validate`` hook (both modes).
 
-	Every row whose Item has ``inspection_required_before_purchase`` must be received into the QC
-	Hold warehouse of the company; the row's ``rejected_warehouse`` defaults to the Rejected
-	warehouse. Rows for items without inspection keep their own warehouse. Returns are untouched.
-	``on_submit_purchase_receipt`` later releases accepted stock from QC Hold (it keys on the row
-	warehouse being QC Hold, so the two handlers stay in step).
+	Rows of items with ``inspection_required_before_purchase`` (and any row carrying a
+	``rejected_qty``) get the company's Rejected warehouse as ``rejected_warehouse`` when blank, so
+	a partly rejected lot can be posted without a manual step. Runs before ERPNext's own
+	``validate_rejected_warehouse`` (part of the controller ``validate``), which would otherwise
+	reject a row whose rejected qty was entered on the first save. Rows keep the warehouse chosen on
+	the receipt (the item default, HQ Raw Materials for inspected items). Returns are untouched.
 	"""
 	if doc.get("is_return") or not doc.get("company"):
+		return
+	default_rejected_warehouse(doc, get_inspection_items([row.item_code for row in doc.items]))
+
+
+def validate_purchase_receipt(doc, method=None):
+	"""Purchase Receipt ``validate`` hook: optional QC Hold routing (ADR-2).
+
+	Only with QC Hold routing switched on (``config.use_qc_hold()``): inspection rows are re-routed
+	into the QC Hold warehouse; ``on_submit_purchase_receipt`` then releases the accepted stock (it keys on the row warehouse
+	being QC Hold, so the two handlers stay in step). Returns are untouched.
+	"""
+	if doc.get("is_return") or not doc.get("company") or not config.use_qc_hold():
 		return
 	rerouted = route_inspection_rows_to_qc_hold(doc)
 	if rerouted:
@@ -57,16 +80,32 @@ def get_inspection_items(item_codes):
 	)
 
 
-def route_inspection_rows_to_qc_hold(doc):
-	"""Set ``warehouse`` = QC Hold (and a default ``rejected_warehouse``) on inspection rows.
+def default_rejected_warehouse(doc, inspection_items):
+	"""Fill a blank ``rejected_warehouse`` with the company's Rejected warehouse on inspection rows
+	and on rows with a rejected qty. Returns the ``idx`` list of rows changed."""
+	rejected = config.get_warehouse(config.REJECTED_WAREHOUSE_NAME, doc.company)
+	if not rejected:
+		return []
+	changed = []
+	for row in doc.items:
+		if row.get("rejected_warehouse"):
+			continue
+		if row.item_code in inspection_items or flt(row.get("rejected_qty")) > 0:
+			row.rejected_warehouse = rejected
+			changed.append(row.idx)
+	return changed
+
+
+def route_inspection_rows_to_qc_hold(doc, inspection_items=None):
+	"""Set ``warehouse`` = QC Hold on inspection rows (optional QC Hold mode only).
 
 	Returns the ``idx`` list of rows whose warehouse was changed.
 	"""
 	qc_hold = rerouted_warehouse(doc)
 	if not qc_hold:
 		return []
-	rejected = config.get_warehouse(config.REJECTED_WAREHOUSE_NAME, doc.company)
-	inspection_items = get_inspection_items([row.item_code for row in doc.items])
+	if inspection_items is None:
+		inspection_items = get_inspection_items([row.item_code for row in doc.items])
 	rerouted = []
 	for row in doc.items:
 		if row.item_code not in inspection_items:
@@ -74,17 +113,15 @@ def route_inspection_rows_to_qc_hold(doc):
 		if row.warehouse != qc_hold:
 			row.warehouse = qc_hold
 			rerouted.append(row.idx)
-		if rejected and not row.get("rejected_warehouse"):
-			row.rejected_warehouse = rejected
 	return rerouted
 
 
 def on_submit_purchase_receipt(doc, method=None):
-	"""Purchase Receipt ``on_submit`` hook: move QC-accepted stock out of QC Hold and raise the
-	paperwork for rejected quantities.
+	"""Purchase Receipt ``on_submit`` hook (= GRN): raise the paperwork for rejected quantities and,
+	in the optional QC Hold mode only, move QC-accepted stock out of QC Hold.
 
-	- Rows received into the QC Hold warehouse whose Quality Inspection is submitted and Accepted:
-	  a Material Transfer Stock Entry of the accepted qty (``row.qty``; ERPNext keeps rejected qty
+	- QC Hold mode only - rows received into the QC Hold warehouse whose Quality Inspection is
+	  submitted and Accepted: a Material Transfer Stock Entry of the accepted qty (``row.qty``; ERPNext keeps rejected qty
 	  in ``rejected_qty`` / ``rejected_warehouse``, so ``qty`` is already net of rejections) from
 	  QC Hold to the item's default warehouse for the company, falling back to Raw Materials.
 	- Rows with ``rejected_qty`` > 0: ONE draft Purchase Return (against the rejected warehouse)
@@ -97,7 +134,10 @@ def on_submit_purchase_receipt(doc, method=None):
 
 	created_links = []
 	try:
-		created_links += release_accepted_stock(doc)
+		if config.use_qc_hold():
+			created_links += release_accepted_stock(doc)
+		else:
+			warn_rows_left_in_qc_hold(doc)
 	except Exception:
 		frappe.log_error(title=f"QC release failed for {doc.name}", message=frappe.get_traceback())
 		frappe.msgprint(
@@ -131,6 +171,22 @@ def _qi_is_accepted(qi_name):
 		return False
 	qi = frappe.db.get_value("Quality Inspection", qi_name, ["docstatus", "status"], as_dict=True)
 	return bool(qi and qi.docstatus == 1 and qi.status == "Accepted")
+
+
+def warn_rows_left_in_qc_hold(doc):
+	"""Standard mode: nothing is released automatically. A row still received into QC Hold (a draft
+	made while QC Hold routing was on, or chosen by hand) is flagged so it is moved manually."""
+	qc_hold = config.get_warehouse(config.QC_HOLD_WAREHOUSE_NAME, doc.company)
+	rows = [str(row.idx) for row in doc.items if qc_hold and row.warehouse == qc_hold]
+	if rows:
+		frappe.msgprint(
+			_(
+				"Rows {0} were received into {1}. QC Hold routing is switched off, so no automatic "
+				"release is made; transfer the stock with a Material Transfer when it is cleared."
+			).format(", ".join(rows), frappe.bold(qc_hold)),
+			indicator="orange",
+			alert=True,
+		)
 
 
 def get_item_destination_warehouse(item_code, company):

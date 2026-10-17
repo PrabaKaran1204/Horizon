@@ -41,7 +41,7 @@ GST registrations (`demo_data.COMPANY_ADDRESSES`, company addresses with `is_you
 All Warehouses - HML
 ├── Mumbai HQ - HML (group)
 │   ├── HQ Raw Materials - HML        default for raw / components; reorder warehouse
-│   ├── HQ QC Hold - HML              every Purchase Receipt lands here
+│   ├── HQ QC Hold - HML              optional QC Hold mode only (ADR-2); unused by default
 │   ├── HQ Work In Progress - HML     WIP for Work Orders; default for sub-assemblies
 │   ├── HQ Finished Goods - HML       equipment and spares
 │   ├── HQ Rejected - HML             is_rejected_warehouse = 1 (QC rejections)
@@ -52,7 +52,7 @@ All Warehouses - HML
 ```
 
 Justification: the brief asks for 2 + 1 warehouses; the extra HQ warehouses are what make the
-quality gates enforceable (QC Hold, Rejected, Scrap) and the transit warehouse is what makes an
+quality gates enforceable (Rejected, Scrap; QC Hold for the optional mode) and the transit warehouse is what makes an
 inter-branch movement auditable (goods are neither at HQ nor at DC while on the truck).
 
 Transfer process (HQ to DC): Stock Entry *Material Transfer* with `add_to_transit`, source
@@ -66,7 +66,8 @@ treatment for the inter-GSTIN movement is covered in ADR-10 (`02_decision_log.md
 | Setting | Value | Effect |
 | --- | --- | --- |
 | Stock Settings `allow_negative_stock` | 0 | Negative stock from migration cannot recur |
-| `action_if_quality_inspection_is_not_submitted` / `_is_rejected` | Stop / Stop | A Purchase Receipt cannot be submitted without an accepted Quality Inspection |
+| `action_if_quality_inspection_is_not_submitted` / `_is_rejected` | Stop / Warn | The GRN (Purchase Receipt submit) is blocked until its Quality Inspection is submitted; a rejected lot is still booked, with a warning, as `rejected_qty` into HQ Rejected and returned (ADR-2) |
+| `horizon_use_qc_hold` (custom, Horizon section) | 0 | Optional QC Hold routing off: the receipt keeps the item's warehouse (HQ Raw Materials) |
 | `auto_indent`, `reorder_email_notify` | 1 / 1 | Hourly reorder creates Material Requests and emails |
 | `valuation_method` | Moving Average (also set per item) | ERPNext refuses a global change once ledgers exist; every demo item carries it explicitly |
 | `use_serial_batch_fields` | 1 | Batch / serial captured directly on receipt and delivery rows |
@@ -191,7 +192,7 @@ in `horizon_integrations/inventory_api.py` before the data query.
 
 ## 4. Workflow diagrams
 
-### 4.1 Purchasing - PO approval (`horizon_workflow/workflows.py` "Horizon PO Approval") and QC-Hold receipt
+### 4.1 Purchasing - PO approval (`horizon_workflow/workflows.py` "Horizon PO Approval") and Receipt -> QC -> GRN
 
 ```mermaid
 flowchart TD
@@ -221,19 +222,23 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    PO[Approved Purchase Order] --> PR[Purchase Receipt into HQ QC Hold - HML<br/>batch / serial captured]
-    PR --> QI{Quality Inspection submitted?<br/>template per item group}
+    PO[Approved Purchase Order] --> PR[Receipt = Purchase Receipt DRAFT<br/>row warehouse HQ Raw Materials - HML<br/>batch / serial captured, no stock posted]
+    PR --> QI{Quality Inspection submitted?<br/>template per item group<br/>SLA 4 h from PR saved}
     QI -- no --> STOP1[Submit blocked: Stock Settings = Stop]
-    QI -- Rejected --> STOP2[Submit blocked: Stock Settings = Stop<br/>correct rejected_qty / rejected_warehouse first]
-    QI -- Accepted --> SUB[Submit Purchase Receipt = GRN<br/>stock ledger updated]
-    SUB --> T1[on_submit: Material Transfer<br/>accepted qty QC Hold -> HQ Raw Materials]
+    QI -- Rejected --> W1[Warning only: Stock Settings = Warn<br/>book the lot as rejected_qty]
+    QI -- Accepted --> SUB
+    W1 --> SUB[GRN = Submit Purchase Receipt<br/>only step that updates stock:<br/>accepted qty -> HQ Raw Materials, rejected_qty -> HQ Rejected]
     SUB --> T2{rejected_qty > 0?}
-    T2 -- yes --> T3[Rejected qty in HQ Rejected - HML<br/>draft Purchase Return created]
+    T2 -- yes --> T3[draft Purchase Return created]
     T3 --> T4{Submitted Purchase Invoice exists?}
     T4 -- yes --> T5[Draft Debit Note for rejected qty]
     T4 -- no --> T6[Comment: raise Debit Note once invoice is booked]
     SUB --> PI[Purchase Invoice from receipt<br/>pr_required = Yes]
 ```
+
+Optional QC Hold mode (Stock Settings *Route Inspected Receipts via QC Hold*, default off): rows of
+inspected items are received into `HQ QC Hold - HML` and, on submit, a Material Transfer moves the
+accepted qty to the item's default warehouse (ADR-2).
 
 ### 4.2 Manufacturing - order to finished goods with quality gates
 
@@ -351,11 +356,11 @@ notification, print format, workspace, permissions; **Custom code** = Python / J
 
 | # | Requirement | How it is met | Type | Where |
 | --- | --- | --- | --- | --- |
-| RQ-1 | Purchase Receipt with PO link, batch/serial, mandatory inspection | Standard PR; items carry `inspection_required_before_purchase` + template; Stock Settings Stop/Stop | Standard + Configuration | `demo_data._ensure_qi_templates`, `setup_company_settings` |
+| RQ-1 | Purchase Receipt with PO link, batch/serial, mandatory inspection | Standard PR; items carry `inspection_required_before_purchase` + template; Stock Settings QI not submitted = Stop, QI rejected = Warn | Standard + Configuration | `demo_data._ensure_qi_templates`, `setup_company_settings` |
 | RQ-2 | Quality Inspection: category checklists, Pass/Fail/Conditional, photos, rejection reason | Templates RM Steel Incoming, Electrical Incoming, Fastener Incoming, Weld, Paint, Assembly; custom `qc_result` (Pass / Fail / Conditional Pass / Rework), `rejection_reason`, `evidence_required` (attachment enforced on submit) | Configuration + Custom code | `demo_data.QI_TEMPLATES`, `horizon_quality_management/custom/quality_inspection.json`, `inspection.validate_evidence` |
-| RQ-3 | PO -> Receipt -> Inspection -> GRN; only GRN updates stock; rejected -> debit note and return | Purchase Receipt **is** the GRN (ADR-2): rows for inspection items are forced into QC Hold on save (`validate_purchase_receipt`, rejected warehouse defaulted), submit blocked until QI accepted, accepted qty auto-transferred to Raw Materials, rejected qty to HQ Rejected with draft Purchase Return and draft Debit Note | Standard + Custom code | `purchase_receipt.validate_purchase_receipt`, `purchase_receipt.on_submit_purchase_receipt` |
-| RQ-4 | Quality dashboard: rejection by supplier, rejected categories, inspection SLA 4 h | Supplier Quality Scorecard + *Horizon Quality* card QI Rejected (30d); inspection SLA (hours from Purchase Receipt creation to the Quality Inspection, % within 4 h, average, worst 5) in *Quality Metrics* | Custom code | `horizon_quality_management/report/supplier_quality_scorecard`, `horizon_quality_management/report/quality_metrics` |
-| RQ-5 | Supplier Quality Scorecard | Rejection rate, on-time delivery, price stability, composite score | Custom code | same |
+| RQ-3 | PO -> Receipt -> Inspection -> GRN; only GRN updates stock; rejected -> debit note and return | Standard flow (ADR-2): Purchase Receipt **draft = Receipt** (no stock), Quality Inspection against it, Purchase Receipt **submit = GRN** (only stock posting). Stock Settings *QI not submitted = Stop* blocks the GRN until inspected; *QI rejected = Warn* lets a rejected lot be booked as `rejected_qty` into HQ Rejected (rejected warehouse defaulted on save); draft Purchase Return and draft Debit Note raised on submit. QC Hold routing is an optional mode (`horizon_use_qc_hold`, default off) | Standard + Configuration + Custom code | `demo_data.setup_company_settings`, `purchase_receipt.before_validate_purchase_receipt`, `purchase_receipt.on_submit_purchase_receipt`, `horizon_stock/custom/stock_settings.json` |
+| RQ-4 | Quality dashboard: rejection by supplier, rejected categories, inspection SLA 4 h | Supplier Quality Scorecard + *Horizon Quality* card QI Rejected (30d); inspection SLA (hours from receipt = Purchase Receipt saved (`creation`) to the Quality Inspection `creation`, % within 4 h, average, worst 5) in *Quality Metrics* | Custom code | `horizon_quality_management/report/supplier_quality_scorecard`, `horizon_quality_management/report/quality_metrics` |
+| RQ-5 | Supplier Quality Scorecard | Standard ERPNext *Supplier Scorecard* per supplier (Per Month; criteria Horizon Quality 50 = accepted / received items, Horizon Delivery 30 = on-time / total shipments, Horizon Price 20 neutral; Poor / Very Poor warn on POs) plus the custom *Supplier Quality Scorecard* report for rejection rate, on-time %, price stability, blacklist flag and composite score over any date range | Standard + Configuration + Custom code | `demo_data.setup_supplier_scorecards`, `horizon_quality_management/report/supplier_quality_scorecard` |
 
 ### 5.8 Reorder and MRP
 

@@ -165,7 +165,7 @@ class TestQualityMetrics(FrappeTestCase):
 		qi_row = next(r for r in data if r.get("reference") == self.qi.name)
 		self.assertAlmostEqual(qi_row["hours"], 1.0, delta=0.05)
 		self.assertEqual(qi_row["is_breach"], 0)
-		self.assertAlmostEqual(summary["Inspections within 4 h"]["value"], 100.0, places=1)
+		self.assertAlmostEqual(summary["Inspections within 4 h of receipt"]["value"], 100.0, places=1)
 
 	def test_default_filters_run(self):
 		columns, data, _m, chart, summary = execute({"company": COMPANY})

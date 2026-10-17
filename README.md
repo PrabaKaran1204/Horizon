@@ -17,8 +17,9 @@ Reports (+ the API Usage Report = 20), 11 workspaces (a *Horizon ERP* home + one
 `doctype_js`. Business rules (PO approval limits, blacklisted suppliers, discount caps, Delivery
 Note before Invoice, Work Order capacity, quality gates, timesheet / task rules) live in
 `doc_events` hooks and are covered by the test suite. The inventory API honours Warehouse User
-Permissions (`warehouses_excluded` / 403 `warehouse_not_permitted`), Purchase Receipt rows for
-inspection items are forced into QC Hold on save, and the monthly budget email carries the year-end
+Permissions (`warehouses_excluded` / 403 `warehouse_not_permitted`), the receipt flow is standard
+ERPNext (Purchase Receipt draft = receipt, submit = GRN, blocked until the Quality Inspection is
+submitted; QC Hold routing optional), suppliers carry a standard Supplier Scorecard, and the monthly budget email carries the year-end
 forecast columns (the standard *Budget Variance Report* stays untouched). Design documents and the
 full API contract are in `docs/` (`docs/api.md` for the endpoint). The folder layout mirrors the
 `kaynes` app: one Frappe module per ERPNext domain (see *Folder structure*).
@@ -151,8 +152,8 @@ horizon_erp/
                                 print_format/horizon_sales_invoice, workspace/horizon_selling,
                                 number_card/, dashboard_chart/, tests/
   horizon_crm/                  number_card/ (open leads, leads > 14 days), dashboard_chart/
-  horizon_stock/                purchase_receipt.py (QC Hold routing / release), scrap.py,
-                                tasks.py (reorder + accuracy, reorder recompute), custom/item.json,
+  horizon_stock/                purchase_receipt.py (rejection paperwork, optional QC Hold), scrap.py,
+                                tasks.py (reorder + accuracy, reorder recompute), custom/{item,stock_settings}.json,
                                 report/ (inventory_obsolescence_analysis, forecast_vs_actual_demand),
                                 print_format/horizon_packing_slip_thermal, workspace/horizon_inventory,
                                 number_card/, dashboard_chart/, dashboard_chart_source/

@@ -5,7 +5,13 @@
 
 One table, four blocks. Each block starts with a header row (``is_header``, ``indent`` 0) and lists
 its detail rows at ``indent`` 1; the four KPIs are returned in ``report_summary`` and the defect
-trend in the chart. ``item_group`` narrows Work Orders / Quality Inspections through the Item; Non
+trend in the chart.
+
+Inspection SLA: hours from receipt (Purchase Receipt saved - its ``creation``; the draft is the
+receipt and posts no stock) to inspection (Quality Inspection ``creation``), target 4 h. Submit
+times are deliberately not used: the GRN (Purchase Receipt submit) follows the inspection.
+
+``item_group`` narrows Work Orders / Quality Inspections through the Item; Non
 Conformances carry no item and are therefore only counted when no item group is selected.
 """
 
@@ -260,6 +266,8 @@ def get_period_months(filters):
 # (d) inspection SLA
 # ---------------------------------------------------------------------------------------------
 def get_inspection_sla(filters):
+	"""Hours from receipt (Purchase Receipt ``creation`` = draft saved) to inspection (Quality
+	Inspection ``creation``) for every incoming inspection raised in the period."""
 	qi = frappe.qb.DocType("Quality Inspection")
 	pr = frappe.qb.DocType("Purchase Receipt")
 	item = frappe.qb.DocType("Item")
@@ -385,9 +393,10 @@ def build_rows(fpy, rework, defects, sla):
 	data.append(
 		header(
 			_("Inspection SLA ({0} h)").format(INSPECTION_SLA_HOURS),
-			detail=_("{0} of {1} incoming inspections within {2} h; average {3} h").format(
-				sla.within, sla.total, INSPECTION_SLA_HOURS, sla.avg_hours
-			),
+			detail=_(
+				"{0} of {1} incoming inspections within {2} h from receipt (PR saved) to inspection; "
+				"average {3} h"
+			).format(sla.within, sla.total, INSPECTION_SLA_HOURS, sla.avg_hours),
 			count=sla.total,
 			hours=sla.avg_hours,
 			pct=sla.within_pct,
@@ -449,7 +458,7 @@ def get_summary(fpy, rework, defects, sla):
 		},
 		{
 			"value": sla.within_pct,
-			"label": _("Inspections within {0} h").format(INSPECTION_SLA_HOURS),
+			"label": _("Inspections within {0} h of receipt").format(INSPECTION_SLA_HOURS),
 			"datatype": "Percent",
 			"indicator": "Green" if sla.within_pct >= 90 else ("Orange" if sla.within_pct >= 75 else "Red"),
 		},

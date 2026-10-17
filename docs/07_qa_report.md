@@ -330,3 +330,14 @@ All seven High defects (DEF-01 … DEF-07) are **verified fixed on the live site
 | OBS-R2-1 | **Fixed** | `ROLE_PERMISSIONS["Sales Invoice"]` grants Warehouse Manager read; `setup_role_permissions` re-run; `frappe.has_permission("Sales Invoice", "read")` as wh.delhi = True, create = False. |
 | OBS-R2-2 | **Fixed** | `setup_payment_terms()` creates Payment Term *Net 30 - 100%* and template *Net 30* (100 %, 30 days after invoice date), sets it on Company and on all 6 demo customers; a new Sales Invoice for Tata Precision Works dated 2026-10-16 gets due date 2026-11-15. |
 | ERPNext test fixtures on the site | **Removed** | Safety backup `20261016_163302-horizon_local-*` taken first. 9 `_Test Company*` (0 GL Entries, 0 Stock Ledger Entries, 0 submitted documents) and 1 071 dependent masters (923 Accounts, 119 Departments, 55 Warehouses, 38 Fiscal Years, tax templates, price lists, suppliers, contacts, leads, roles, 9 `test*@example.com` users ...) plus 21 child rows (GST Settings accounts, Mode of Payment accounts) deleted link-safely; only `Horizon Manufacturing Ltd` remains, HML ledgers unchanged (262 GL / 85 SLE). `setup_all` re-run and the suite (134 OK) confirm the demo data is intact. |
+
+## 10. Change after sign-off: standard receipt / QC flow (2026-10-17)
+
+ADR-2 revised with the lead's approval: the QC Hold stock posting contradicted "only GRN submission
+updates inventory". The Purchase Receipt draft is now the receipt, its submit is the GRN; QC Hold
+routing is an optional setting (`horizon_use_qc_hold`, default 0). Stock Settings *QI rejected*
+changed Stop → **Warn**, so the round-1 case PR-3 (rejected QI blocks the receipt) now books the lot
+as rejected qty with a warning and a draft return. Standard Supplier Scorecards added for the six
+demo suppliers. Live evidence (PUR-ORD-2026-00012, PR-26-00009, MAT-QA-2026-00007, PR-26-00010) and
+scores in `05_test_plan_and_evidence.md`; earlier receipts PR-26-00001 / -00004 / -00008 with their
+release Stock Entries remain as history of the former default.

@@ -1169,8 +1169,15 @@ def setup_company_settings():
 		"auto_indent": 1,
 		"reorder_email_notify": 1,
 		"allow_negative_stock": 0,
+		# Receipt -> Quality Check -> GRN (ADR-2): the Purchase Receipt draft is the receipt, its
+		# submit is the GRN and the only step that posts stock; "Stop" keeps an uninspected lot out.
 		"action_if_quality_inspection_is_not_submitted": "Stop",
-		"action_if_quality_inspection_is_rejected": "Stop",
+		"allow_to_make_quality_inspection_after_purchase_or_delivery": 0,
+		# "Warn": a fully / partly rejected lot is still submitted with the qty in rejected_qty (posted
+		# to HQ Rejected) so the automatic draft Purchase Return / Debit Note can be raised against it.
+		"action_if_quality_inspection_is_rejected": "Warn",
+		# optional QC Hold routing (horizon_stock.purchase_receipt) stays off: standard flow
+		"horizon_use_qc_hold": 0,
 		"use_serial_batch_fields": 1,
 	}
 	try:
@@ -2586,6 +2593,169 @@ def _run_optional_module(results, key, module_path, function_name):
 	_run_step(key, fn, results)
 
 
+# ---------------------------------------------------------------------------
+# Standard Supplier Scorecard (ERPNext Buying)
+# ---------------------------------------------------------------------------
+
+# Formulas use the standard Supplier Scorecard Variables ERPNext installs (param_name in braces) and
+# guard every division the way ERPNext's own examples do; an empty period scores 100 (no penalty).
+SCORECARD_CRITERIA = [
+	{
+		"criteria_name": "Horizon Quality",
+		"weight": 50,
+		"formula": "(({total_accepted_items} / {total_received_items}) * 100) "
+		"if {total_received_items} > 0 else 100",
+	},
+	{
+		"criteria_name": "Horizon Delivery",
+		"weight": 30,
+		"formula": "(({on_time_shipment_num} / {total_shipments}) * 100) if {total_shipments} > 0 else 100",
+	},
+	# No standard variable measures price movement (the amount variables only value accepted /
+	# rejected qty), so price is a neutral 100 here; the price trend and blacklist flag live in the
+	# custom "Supplier Quality Scorecard" report.
+	{"criteria_name": "Horizon Price", "weight": 20, "formula": "100"},
+]
+SCORECARD_PERIOD = "Per Month"
+# ERPNext default standings (Very Poor / Poor / Average / Excellent): Poor and Very Poor warn on new
+# POs; Very Poor does not block them (blocking is the blacklist + override flow's job).
+SCORECARD_STANDING_ACTIONS = {
+	"Poor": {"warn_pos": 1, "prevent_pos": 0},
+	"Very Poor": {"warn_pos": 1, "prevent_pos": 0},
+}
+_STANDING_FIELDS = (
+	"standing_color",
+	"min_grade",
+	"max_grade",
+	"warn_rfqs",
+	"warn_pos",
+	"prevent_rfqs",
+	"prevent_pos",
+	"notify_supplier",
+	"notify_employee",
+)
+
+
+def _ensure_scorecard_masters():
+	"""Default variables / standings (ERPNext installs them; recreated if missing) and our criteria."""
+	if not frappe.db.exists("Supplier Scorecard Standing", "Average"):
+		from erpnext.buying.doctype.supplier_scorecard.supplier_scorecard import make_default_records
+
+		make_default_records()
+	for name, actions in SCORECARD_STANDING_ACTIONS.items():
+		if frappe.db.exists("Supplier Scorecard Standing", name):
+			frappe.db.set_value("Supplier Scorecard Standing", name, actions)
+	for row in SCORECARD_CRITERIA:
+		if frappe.db.exists("Supplier Scorecard Criteria", row["criteria_name"]):
+			doc = frappe.get_doc("Supplier Scorecard Criteria", row["criteria_name"])
+		else:
+			doc = frappe.new_doc("Supplier Scorecard Criteria")
+			doc.criteria_name = row["criteria_name"]
+		doc.update({"weight": row["weight"], "max_score": 100, "formula": row["formula"]})
+		doc.flags.ignore_permissions = True
+		doc.save()
+
+
+def _scorecard_standings():
+	standings = frappe.get_all(
+		"Supplier Scorecard Standing", fields=["name", *_STANDING_FIELDS], order_by="min_grade asc"
+	)
+	rows = [{"standing_name": s.name, **{f: s.get(f) for f in _STANDING_FIELDS}} for s in standings]
+	# SupplierScorecard.update_standing matches ``min_grade <= score < max_grade``: a perfect 100 would
+	# fall outside the top band (status blank). Open the top band's upper edge on the scorecard rows.
+	if rows and flt(rows[-1]["max_grade"]) == 100:
+		rows[-1]["max_grade"] = 101
+	return rows
+
+
+def _is_provisional_period(period):
+	"""A month-to-date period: standard "Per Month" periods always end on the month's last day."""
+	from frappe.utils import get_last_day, getdate
+
+	return getdate(period.end_date) != get_last_day(period.start_date)
+
+
+def _drop_stale_provisional_periods(scorecard_name):
+	"""Cancel + delete month-to-date periods from earlier runs so they neither double count nor block
+	ERPNext from creating the full month period (it skips any overlapping period)."""
+	from frappe.utils import getdate, nowdate
+
+	today = getdate(nowdate())
+	for period in frappe.get_all(
+		"Supplier Scorecard Period",
+		filters={"scorecard": scorecard_name, "docstatus": 1, "end_date": ["<", today]},
+		fields=["name", "start_date", "end_date"],
+	):
+		if not _is_provisional_period(period):
+			continue
+		doc = frappe.get_doc("Supplier Scorecard Period", period.name)
+		doc.flags.ignore_permissions = True
+		doc.cancel()
+		frappe.delete_doc("Supplier Scorecard Period", doc.name, ignore_permissions=True, force=True)
+
+
+def _ensure_month_to_date_period(scorecard):
+	"""Score the running month too. ERPNext's ``make_all_scorecards`` (also run daily by its
+	``refresh_scorecards`` job) only creates *completed* periods, counted from the supplier's
+	creation date, so a supplier created this month would show no period and a flat 100. The
+	month-to-date period is a standard Supplier Scorecard Period built with
+	``make_supplier_scorecard``; ``_drop_stale_provisional_periods`` replaces it on the next run."""
+	from erpnext.buying.doctype.supplier_scorecard_period.supplier_scorecard_period import (
+		make_supplier_scorecard,
+	)
+	from frappe.utils import get_first_day, getdate, nowdate
+
+	today = getdate(nowdate())
+	created = getdate(frappe.db.get_value("Supplier", scorecard.supplier, "creation"))
+	start = max(created, get_first_day(today))
+	if start > today or frappe.db.exists(
+		"Supplier Scorecard Period",
+		{"scorecard": scorecard.name, "docstatus": 1, "end_date": [">=", start]},
+	):
+		return None
+	period = make_supplier_scorecard(scorecard.name, None)
+	period.start_date = start
+	period.end_date = today
+	period.insert(ignore_permissions=True)
+	period.submit()
+	return period.name
+
+
+def setup_supplier_scorecards(suppliers=None):
+	"""Standard ERPNext Supplier Scorecard for every demo supplier (``Per Month``), scored with the
+	standard engine. Idempotent. Returns ``{supplier: (score, standing)}``."""
+	from erpnext.buying.doctype.supplier_scorecard.supplier_scorecard import make_all_scorecards
+
+	_ensure_scorecard_masters()
+	suppliers = suppliers or [s["supplier_name"] for s in SUPPLIERS]
+	criteria = [{"criteria_name": c["criteria_name"], "weight": c["weight"]} for c in SCORECARD_CRITERIA]
+	standings = _scorecard_standings()
+	scores = {}
+	for supplier in suppliers:
+		if not frappe.db.exists("Supplier", supplier):
+			_warn(f"supplier {supplier} missing; no scorecard")
+			continue
+		if frappe.db.exists("Supplier Scorecard", supplier):
+			_drop_stale_provisional_periods(supplier)
+			sc = frappe.get_doc("Supplier Scorecard", supplier)
+		else:
+			sc = frappe.new_doc("Supplier Scorecard")
+			sc.supplier = supplier
+		sc.period = SCORECARD_PERIOD
+		sc.set("criteria", criteria)
+		sc.set("standings", standings)
+		sc.flags.ignore_permissions = True
+		sc.save()  # on_update runs make_all_scorecards for every completed period
+		make_all_scorecards(sc.name)
+		_ensure_month_to_date_period(sc)
+		sc.reload()
+		sc.flags.ignore_permissions = True
+		sc.save()  # recompute supplier_score / standing from the submitted periods
+		scores[supplier] = (sc.supplier_score, sc.status)
+	_log("supplier scorecards: " + ", ".join(f"{k}={v[0]} ({v[1]})" for k, v in scores.items()))
+	return scores
+
+
 def setup_all():
 	"""Create / update all Horizon demo masters, settings and opening stock. Idempotent."""
 	frappe.set_user("Administrator")
@@ -2598,6 +2768,8 @@ def setup_all():
 	_run_optional_module(
 		results, "hr_finance", "horizon_erp.horizon_setup.demo_hr_finance", "setup_hr_finance"
 	)
+	# last: the standard scoring reads the receipts / orders created by the steps above
+	_run_step("supplier_scorecards", setup_supplier_scorecards, results)
 
 	_log("summary: " + ", ".join(f"{k}={v}" for k, v in results.items()))
 	return results

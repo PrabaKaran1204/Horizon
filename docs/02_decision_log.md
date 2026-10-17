@@ -31,29 +31,42 @@ handled (ADR-10).
 
 ---
 
-## ADR-2 GRN = Purchase Receipt, with a QC Hold warehouse
+## ADR-2 Receipt = Purchase Receipt draft, GRN = Purchase Receipt submit (QC Hold optional)
 
-**Context.** The brief asks for "PO -> Receipt -> Inspection -> GRN, only GRN updates inventory",
-i.e. a fourth document after the receipt.
+**Context.** The brief asks for "Receipt -> Quality Check -> GRN -> Inventory Update", "only GRN
+submission updates inventory" and an inspection SLA of 4 hours from receipt, i.e. seemingly a
+fourth document after the receipt.
 
 **Options.**
 1. New custom "GRN" DocType after Purchase Receipt - duplicates Purchase Receipt (stock ledger,
    valuation, landed cost, returns, invoice linkage all live on PR), breaks Purchase Invoice
    `pr_required`, and every standard report ignores it.
-2. **Purchase Receipt is the GRN**; inspection is forced before submit (Stock Settings Stop / Stop)
-   and the physical state "received but not released" is a warehouse (`HQ QC Hold - HML`).
+2. Purchase Receipt is the GRN and the state "received but not released" is a warehouse: post the
+   receipt into `HQ QC Hold - HML`, auto-transfer the accepted qty to Raw Materials (the original
+   decision, 16-Oct-2026). Stock is posted *before* inspection, which contradicts "only GRN
+   updates inventory", and it adds a second stock movement per receipt.
+3. **Standard ERPNext flow**: the Purchase Receipt *draft* is the receipt (its `creation` is the
+   receipt time; nothing is posted), the Quality Inspection is raised against it, and *submitting*
+   the Purchase Receipt is the GRN - the only step that posts stock. Stock Settings *Action if
+   Quality Inspection is not Submitted* = **Stop** guarantees no stock before inspection.
 
-**Decision.** Option 2. `purchase_receipt.on_submit_purchase_receipt` moves accepted qty from QC Hold to the
-item's default warehouse and raises the Purchase Return / Debit Note for `rejected_qty`.
+**Decision.** Option 3 (revised 17-Oct-2026). Settings: QI not submitted = Stop, QI rejected =
+**Warn** (a fully or partly rejected lot is still booked, with the qty in `rejected_qty` posted to
+`HQ Rejected - HML`), *Allow QI after purchase* = 0. `purchase_receipt.before_validate_purchase_receipt`
+defaults `HQ Rejected - HML` as the rejected warehouse; `on_submit_purchase_receipt` raises the draft
+Purchase Return and, if a submitted Purchase Invoice exists, the draft Debit Note for `rejected_qty`.
+The QC Hold routing of option 2 is kept as an **optional mode** (Stock Settings *Route Inspected
+Receipts via QC Hold* / `horizon_use_qc_hold`, or the same key in `site_config.json`; default off) for
+a site that wants the received-but-uninspected lot visible as stock.
 
-**Consequences.** Stock is visible (and valued) in QC Hold between receipt and release, which is
-the truth. Material in QC Hold is not available to Work Orders because it is not in Raw Materials.
-The receipt warehouse must be QC Hold: `purchase_receipt.validate_purchase_receipt` enforces it - every
-Purchase Receipt row whose Item requires inspection before purchase is routed to `HQ QC Hold - HML`
-(with `HQ Rejected - HML` defaulted as the rejected warehouse) and the user is told which rows were
-moved; rows for items without inspection keep their warehouse (follow-up closed).
+**Consequences.** One stock movement per receipt; items in Raw Materials are always inspected. A lot
+waiting for inspection is visible as a draft Purchase Receipt, not as stock. The inspection SLA is measured from Purchase Receipt `creation` (draft
+saved) to Quality Inspection `creation` (*Quality Metrics*). The `HQ QC Hold - HML` warehouse stays in
+the tree, used only by the optional mode. Supplier performance uses the standard *Supplier
+Scorecard* (Horizon Quality 50 / Delivery 30 / Price 20), complemented by the custom *Supplier
+Quality Scorecard* report for price trend and blacklist.
 
-**Status.** Accepted.
+**Status.** Accepted (revised 17-Oct-2026; supersedes the QC Hold default).
 
 ---
 

@@ -1,7 +1,13 @@
 # Copyright (c) 2026, Horizon Manufacturing Ltd and contributors
 # For license information, please see license.txt
 
-"""Supplier Quality Scorecard: rejection, on-time delivery and price stability per supplier."""
+"""Supplier Quality Scorecard: rejection, on-time delivery and price stability per supplier.
+
+Complements ERPNext's standard Supplier Scorecard (one per demo supplier, criteria Horizon Quality
+50 / Delivery 30 / Price 20, set up by ``horizon_setup.demo_data.setup_supplier_scorecards``), which
+drives the standard PO / RFQ warnings. This report adds what the standard variables cannot express:
+the purchase price trend and the Horizon blacklist flag, over any date range.
+"""
 
 import frappe
 from erpnext.accounts.utils import get_fiscal_year
