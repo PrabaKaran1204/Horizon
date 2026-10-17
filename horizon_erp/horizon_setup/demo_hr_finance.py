@@ -53,6 +53,9 @@ SS_CONTRACT = "Horizon Contractual"
 PROJECT_NAME = "Custom Conveyor - Bharat Mining"
 ASSET_NAME = "CNC Lathe 2m"
 ASSET_ITEM = "FA-CNC-LATHE"
+# HSN 8458 11 00: horizontal CNC lathes. India Compliance (GST Settings validate_hsn_code) rejects an
+# Item without one, so the demo asset item must carry it on a fresh site.
+ASSET_ITEM_HSN = "84581100"
 BANK_NAME = "HDFC Bank"
 BANK_ACCOUNT_NAME = "Horizon Current Account - HDFC"
 MONTHLY_DISTRIBUTION = "Manufacturing Seasonal"
@@ -1391,6 +1394,8 @@ def _fixed_asset_item():
 		if not item.is_stock_item and not item.stock_ledger_created():
 			item.is_fixed_asset = 1
 			item.asset_category = "Production Equipment"
+			if item.meta.has_field("gst_hsn_code") and not item.get("gst_hsn_code"):
+				item.gst_hsn_code = ASSET_ITEM_HSN
 			item.save()
 			print(f"    converted existing item {ASSET_ITEM} to fixed asset (Production Equipment)")
 			return ASSET_ITEM
@@ -1399,7 +1404,7 @@ def _fixed_asset_item():
 	else:
 		code = ASSET_ITEM
 	if not frappe.db.exists("Item", code):
-		frappe.get_doc(
+		item = frappe.get_doc(
 			{
 				"doctype": "Item",
 				"item_code": code,
@@ -1410,7 +1415,10 @@ def _fixed_asset_item():
 				"is_fixed_asset": 1,
 				"asset_category": "Production Equipment",
 			}
-		).insert()
+		)
+		if item.meta.has_field("gst_hsn_code"):
+			item.gst_hsn_code = ASSET_ITEM_HSN
+		item.insert()
 	return code
 
 
