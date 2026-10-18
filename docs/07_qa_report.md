@@ -370,6 +370,21 @@ discount still needs the reason (UB-4, `test_genuine_manual_discount_still_needs
 CRM-OPP-2026-00002 still carries the 1,00,000 estimate; a new quotation from it is now priced at the
 list price.
 
+*Follow-up (18-Oct-2026, ADR-18)*: the fix re-priced *every* mapped row, so an Opportunity rate
+the customer had agreed **above** the list price was lost too (user report: HZ-PUMP-100 typed at
+2,00,000, quotation 1,85,000). Now only a rate below the rule rate is re-priced. A higher one is
+kept and recorded as *Agreed Rate* (`horizon_agreed_rate`). The Quotation / Sales Order controllers
+keep it when ERPNext re-applies the pricing rules (needed for Premium rows), with no approval and the
+list price untouched. On submit, the customer gets a grossed-up customer Item Price, so their next
+quotation nets the agreed rate. Evidence: `05`, AP-1 to AP-9 (live: CRM-OPP-2026-00015 ->
+SAL-QTN-2026-00021 Approved -> Item Price 72oc4tr5t1 -> SAL-QTN-2026-00022 at 2,00,000). The user's
+SAL-QTN-2026-00020 is left as it is. It was a Lead quotation priced at 1,85,000 under the earlier
+fix: its Opportunity CRM-OPP-2026-00002 stores 1,00,000, not 2,00,000, so the 2,00,000 was probably
+typed on the form and not saved. It was submitted and is already *Ordered* (SAL-ORD-2026-00010,
+Customer *Praba*, 1,85,000). Submit-time price recording does not run retroactively, and it was a
+Lead quotation, so no Item Price exists for *Praba*. To agree 2,00,000 for *Praba*, submit a new
+quotation to the Customer at that rate.
+
 ### DEF-24 – Opportunity does not ask for the customer details
 *Severity* Medium · *Priority* P2 · *Risk* Low · *Type* Usability
 *Evidence*: Lead > Create > Opportunity opens the full form (Opportunity has no quick entry), but the

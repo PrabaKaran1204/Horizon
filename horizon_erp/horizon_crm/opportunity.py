@@ -23,8 +23,9 @@ Wiring (hooks.py ``doc_events``):
   controller's ``validate`` runs ``set_missing_values`` and the pricing engine. Rows still priced by
   the Lead's pricing rules are re-priced for the Customer (``reset_rule_priced_rows``).
 - ``override_whitelisted_methods`` -> ``make_quotation``: ERPNext's Opportunity -> Quotation mapper
-  copies the Opportunity Item ``rate`` (a free-typed estimate) onto the Quotation row; rows the price
-  list prices are re-priced from the price list + pricing rules (DEF-23).
+  copies the Opportunity Item ``rate`` (a free-typed estimate) onto the Quotation row; a rate below
+  the price list + pricing-rule rate is re-priced to that rate (DEF-23), a higher one is the price
+  the customer agreed and is kept (Option B).
 
 The Opportunity itself keeps ``opportunity_from = "Lead"`` (funnel reports stay Lead -> Opportunity
 -> Quotation; ERPNext's Opportunity -> Quotation mapper copies it into ``quotation_to``, which the
@@ -40,7 +41,7 @@ import frappe
 from frappe import _
 from frappe.utils import cstr, flt, get_link_to_form
 
-from horizon_erp.horizon_selling.selling import get_rule_rate
+from horizon_erp.horizon_selling.selling import RATE_TOLERANCE, get_rule_rate, set_agreed_rate
 
 # Roles that may trigger Customer creation from an Opportunity even without Customer "create"
 # permission; the Customer, Address and Contact links are then written with ignore_permissions.
@@ -521,8 +522,6 @@ ROW_PRICING_FIELDS = (
 	"margin_rate_or_amount",
 	"rate",
 )
-# Rate difference (in transaction currency) still treated as "priced by the rules"
-RATE_TOLERANCE = 0.01
 
 
 def reset_rule_priced_rows(doc):
@@ -533,7 +532,8 @@ def reset_rule_priced_rows(doc):
 	kept the Lead's price after the switch and missed the Customer's Premium rule; a changed default
 	price list also left the old ``price_list_rate`` on the row. Rows whose rate is exactly the rule
 	rate of their stored rules are cleared so the engine prices them again for the Customer. Rows with
-	a manual rate / discount are left alone: ``validate_discounts`` governs those.
+	a manual rate / discount are left alone: ``validate_discounts`` governs those. An agreed rate above
+	the rule rate is left alone too and survives the Customer's rules (``keep_agreed_rate``).
 	"""
 	rule_cache = {}
 	for row in doc.get("items", []):
@@ -551,22 +551,36 @@ def reset_rule_priced_rows(doc):
 @frappe.whitelist()
 def make_quotation(source_name, target_doc=None):
 	"""ERPNext's ``erpnext.crm.doctype.opportunity.opportunity.make_quotation`` with the mapped rows
-	priced from the price list and pricing rules (DEF-23).
+	priced against the price list and pricing rules (DEF-23, Option B).
 
-	The standard mapper copies the Opportunity Item ``rate`` (mandatory on the Opportunity, typed as
-	an estimate) onto the Quotation row and only overwrites it when a pricing rule applies. A row
-	without a rule therefore kept e.g. 1,00,000 against a list price of 1,85,000 with Discount 0 %
-	on the form, and ``validate_discounts`` rightly asked for a discount reason the user never meant
-	to give. Used by the Opportunity's Create > Quotation and the Quotation's Get Items From >
-	Opportunity (both resolve the method through ``override_whitelisted_methods``).
+	The standard mapper copies the Opportunity Item ``rate`` (mandatory on the Opportunity) onto the
+	Quotation row and only overwrites it when a pricing rule applies. A rate typed as a low estimate
+	(1,00,000 against a list price of 1,85,000) then read as a 46 % discount and
+	``validate_discounts`` asked for a reason the user never meant to give; such rows are re-priced.
+	A rate at or above the rule rate is the price the customer agreed and is kept. Used by the
+	Opportunity's Create > Quotation and the Quotation's Get Items From > Opportunity (both resolve
+	the method through ``override_whitelisted_methods``).
 	"""
 	from erpnext.crm.doctype.opportunity.opportunity import make_quotation as erpnext_make_quotation
 
 	frappe.has_permission("Opportunity", "read", source_name, throw=True)
 	existing_rows = get_row_names(target_doc)
 	quotation = erpnext_make_quotation(source_name, target_doc)
-	price_mapped_rows(quotation, existing_rows)
+	price_mapped_rows(quotation, existing_rows, get_opportunity_rates(source_name))
 	return quotation
+
+
+def get_opportunity_rates(opportunity):
+	"""``[(item_code, rate)]`` of the Opportunity Items in mapping order. The mapper's
+	``set_missing_values`` already ran the pricing rules, so a rule-priced row no longer carries the
+	Opportunity rate; ERPNext's table map copies every Opportunity Item, in ``idx`` order."""
+	return frappe.get_all(
+		"Opportunity Item",
+		filters={"parent": opportunity, "parenttype": "Opportunity"},
+		fields=["item_code", "rate"],
+		order_by="idx asc",
+		as_list=True,
+	)
 
 
 def get_row_names(target_doc):
@@ -578,22 +592,39 @@ def get_row_names(target_doc):
 	return {row.get("name") for row in target_doc.get("items") or [] if row.get("name")}
 
 
-def price_mapped_rows(quotation, existing_rows=None):
-	"""Rows mapped from an Opportunity get ``rate = price list rate - pricing-rule discount``.
+def price_mapped_rows(quotation, existing_rows=None, opportunity_rates=None):
+	"""Price the rows mapped from an Opportunity against the rule rate.
 
 	The mapper's ``set_missing_values`` already fetched ``price_list_rate`` / ``pricing_rules`` /
-	``discount_percentage`` from the price list and pricing engine; clearing ``rate`` lets ERPNext's
-	``calculate_taxes_and_totals`` derive it from them. Rows the price list does not price keep the
-	Opportunity rate (nothing better exists; ``validate_discounts`` ignores them).
+	``discount_percentage`` for the quotation's party, quantity and date, so ``get_rule_rate`` gives
+	the rate the row would be priced at:
+
+	- Opportunity rate above the rule rate: an agreed higher price, kept (``set_agreed_rate``:
+	  ``price_list_rate`` stays the list price, the difference is a margin / negative discount).
+	  ``validate_discounts`` reads it as 0 % extra discount, so no approval.
+	- Opportunity rate at or below the rule rate: ``rate`` is cleared so ERPNext's
+	  ``calculate_taxes_and_totals`` derives the rule rate (DEF-23); a changed rate is announced.
+
+	Rows the price list does not price keep the Opportunity rate (nothing better exists;
+	``validate_discounts`` ignores them). ``opportunity_rates`` (``get_opportunity_rates``) gives the
+	typed rates of the mapped rows in order; without it the mapped ``rate`` is used.
 	"""
 	existing_rows = existing_rows or set()
-	repriced = []
+	mapped_rates = list(opportunity_rates or [])
+	repriced, kept = [], []
+	rule_cache = {}
 	for row in quotation.get("items", []):
 		if row.name in existing_rows or row.get("prevdoc_doctype") != "Opportunity":
 			continue
+		source_item, source_rate = mapped_rates.pop(0) if mapped_rates else (None, None)
 		if not row.item_code or not flt(row.price_list_rate):
 			continue
-		opportunity_rate = flt(row.rate)
+		opportunity_rate = flt(source_rate) if source_item == row.item_code else flt(row.rate)
+		rule_rate = get_rule_rate(row, rule_cache)
+		if opportunity_rate > rule_rate + RATE_TOLERANCE:
+			set_agreed_rate(row, opportunity_rate)
+			kept.append((row, rule_rate))
+			continue
 		row.rate = 0
 		row.discount_amount = 0
 		if not row.get("pricing_rules"):
@@ -602,10 +633,25 @@ def price_mapped_rows(quotation, existing_rows=None):
 			row.margin_rate_or_amount = 0
 		repriced.append((row, opportunity_rate))
 
-	if not repriced:
+	if not (repriced or kept):
 		return
 
 	quotation.calculate_taxes_and_totals()
+	if kept:
+		frappe.msgprint(
+			_("Agreed Opportunity rates kept (above the Price List {0} / pricing-rule rate): {1}").format(
+				frappe.bold(quotation.selling_price_list),
+				"; ".join(
+					_("{0} {1} (rule rate {2})").format(
+						row.item_code, format_currency(row.rate), format_currency(rule_rate)
+					)
+					for row, rule_rate in kept
+				),
+			),
+			indicator="green",
+			alert=True,
+		)
+
 	changed = [
 		(row, opportunity_rate)
 		for row, opportunity_rate in repriced
@@ -614,14 +660,13 @@ def price_mapped_rows(quotation, existing_rows=None):
 	if changed:
 		frappe.msgprint(
 			_(
-				"Rates priced from Price List {0} and the pricing rules instead of the Opportunity estimate: {1}"
+				"Rates priced from Price List {0} and the pricing rules instead of the lower Opportunity "
+				"rate: {1}"
 			).format(
 				frappe.bold(quotation.selling_price_list),
 				"; ".join(
 					_("{0} {1} (Opportunity {2})").format(
-						row.item_code,
-						frappe.format_value(row.rate, {"fieldtype": "Currency"}),
-						frappe.format_value(opportunity_rate, {"fieldtype": "Currency"}),
+						row.item_code, format_currency(row.rate), format_currency(opportunity_rate)
 					)
 					for row, opportunity_rate in changed
 				),
@@ -629,3 +674,7 @@ def price_mapped_rows(quotation, existing_rows=None):
 			indicator="blue",
 			alert=True,
 		)
+
+
+def format_currency(value):
+	return frappe.format_value(value, {"fieldtype": "Currency"})

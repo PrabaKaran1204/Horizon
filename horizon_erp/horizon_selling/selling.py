@@ -17,6 +17,8 @@ from horizon_erp.horizon_core import config
 DEFAULT_VALID_TILL_DAYS = 30
 MAX_BOM_DEPTH = 5  # sub-assembly levels explored by get_mfg_lead_days
 MAX_MFG_LEAD_DAYS = 365
+# Rate difference (in transaction currency) still treated as "the pricing-rule rate"
+RATE_TOLERANCE = 0.01
 # Pricing fields copied from the Sales Order row onto Delivery Note / Sales Invoice rows (price
 # locked at order time; see lock_rates_to_sales_order)
 SO_LOCKED_RATE_FIELDS = (
@@ -64,6 +66,7 @@ def validate_discounts(doc, method=None):
 	for row in doc.get("items", []):
 		row.rule_rate = get_rule_rate(row, rule_cache)
 		row.discount_over_rule_pct = get_discount_over_rule_pct(row.rule_rate, row.rate)
+		sync_agreed_rate(row)
 		if flt(row.discount_over_rule_pct) > threshold:
 			needs_approval = True
 
@@ -115,15 +118,26 @@ def get_rule_rate(row, rule_cache=None):
 	rule with ``apply_discount_on_rate`` is applied on the already discounted rate; a "Rate" rule
 	replaces the price list rate and resets earlier discounts.
 	"""
-	from erpnext.accounts.doctype.pricing_rule.utils import get_applied_pricing_rules
-
 	price_list_rate = flt(row.get("price_list_rate"))
 	if not price_list_rate:
 		return 0.0
 
-	base_rate = price_list_rate
-	discount_pct = 0.0
-	discount_amount = 0.0
+	terms = get_rule_terms(row, rule_cache)
+	base_rate = flt(terms.rule_price) if terms.rule_price else price_list_rate
+	rule_rate = base_rate * (1 - terms.discount_pct / 100) - terms.discount_amount
+	return flt(rule_rate, get_row_precision(row, "rule_rate"))
+
+
+def get_rule_terms(row, rule_cache=None):
+	"""``{rule_price, discount_pct, discount_amount}`` of the Price rules recorded on the row.
+
+	``rule_price`` is the rate of the last "Rate" rule (it replaces the price list rate), else 0;
+	``get_rule_rate`` and the agreed-price gross-up (``agreed_price.py``) share this reading so the
+	Item Price written for an agreed rate nets to exactly that rate again.
+	"""
+	from erpnext.accounts.doctype.pricing_rule.utils import get_applied_pricing_rules
+
+	terms = frappe._dict(rule_price=0.0, discount_pct=0.0, discount_amount=0.0)
 	rule_cache = rule_cache if rule_cache is not None else {}
 	for rule_name in get_applied_pricing_rules(row.get("pricing_rules")) or []:
 		if rule_name not in rule_cache:
@@ -144,20 +158,84 @@ def get_rule_rate(row, rule_cache=None):
 		if not rule or rule.price_or_product_discount != "Price":
 			continue
 		if rule.rate_or_discount == "Rate" and flt(rule.rate):
-			base_rate = flt(rule.rate)
-			discount_pct = 0.0
-			discount_amount = 0.0
+			terms.rule_price = flt(rule.rate)
+			terms.discount_pct = 0.0
+			terms.discount_amount = 0.0
 		elif rule.rate_or_discount == "Discount Percentage":
-			if cint(rule.apply_discount_on_rate) and discount_pct:
-				discount_pct += (100 - discount_pct) * flt(rule.discount_percentage) / 100
+			if cint(rule.apply_discount_on_rate) and terms.discount_pct:
+				terms.discount_pct += (100 - terms.discount_pct) * flt(rule.discount_percentage) / 100
 			else:
-				discount_pct += flt(rule.discount_percentage)
+				terms.discount_pct += flt(rule.discount_percentage)
 		elif rule.rate_or_discount == "Discount Amount":
-			discount_amount += flt(rule.discount_amount)
+			terms.discount_amount += flt(rule.discount_amount)
+	return terms
 
-	rule_rate = base_rate * (1 - discount_pct / 100) - discount_amount
+
+def get_row_precision(row, fieldname):
 	precision_fn = getattr(row, "precision", None)  # child-table row; plain dicts have none
-	return flt(rule_rate, precision_fn("rule_rate") if callable(precision_fn) else 2)
+	return precision_fn(fieldname) if callable(precision_fn) else 2
+
+
+# ---------------------------------------------------------------------------------------------
+# Agreed rate above the pricing-rule rate (Opportunity rate / customer-agreed price)
+# ---------------------------------------------------------------------------------------------
+def set_agreed_rate(row, rate):
+	"""Represent ``rate`` (at or above the rule rate) on a Quotation / Sales Order row so that
+	ERPNext's ``calculate_taxes_and_totals`` keeps it and ``price_list_rate`` stays the list price;
+	``horizon_agreed_rate`` records it so later saves (and the Sales Order) keep it too.
+
+	- No pricing rule on the row: ``margin_type = "Amount"``, ``margin_rate_or_amount = rate - list``
+	  (what ERPNext's own ``calculate_margin`` writes for a rate above the list price).
+	- Pricing rules on the row (e.g. Premium 5 %): ``discount_percentage = 0`` and
+	  ``discount_amount = list - rate`` (negative above the list price); ``calculate_item_values``
+	  then derives ``rate = price_list_rate - discount_amount``. A margin would be wiped by
+	  ``calculate_margin``, which keeps only margins defined on the rules themselves.
+	"""
+	price_list_rate = flt(row.get("price_list_rate"))
+	rate = flt(rate, get_row_precision(row, "rate"))
+	row.rate = rate
+	if row.meta.has_field("horizon_agreed_rate"):
+		row.horizon_agreed_rate = rate
+	row.discount_percentage = 0
+	row.discount_amount = flt(price_list_rate - rate, get_row_precision(row, "discount_amount"))
+	if not row.get("pricing_rules") and rate > price_list_rate:
+		row.margin_type = "Amount"
+		row.margin_rate_or_amount = flt(
+			rate - price_list_rate, get_row_precision(row, "margin_rate_or_amount")
+		)
+	else:
+		row.margin_type = None
+		row.margin_rate_or_amount = 0
+
+
+def keep_agreed_rate(row, pricing_rule_args=None):
+	"""Called by the Quotation / Sales Order controllers (``overrides/selling_controllers.py``) right
+	after ERPNext applied the pricing rules to a row: a row's ``horizon_agreed_rate`` (the rate the
+	customer agreed, set from the Opportunity) above the rate the rules give is put back; ERPNext
+	alone would lower it to the rule rate on every save. Only the explicit agreed rate counts: a
+	server / API document that posts the list price as ``rate`` still gets its rule discounts.
+	Returns True when the agreed rate was kept.
+	"""
+	args = pricing_rule_args or {}
+	if args.get("validate_applied_rule") or args.get("price_or_product_discount") != "Price":
+		return False
+	agreed_rate = flt(row.get("horizon_agreed_rate"))
+	if not agreed_rate or not flt(row.get("price_list_rate")):
+		return False
+	if agreed_rate <= flt(row.get("rate")) + RATE_TOLERANCE:
+		return False
+	set_agreed_rate(row, agreed_rate)
+	return True
+
+
+def sync_agreed_rate(row):
+	"""``validate``: a rate typed over an agreed rate (rows without rules keep typed rates) becomes the
+	new agreed rate when it is still above the rule rate; at or below it the agreed rate is dropped
+	and the row is an ordinary (possibly discounted) row for ``validate_discounts``."""
+	agreed_rate = flt(row.get("horizon_agreed_rate"))
+	if not agreed_rate or abs(flt(row.rate) - agreed_rate) <= RATE_TOLERANCE:
+		return
+	row.horizon_agreed_rate = flt(row.rate) if flt(row.rate) > flt(row.rule_rate) + RATE_TOLERANCE else 0
 
 
 def get_discount_over_rule_pct(rule_rate, rate):
@@ -170,7 +248,8 @@ def get_discount_over_rule_pct(rule_rate, rate):
 def validate_price_list_rates_untouched(doc):
 	"""Non-managers may not type over ``price_list_rate``. Compared against Item Price for the
 	document's selling price list / currency (rows whose UOM differs from the Item Price UOM are
-	skipped to avoid conversion false positives)."""
+	skipped to avoid conversion false positives). Only general prices and the document customer's
+	own prices count: a customer-agreed Item Price (ADR-18) is no list price for anyone else."""
 	price_list = doc.get("selling_price_list")
 	if not price_list:
 		return
@@ -178,6 +257,7 @@ def validate_price_list_rates_untouched(doc):
 	if not item_codes:
 		return
 
+	customer = get_document_customer(doc)
 	prices = frappe.get_all(
 		"Item Price",
 		filters={
@@ -185,10 +265,12 @@ def validate_price_list_rates_untouched(doc):
 			"item_code": ["in", item_codes],
 			"currency": doc.currency,
 		},
-		fields=["item_code", "uom", "price_list_rate", "valid_from", "valid_upto"],
+		fields=["item_code", "uom", "customer", "price_list_rate", "valid_from", "valid_upto"],
 	)
 	by_item = {}
 	for p in prices:
+		if p.customer and p.customer != customer:
+			continue
 		by_item.setdefault(p.item_code, []).append(p)
 
 	for row in doc.get("items", []):
@@ -217,6 +299,13 @@ def validate_price_list_rates_untouched(doc):
 			frappe.PermissionError,
 			title=_("Ad-hoc Pricing Not Allowed"),
 		)
+
+
+def get_document_customer(doc):
+	"""Customer of a Quotation (only when addressed to a Customer) or Sales Order."""
+	if doc.doctype == "Quotation":
+		return doc.get("party_name") if doc.get("quotation_to") == "Customer" else None
+	return doc.get("customer")
 
 
 # --- availability ----------------------------------------------------------------------------

@@ -49,9 +49,14 @@ jinja = {"methods": ["horizon_erp.utils.jinja_methods"]}
 
 # DocType Class
 # -------------
-# No standard controller is overridden today. Override classes go in horizon_erp/overrides/
-# (same convention as kaynes/overrides), e.g.
-# override_doctype_class = {"Purchase Receipt": "horizon_erp.overrides.purchase_receipt.CustomPR"}
+# Override classes go in horizon_erp/overrides/ (same convention as kaynes/overrides).
+# Quotation / Sales Order: a rate agreed above the pricing-rule rate (Opportunity rate, customer
+# agreed price) is kept instead of being lowered by the pricing rules on every save (ADR-18);
+# only apply_pricing_rule_on_items is wrapped (overrides/selling_controllers.py)
+override_doctype_class = {
+	"Quotation": "horizon_erp.overrides.selling_controllers.HorizonQuotation",
+	"Sales Order": "horizon_erp.overrides.selling_controllers.HorizonSalesOrder",
+}
 
 # Overriding Methods
 # ------------------
@@ -106,6 +111,9 @@ doc_events = {
 		# rules, so a Lead quotation is moved to its Customer before Premium (Customer Group) pricing
 		"before_validate": "horizon_erp.horizon_crm.opportunity.switch_quotation_to_customer",
 		"validate": "horizon_erp.horizon_selling.selling.validate_discounts",
+		# rows above the rule rate -> the customer's agreed Item Price (ADR-18); reversed on cancel
+		"on_submit": "horizon_erp.horizon_selling.agreed_price.on_submit_quotation",
+		"on_cancel": "horizon_erp.horizon_selling.agreed_price.on_cancel_quotation",
 	},
 	"Sales Order": {"validate": "horizon_erp.horizon_selling.selling.validate_discounts"},
 	# before_validate runs ahead of the ERPNext controller's validate (pricing engine, totals,

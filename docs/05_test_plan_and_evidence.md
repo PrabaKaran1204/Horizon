@@ -222,6 +222,38 @@ residue (`find_test_residue()`) = {}. Browser-created documents removed except t
 -> Quotation chain CRM-LEAD-2026-00017 / CRM-OPP-2026-00014 / Customer *UIBug Industries 011750* /
 SAL-QTN-2026-00019.
 
+### Agreed Opportunity rate and customer agreed price (18-Oct-2026, DEF-23 follow-up, ADR-18)
+
+User report: HZ-PUMP-100 typed at 2,00,000 on the Opportunity (price agreed with the customer, list
+1,85,000) came out at 1,85,000 on the quotation. Unit tests in
+`horizon_erp.horizon_selling.tests.test_agreed_price` (prefix PRICETEST, run as the Sales User
+`brtest-sales`, who is no discount approver). Live run as **amit@horizon.local** (password login,
+HTTP API against http://127.0.0.1:8001).
+
+| ID | Scenario | Expected | Evidence |
+| --- | --- | --- | --- |
+| AP-1 | Standard customer, Opportunity rate 2,00,000 on a 1,85,000 item -> Horizon *make_quotation* -> save -> reload / save -> submit -> Sales Order | Rate 2,00,000 kept with no approval; list price untouched; kept through save, submit and SO | **PASS** - row `price_list_rate 185000`, `rate 200000`, `margin_type Amount`, `margin 15000`, `horizon_agreed_rate 200000`, `rule_rate 185000`, extra discount 0, `needs_discount_approval 0`; SO row 2,00,000 (`test_higher_opportunity_rate_kept_through_save_submit_and_sales_order`) |
+| AP-2 | DEF-23 regression: Opportunity rate 1,00,000 | Re-priced to the rule rate with an alert | **PASS** - 1,85,000, alert "instead of the lower Opportunity rate" (`test_lower_opportunity_rate_repriced_with_alert`; LEADTEST DEF-23 tests unchanged and green) |
+| AP-3 | Premium customer (5 % rule), Opportunity rate 1,80,000 (rule rate 1,75,750) -> save, re-save, submit, SO; then a fresh quotation | Kept against the re-applied Premium rule; customer Item Price nets to 1,80,000; others unaffected | **PASS** - row `discount_percentage 0`, `discount_amount 5000`, rule PRICETEST Premium 5 kept on the row, rate 1,80,000 after every save and on the SO; Item Price **1,89,473.68** (customer, `valid_from` today, note "Quotation <name>: ..."), timeline comment; fresh quotation: price list rate 1,89,473.68, discount 5 %, rate **1,80,000.00** = `rule_rate`, extra discount 0, no approval; another Premium customer 1,75,750, a Standard customer 1,85,000 (`test_premium_agreed_rate_kept_recorded_and_reused`) |
+| AP-4 | Qualified Lead Opportunity (group Premium) at 2,00,000 -> quotation moved to the new Customer | Agreed rate survives the switch and the Customer's Premium rule | **PASS** - quotation_to Customer, Premium rule on the row, rate 2,00,000, rule rate 1,75,750 (`test_switch_to_customer_keeps_agreed_rate`) |
+| AP-5 | Same customer: second quotation agreed at 2,10,000 the same day, then at the rule rate, then 2.4 % below, then 2,20,000 dated tomorrow; cancel in reverse | Same-day price updated (no duplicate); nothing at or below the rule rate; history by `valid_from`; cancel reverses | **PASS** - prices [2,00,000] -> [2,10,000] (note trailer keeps the replaced 2,00,000) -> unchanged twice -> [2,10,000, 2,20,000]; cancel -> [2,00,000] -> [] (`test_new_agreed_rate_updates_the_price_without_duplicates_and_cancel_reverses`) |
+| AP-6 | Lead quotation (unqualified, stays on the Lead) at 2,00,000, submitted | No Item Price | **PASS** (`test_lead_quotation_creates_no_item_price`) |
+| AP-7 | Genuine 20 % manual discount | Reason + Sales Manager approval still required | **PASS** - "Discount Reason Required", then `needs_discount_approval 1`, Sales User submit -> PermissionError, no price (`test_genuine_manual_discount_still_needs_approval`) |
+| AP-8 | Typed rate over an agreed rate; list price posted without agreement; another customer's agreed price typed as list price | Agreed rate moves / clears; API rows keep standard rule pricing; customer prices are no list price for others | **PASS** - 1,90,000 -> agreed 1,90,000; 1,80,000 -> agreed cleared, 2.7 % discount; Premium row posted at 1,85,000 -> 1,75,750; Sales User blocked "Ad-hoc Pricing Not Allowed" (`test_typed_rate_moves_or_drops_the_agreed_rate`, `test_rate_posted_without_agreement_still_gets_the_rule`, `test_customer_price_is_no_list_price_for_other_customers`) |
+| AP-9 | Live, amit: Opportunity for Bharat Mining Co (Standard, West) HZ-PUMP-100 x 2 @ 2,00,000 -> *Create > Quotation* (Horizon mapper) -> save -> workflow *Submit* -> fresh quotation pump x 1 | 2,00,000 kept, Approved, Item Price for the customer, fresh quotation 2,00,000 | **PASS** - CRM-OPP-2026-00015 -> alert "Agreed Opportunity rates kept ... HZ-PUMP-100 2,00,000 (rule rate 1,85,000)" -> SAL-QTN-2026-00021 (rate 2,00,000, rule rate 1,85,000, approval 0) -> *Submit* -> **Approved**, message + timeline comment "Item Price 72oc4tr5t1 at 2,00,000 created" (Standard Selling, Nos, valid from 18-10-2026) -> SAL-QTN-2026-00022 (draft): price list rate 2,00,000, rate 2,00,000, rule rate 2,00,000, extra discount 0. Kept as demo documents |
+
+Two regressions found by the full suite and fixed before commit. The first design kept *any*
+posted rate above the rule rate, and server-posted list prices then lost their rule discounts
+(`test_partial_delivery_keeps_sales_order_rate_and_invoices_cleanly`: SO qty 60 at 1,000 instead
+of 920; `test_quotation_from_opportunity_switches_to_customer_before_pricing`: 1,00,000 instead of
+95,000). Only the explicit `horizon_agreed_rate` is kept now.
+
+Suite: `bench --site horizon.local run-tests --app horizon_erp --skip-test-records` -> **Ran 197 tests**.
+All pricing, selling and CRM modules are green. The 5 failures / errors are all in
+`test_dashboards` / `test_module_structure` and concern the *Horizon CRM* workspace, number cards
+and chart. Another developer was adding them, uncommitted, during the run; not part of this
+change. Residue (`find_test_residue()`) = {}.
+
 ### Receipt -> QC -> GRN on the standard flow (17-Oct-2026)
 
 ADR-2 revised: Purchase Receipt draft = receipt, submit = GRN, QC Hold routing optional (off). Site

@@ -460,3 +460,122 @@ replaced by the Horizon action; a billing state different from the organisation 
 over the State copied from the Lead.
 
 **Status.** Accepted.
+
+## ADR-18 Agreed rates above the rule rate are kept; the customer's agreed price is a grossed-up customer Item Price
+
+**Context.** The Opportunity Item `rate` is mandatory and free-typed. DEF-23 re-priced every mapped
+row to the price list + pricing-rule rate because a low estimate read as a discount. The user then
+typed **2,00,000** for HZ-PUMP-100 (list 1,85,000) because the customer had agreed a higher price,
+and the quotation came out at 1,85,000. Two ERPNext v15 behaviours matter:
+
+- On a row **without** a pricing rule, a rate above `price_list_rate` is stable: `calculate_margin`
+  stores it as `margin_type = "Amount"`, `margin_rate_or_amount = rate - list` (verified: insert,
+  re-save, reload + save all keep 2,00,000).
+- On a row **with** a rule (Premium 5 %, Components 3 %, Q4 Spares, volume) the engine re-applies
+  the rules on every `validate` (`set_missing_item_details` -> `apply_pricing_rule_on_items`, with the
+  stored `pricing_rules` or a new search when none are stored): a posted 1,80,000 or 2,00,000 for
+  Tata Precision Works (Premium) was saved as 1,75,750, even with a margin on the row
+  (`calculate_margin` keeps only margins defined on the rules).
+
+**Decision 1 - Option B.** The Horizon `make_quotation` mapper compares the Opportunity rate with
+the row's rule rate for the quotation's party / qty / date (`get_rule_rate` on the
+`price_list_rate` / `pricing_rules` the mapper fetched). The rate is read from the Opportunity Item,
+because ERPNext's mapper has already run the rules on the row (the Opportunity's `customer_group`
+is mapped too). If the Opportunity rate is above the rule rate, it is kept (`selling.set_agreed_rate`)
+and recorded in the new Custom Field **`horizon_agreed_rate`** ("Agreed Rate", Quotation Item and
+Sales Order Item, editable, copied to the Sales Order by fieldname). `price_list_rate` stays the
+list price. A row without rules uses
+ERPNext's own margin representation. A row with rules gets `discount_percentage = 0` and
+`discount_amount = list - rate` (negative above the list price): `calculate_item_values` then gives
+`rate = price_list_rate - discount_amount`. A lower Opportunity rate is re-priced to the rule rate and
+announced (DEF-23 behaviour). A row without an Item Price keeps the Opportunity rate.
+`overrides/selling_controllers.py` (`override_doctype_class` for Quotation and Sales Order) wraps only
+`apply_pricing_rule_on_items`: after ERPNext applied the rules, the row's `horizon_agreed_rate` is
+put back when it is above the resulting rate. That is the one point ahead of India Compliance's
+`validate` (taxable values) where the rate can be fixed. Re-imposing it in a later `validate` hook
+would leave GST values stale. Only the explicit field counts. Keeping *any* posted rate above the
+rule rate was tried and rejected: server / API documents that post the list price as `rate` lost
+their rule discounts (the 8 % volume Sales Order stayed at 1,000; a Lead row at list kept 1,00,000
+after the switch to Premium). Those rows are priced exactly as in standard ERPNext, and a typed
+rate below the rule rate is still reverted (DEF-13 unchanged). `validate_discounts` syncs the field
+(`sync_agreed_rate`). A rate typed on a row without rules that stays above the rule rate becomes the
+new agreed rate. At or below the rule rate the field is cleared and the row is an ordinary,
+possibly discounted, row. `validate_discounts`
+already reads a rate above the rule rate as 0 % extra discount, so no approval is needed. No
+`price_list_rate` is edited and `ignore_pricing_rule` is not set, so the ad-hoc pricing guards do
+not fire for a Sales User. On the Lead -> Customer switch, `reset_rule_priced_rows` only clears rows
+at their rule rate, so the agreed rate survives and is kept against the Customer's Premium rule. The
+Sales Order copies the row and keeps it the same way. Delivery Note / Sales Invoice are locked to
+the Sales Order (ADR-14).
+
+**Decision 2 - customer agreed Item Price (kaynes `CustomQuotation.create_item_price` pattern).** On
+`Quotation.on_submit` with `quotation_to = Customer`, every row whose rate is above its rule rate
+creates or updates a customer-specific Item Price on the quotation's selling price list
+(`customer`, `item_code`, `uom`, `valid_from = transaction_date`). The next quotation or Sales Order
+for that customer starts from it. Options for the Premium customer, whose 5 % Customer Group rule
+also applies to a customer Item Price:
+
+- (a) **Gross-up** `price_list_rate = (agreed + rule discount amounts) / (1 - rule discount % / 100)`,
+  using the Price rules on the agreed row read with `get_rule_terms` (the same reading `get_rule_rate`
+  uses, additive as in ADR-14), rounded to currency precision and checked to net back exactly.
+  1,80,000 / 0.95 = **1,89,473.68**, and 5 % off gives **1,80,000.00**. A Standard customer has no
+  rule: 2,00,000 is stored as is.
+- (b) A customer-specific "Rate" Pricing Rule with higher priority. Rejected. PR-PREMIUM-5 has
+  `apply_multiple_pricing_rules`, so ERPNext stacks every matching rule (`get_pricing_rules` ->
+  `apply_multiple_pricing_rules` is true when *any* match has the flag). The result then depends on
+  the order the rules are applied in: a Rate rule resets the discount only if applied last, and
+  `apply_pricing_rule_on_items` writes the Rate rule's rate into `price_list_rate`, which no Item
+  Price backs, so `validate_price_list_rates_untouched` would block Sales Users. It would also add a
+  Pricing Rule per customer and item, created with elevated rights.
+- (c) An Item Price at the agreed rate with the group rule applied on top. Rejected: the Premium
+  customer would net 1,71,000, not 1,80,000.
+
+(a) is chosen. ERPNext selects a customer's own Item Price before the general one and, among those
+valid on the date, the newest `valid_from` (`get_item_details.get_item_price`). The pricing rule
+still applies and is recorded on the row. `get_rule_rate` reproduces the net, so `rule_rate` equals
+the agreed rate and there is 0 % extra discount. Evidence: `test_premium_agreed_rate_kept_recorded_and_reused`
+(fresh quotation: price list rate 1,89,473.68, discount 5 %, rate 1,80,000.00, rule rate 1,80,000.00,
+no approval; another Premium customer still gets 1,75,750 and a Standard one 1,85,000).
+`validate_price_list_rates_untouched` now accepts only general prices and the document customer's
+own prices, so one customer's agreed price is no list price for another.
+
+Idempotence and history: if the customer's active price already equals the grossed-up value,
+nothing is written. A price with the same `valid_from` is updated in place. Item Price tracks
+changes, and the replaced rate / note is kept in a machine-readable trailer of `note`, because
+Version stores formatted values. A later date creates a new Item Price, so history is kept by
+`valid_from`. A newer agreed price is never overwritten by an older quotation. Rows at or below the
+rule rate, rows priced by a "Rate" rule, and quotations in a currency other than the price list's
+create nothing. The `note` starts with `Quotation <name>: `. ERPNext overwrites `reference` with the
+customer, so `note` is the link. `on_cancel` deletes the prices the quotation created and restores
+the ones it updated. A timeline comment and a message list the prices. Item Prices are written with
+`ignore_permissions` (Sales Users submit quotations but hold no Item Price rights). A failure rolls
+back to a savepoint, logs an Error Log and never blocks the submit (kaynes pattern).
+
+Lead quotations create nothing: there is no customer yet. A qualified Lead quotation is moved to its
+Customer before submit (ADR-17) and is handled. A quotation that stays on the Lead gets its Customer
+only at Sales Order time (`quotation._make_customer`). The agreed price is recorded by the next
+quotation submitted for that Customer. Sales Order submit does **not** record prices: the quotation
+is the commercial agreement, as in kaynes, and a Sales Order typed above the rule rate keeps its rate
+without becoming the customer's price.
+
+**Consequences.** Agreed higher prices survive save, submit, the Lead -> Customer switch and the Sales
+Order, without approval or manager rights. The customer's next quotation nets the agreed price under
+the same rules. Costs and limits:
+
+- The gross-up bakes in the rules active on the agreed row. If they change (rule edited, Q4 Spares
+  expires, volume tier not reached at another quantity), the net moves by that rule's effect, as it
+  would for any list price. The Item Price note names the rules and the percentage, so a Sales
+  Manager can re-base it.
+- The customer's quotations show the grossed-up figure as their Price List Rate (1,89,473.68, then
+  5 %).
+- Changing qty / UOM / price list on the form re-runs the pricing rules in the browser. The rate
+  shown drops to the rule rate until save; the server then restores the agreed rate. To give up an
+  agreed rate, clear *Agreed Rate* on the row.
+- On a Lead quotation the mapper compares against the Lead's rule rate (list). An Opportunity rate
+  between the Premium rule rate and the list price is therefore re-priced, and then gets the Premium
+  rate after the switch, which favours the customer.
+- One Custom Field per row table (`bench migrate`).
+- Two Quotation / Sales Order controller classes are overridden. Another app overriding the same
+  DocTypes would need to subclass these.
+
+**Status.** Accepted.

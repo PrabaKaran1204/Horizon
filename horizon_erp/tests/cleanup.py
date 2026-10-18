@@ -28,7 +28,16 @@ knows ``before_tests``, which is why the per-class registration above exists.
 
 import frappe
 
-DEFAULT_PREFIXES = ("BRTEST", "APITEST", "SCHTEST", "RPTTEST", "GAPTEST", "FIXTEST", "LEADTEST")
+DEFAULT_PREFIXES = (
+	"BRTEST",
+	"APITEST",
+	"SCHTEST",
+	"RPTTEST",
+	"GAPTEST",
+	"FIXTEST",
+	"LEADTEST",
+	"PRICETEST",
+)
 
 # doctype -> columns that carry the fixture prefix when a row is test residue
 RESIDUE_FIELDS = {
