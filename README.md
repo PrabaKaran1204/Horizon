@@ -78,8 +78,14 @@ is designed, not configured.
 Run from the bench root (`frappe-bench/`). The site used throughout is `horizon.local`.
 
 ```bash
-# 0. fetch the app (skip if already in apps/)
-bench get-app horizon_erp <git-url>
+# 0. fetch the dependencies (version-15) and this app
+bench get-app erpnext --branch version-15
+bench get-app payments --branch version-15
+bench get-app hrms --branch version-15
+bench get-app india_compliance --branch version-15
+bench get-app https://github.com/PrabaKaran1204/Horizon.git --branch master
+bench new-site horizon.local --admin-password admin
+bench --site horizon.local install-app erpnext payments hrms india_compliance
 
 # 1. install (after_install syncs <module>/custom/*.json, then roles, role permissions,
 #    workflows, print formats, notifications)
