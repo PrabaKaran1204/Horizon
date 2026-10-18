@@ -1818,6 +1818,66 @@ def setup_parties():
 # ---------------------------------------------------------------------------
 
 
+# Mumbai and Delhi hold different GSTINs, so a stock transfer between them is a supply between
+# distinct persons (ADR-10): Mumbai bills the internal customer "Horizon Delhi DC", Delhi books the
+# internal supplier "Horizon Mumbai HQ". Each party carries the other branch's company address.
+INTERNAL_PARTIES = [
+	{
+		"doctype": "Customer",
+		"name": "Horizon Delhi DC",
+		"group_field": "customer_group",
+		"group": "Standard",
+		"address_title": "Horizon DC Delhi",
+	},
+	{
+		"doctype": "Supplier",
+		"name": "Horizon Mumbai HQ",
+		"group_field": "supplier_group",
+		"group": "Raw Material",
+		"address_title": "Horizon HQ Mumbai",
+	},
+]
+
+
+def setup_internal_parties():
+	for party in INTERNAL_PARTIES:
+		doctype = party["doctype"]
+		address = frappe.db.get_value(
+			"Address", {"address_title": party["address_title"], "is_your_company_address": 1}
+		)
+		gstin = frappe.db.get_value("Address", address, "gstin") if address else None
+		values = {
+			f"{doctype.lower()}_type": "Company",
+			party["group_field"]: party["group"],
+			f"is_internal_{doctype.lower()}": 1,
+			"represents_company": COMPANY,
+			"gstin": gstin,
+			"gst_category": "Registered Regular" if gstin else "Unregistered",
+		}
+		if doctype == "Customer":
+			values["territory"] = "North"
+		else:
+			# Buying Settings require PO and receipt; the transfer has neither on the Delhi side
+			values["allow_purchase_invoice_creation_without_purchase_order"] = 1
+			values["allow_purchase_invoice_creation_without_purchase_receipt"] = 1
+		if frappe.db.exists(doctype, party["name"]):
+			doc = frappe.get_doc(doctype, party["name"])
+			doc.update(values)
+		else:
+			doc = frappe.get_doc({"doctype": doctype, f"{doctype.lower()}_name": party["name"], **values})
+		if not any(row.company == COMPANY for row in doc.companies):
+			doc.append("companies", {"company": COMPANY})
+		doc.flags.ignore_permissions = True
+		doc.save()
+
+		if address:
+			addr = frappe.get_doc("Address", address)
+			if not any(l.link_doctype == doctype and l.link_name == doc.name for l in addr.links):
+				addr.append("links", {"link_doctype": doctype, "link_name": doc.name})
+				addr.flags.ignore_permissions = True
+				addr.save()
+
+
 def setup_pricing():
 	for row in PRICE_LISTS:
 		if not frappe.db.exists("Price List", row["price_list_name"]):
@@ -2561,6 +2621,7 @@ STEPS = [
 	("uoms", setup_uoms),
 	("items", setup_items),
 	("parties", setup_parties),
+	("internal_parties", setup_internal_parties),
 	("pricing", setup_pricing),
 	("manufacturing_masters", setup_manufacturing_masters),
 	("opening_stock", setup_opening_stock),
