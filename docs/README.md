@@ -13,6 +13,7 @@ ERPNext 15.94, HRMS 15.55, India Compliance 15.25; site `horizon.local`; custom 
 | [04_requirements_challenged.md](04_requirements_challenged.md) | 13 requirements that were questioned, why, and the alternative built | Where the brief and good practice diverge |
 | [05_test_plan_and_evidence.md](05_test_plan_and_evidence.md) | 60 test scenarios across purchasing, quality, selling, manufacturing, API, jobs, permissions, HR, finance; evidence column for the test run | How to verify the critical flows |
 | [06_deployment_and_migration_guide.md](06_deployment_and_migration_guide.md) | Fresh bench, restore from backup, post-restore checklist, CSV import order, known caveats | How to stand the system up |
+| [09_ecommerce_portal_design.md](09_ecommerce_portal_design.md) | Bonus, Designed only: e-commerce portal - Webshop + core customer portal recommendation, architecture and sequence diagrams, data flows, security controls, phased plan | How Horizon would sell spares and quote equipment online |
 | [api.md](api.md) | Inventory Sync API contract, rate limiting, logging, retry client, curl examples | How to integrate |
 
 Code entry points: `horizon_erp/hooks.py` (doc_events, scheduler_events, fixtures),
@@ -42,6 +43,8 @@ Finance, Integrations; ADR-16).
 ## Bonus designs (Designed only)
 
 ### E-commerce portal
+
+Full design: [09_ecommerce_portal_design.md](09_ecommerce_portal_design.md).
 
 Architecture: ERPNext Webshop (`Website Item` per sellable Item, Standard Selling price list for
 guests, customer-specific price lists and Pricing Rules applied after login) on the same site, with
