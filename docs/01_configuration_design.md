@@ -163,7 +163,7 @@ Reports built for this axis: **Cost Center Wise P and L** (YTD pivot or month pi
 
 Roles created by `horizon_setup/roles.py` (fixture): Department Head, Procurement Manager, Finance Director,
 Operations Head, Sales Manager, Warehouse Manager, Quality Inspector, HR Manager. Demo users
-(`demo_data.USERS`, password `Horizon@123`, demo only):
+(`demo_data.USERS`, password `Horizon@Test123`, demo only):
 
 | User | Horizon role(s) | ERPNext roles | Sees / may do |
 | --- | --- | --- | --- |

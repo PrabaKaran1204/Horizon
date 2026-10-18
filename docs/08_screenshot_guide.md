@@ -9,15 +9,15 @@ stable (the demo data is idempotent; `setup_all` never renumbers submitted docum
 
 | Login as | Password | Why |
 | --- | --- | --- |
-| `Administrator` | `admin` | Default for every screen unless the table says otherwise |
-| `rajesh@horizon.local` | `Horizon@123` | Finance Director (Level 3 approver, Accounts Manager) |
-| `procure@horizon.local` | `Horizon@123` | Procurement Manager (Level 2), Purchase User |
-| `dept.head@horizon.local` | `Horizon@123` | Department Head (Level 1) |
-| `priya@horizon.local` | `Horizon@123` | Operations Head, Manufacturing / Stock Manager |
-| `qc@horizon.local` | `Horizon@123` | Quality Inspector / Quality Manager |
-| `amit@horizon.local` | `Horizon@123` | Sales Manager (discount approver) |
-| `wh.delhi@horizon.local` | `Horizon@123` | Warehouse Manager restricted to *Delhi DC - HML* by a User Permission |
-| `neha@horizon.local` | `Horizon@123` | HR Manager |
+| `Administrator` | `Horizon@Test123` | Default for every screen unless the table says otherwise |
+| `rajesh@horizon.local` | `Horizon@Test123` | Finance Director (Level 3 approver, Accounts Manager) |
+| `procure@horizon.local` | `Horizon@Test123` | Procurement Manager (Level 2), Purchase User |
+| `dept.head@horizon.local` | `Horizon@Test123` | Department Head (Level 1) |
+| `priya@horizon.local` | `Horizon@Test123` | Operations Head, Manufacturing / Stock Manager |
+| `qc@horizon.local` | `Horizon@Test123` | Quality Inspector / Quality Manager |
+| `amit@horizon.local` | `Horizon@Test123` | Sales Manager (discount approver) |
+| `wh.delhi@horizon.local` | `Horizon@Test123` | Warehouse Manager restricted to *Delhi DC - HML* by a User Permission |
+| `neha@horizon.local` | `Horizon@Test123` | HR Manager |
 
 Use a private window per user so the sessions do not mix. The same screen is only re-captured as a
 second user where the table says so.

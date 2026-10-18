@@ -13,7 +13,7 @@ Automated coverage exists in `horizon_buying/tests/test_buying.py`, `test_sellin
 lead from the test run (screenshot reference, test name, or log excerpt).
 
 Demo users: dept.head@, procure@, rajesh@ (Finance Director), priya@ (Operations Head), amit@
-(Sales Manager), wh.delhi@, qc@, neha@ (all `@horizon.local`, password `Horizon@123`).
+(Sales Manager), wh.delhi@, qc@, neha@ (all `@horizon.local`, password `Horizon@Test123`).
 
 ## Purchasing
 

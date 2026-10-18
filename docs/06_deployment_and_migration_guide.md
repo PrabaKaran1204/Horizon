@@ -35,7 +35,7 @@ bench --site horizon.local install-app horizon_erp         # after_install: cust
 bench --site horizon.local execute horizon_erp.horizon_setup.demo_data.setup_all
 #   -> settings, Branch dimension, addresses/GSTINs, cost centres + allocation, accounts, warehouses,
 #      item groups + GST templates, items, parties (ABC Corp Party Link, ABC Supplies blacklisted),
-#      pricing, workstations/operations/QI templates/BOMs, opening stock, users (Horizon@123),
+#      pricing, workstations/operations/QI templates/BOMs, opening stock, users (Horizon@Test123),
 #      CSV export, then optional modules: horizon_workflow.workflows.setup_workflows and
 #      horizon_setup.demo_hr_finance.setup_hr_finance (HR, payroll, project, asset, budgets, bank, recurring JEs)
 
@@ -128,7 +128,7 @@ asserts the same (plus file / DB module agreement for every shipped JSON).
 | 8 | API keys regenerated | Backups do not carry usable secrets for new users; regenerate on the integration user |
 | 9 | Email account and site URL | Replace the placeholder SMTP settings of Email Account *Horizon Notifications*; `host_name` in `site_config.json` so links in emails resolve |
 | 10 | Redis counters | Rate-limit buckets live in Redis, not the DB: `bench --site horizon.local execute horizon_erp.horizon_integrations.rate_limit.reset_rate_limit --args '["<client>"]'` if needed |
-| 11 | Demo passwords | Change `Horizon@123` on the eight demo users before any shared environment |
+| 11 | Demo passwords | Change `Horizon@Test123` on the eight demo users before any shared environment |
 | 12 | Developer mode off | `developer_mode 0` in production (disables `_simulate_failure`) |
 | 13 | Receipt / QC settings | Stock Settings > Quality: *Action if Quality Inspection is not Submitted* = Stop, *Action if Quality Inspection is Rejected* = Warn, *Allow to Make Quality Inspection after Purchase / Delivery* = 0, *Route Inspected Receipts via QC Hold* (`horizon_use_qc_hold`, Horizon section) = 0. Set by `demo_data.setup_company_settings` |
 | 14 | Supplier Scorecards | One standard *Supplier Scorecard* per supplier: `bench --site horizon.local execute horizon_erp.horizon_setup.demo_data.setup_supplier_scorecards` (idempotent; also the last step of `setup_all`). ERPNext's daily `refresh_scorecards` job adds each completed month |
