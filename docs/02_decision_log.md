@@ -411,6 +411,12 @@ Dashboard Charts are no longer fixtures: fixture import validates and `Dashboard
 rejects a standard chart whenever `developer_mode` is off (production, and any migrate that runs a
 patch); they ship only as module JSON, which `bench migrate` syncs without validation.
 
+*Amendment (2026-10-18):* CRM split out of Selling on user request. *Horizon CRM* (Horizon CRM
+module, sequence 0.515) holds Lead → Opportunity → Quotation with the ADR-17 customer creation;
+*Horizon Selling* keeps pricing and Quotation → Sales Order → Delivery Note → Sales Invoice. The
+parent now has eleven children numbered 1. Setup & Masters, 2. CRM, 3. Selling … 11. Integrations
+(12 workspaces in total).
+
 **Consequences.** A reviewer can walk the implementation module by module from one page; each
 workspace explains itself. Costs: child titles keep the `Horizon` prefix (a workspace title must not
 clash with the standard *Selling*, *Buying*, ... routes), so the longest ones are truncated in the
