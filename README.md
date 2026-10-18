@@ -10,8 +10,8 @@ any bench: 7 custom DocTypes (Production Audit, Shipment Decision, Supplier Exce
 Quarterly Purchase Plan, Inventory API Log, Budget Override Request, Bank Reconciliation Sign-off,
 plus two child tables), 4 approval workflows (PO approval, discount approval for Quotation and
 Sales Order, production audit review, payment approval - 5 Workflow records), 19 tested Script
-Reports (+ the API Usage Report = 20), 11 workspaces (a *Horizon ERP* home + one per assignment section) backed by 23 number cards and
-7 dashboard charts (1 custom chart source),
+Reports (+ the API Usage Report = 20), 12 workspaces (a *Horizon ERP* home + one per assignment section, CRM & Selling split in two) backed by 26 number cards and
+8 dashboard charts (1 custom chart source),
 2 Jinja print formats, 4 notifications, 7 scheduler jobs, 1 REST API
 (`get_inventory_snapshot`, rate limited and logged) and 5 form client scripts loaded through
 `doctype_js`. Business rules (PO approval limits, blacklisted suppliers, discount caps, Delivery
@@ -152,7 +152,8 @@ horizon_erp/
                                 print_format/horizon_sales_invoice, workspace/horizon_selling,
                                 number_card/, dashboard_chart/, tests/
   horizon_crm/                  opportunity.py (Opportunity -> Customer, Lead quotation switch), custom/opportunity.json,
-                                number_card/ (open leads, leads > 14 days), dashboard_chart/, tests/
+                                workspace/horizon_crm, number_card/ (open leads, leads > 14 days, open
+                                opportunities + value, leads converted 90d), dashboard_chart/, tests/
   horizon_stock/                purchase_receipt.py (rejection paperwork, optional QC Hold), scrap.py,
                                 tasks.py (reorder + accuracy, reorder recompute), custom/{item,stock_settings}.json,
                                 report/ (inventory_obsolescence_analysis, forecast_vs_actual_demand),
@@ -188,7 +189,7 @@ docs/                           design documents (business rules, API contract, 
 | Horizon Workflow | - | `horizon_workflow.workflows.setup_workflows` | - | - |
 | Horizon Buying | Supplier Exception Log, Quarterly Purchase Plan (+ Item) | `horizon_buying.buying`, `horizon_buying.tasks.po_approval_reminders`, `public/js/purchase_order.js` | Approval Audit | Horizon Buying |
 | Horizon Selling | - | `horizon_selling.selling`, `public/js/{quotation,sales_order,delivery_note}.js` | Order Status, Price List Comparison | Horizon Selling |
-| Horizon CRM | - | `horizon_crm.opportunity` (Customer created from the qualified Opportunity with group, GSTIN, billing address, credit limit and payment terms; Lead quotations moved to that Customer before pricing - ADR-17), `public/js/opportunity.js`, `custom/opportunity.json`; lead / opportunity cards and charts | - | (cards on Horizon Selling) |
+| Horizon CRM | - | `horizon_crm.opportunity` (Customer created from the qualified Opportunity with group, GSTIN, billing address, credit limit and payment terms; Lead quotations moved to that Customer before pricing - ADR-17), `public/js/opportunity.js`, `custom/opportunity.json`; lead / opportunity cards and charts | - | Horizon CRM |
 | Horizon Stock | - | `horizon_stock.purchase_receipt`, `horizon_stock.scrap`, `horizon_stock.tasks` | Forecast vs Actual Demand, Inventory Obsolescence Analysis | Horizon Inventory |
 | Horizon Manufacturing | - | `horizon_manufacturing.manufacturing`, `public/js/work_order.js` | BOM Explosion with Lead Time, Capacity Utilisation and Sequence | Horizon Manufacturing |
 | Horizon Quality Management | Production Audit (+ Photo), Shipment Decision | `horizon_quality_management.inspection`, `production_audit_hooks`, `tasks.detect_quality_deadline_conflicts` | Audit Findings Dashboard, Quality Metrics, Quality vs Deadline Conflicts, Supplier Quality Scorecard | Horizon Quality |
@@ -205,23 +206,25 @@ Shared helpers: `utils/` (Jinja globals `horizon_customer_outstanding`, `horizon
 ## Workspaces
 
 The desk sidebar starts with **Horizon ERP** (`/app/horizon-erp`): headline KPIs, a link to every
-module workspace and the three demo flows with their document names. Its ten children follow the
-assignment sections in order, each with a one-paragraph scope, the process flow, KPIs, shortcuts in
+module workspace and the three demo flows with their document names. Its eleven children follow the
+assignment sections in order (the CRM & Selling section is split into *CRM*, Lead -> Opportunity ->
+Quotation, and *Selling*, pricing and order to delivery), each with a one-paragraph scope, the process flow, KPIs, shortcuts in
 process order and Transactions / Masters / Reports cards (ADR-16):
 
 | # | Workspace | Module | Route |
 | --- | --- | --- | --- |
 | 0 | Horizon ERP | Horizon Core | `/app/horizon-erp` |
 | 1 | Horizon Setup & Masters | Horizon Setup | `/app/horizon-setup-&-masters` |
-| 2 | Horizon Selling | Horizon Selling | `/app/horizon-selling` |
-| 3 | Horizon Buying | Horizon Buying | `/app/horizon-buying` |
-| 4 | Horizon Inventory | Horizon Stock | `/app/horizon-inventory` |
-| 5 | Horizon Manufacturing | Horizon Manufacturing | `/app/horizon-manufacturing` |
-| 6 | Horizon Quality | Horizon Quality Management | `/app/horizon-quality` |
-| 7 | Horizon Projects & Assets | Horizon Projects | `/app/horizon-projects-&-assets` |
-| 8 | Horizon HR & Payroll | Horizon HR | `/app/horizon-hr-&-payroll` |
-| 9 | Horizon Accounts & Finance | Horizon Accounts | `/app/horizon-accounts-&-finance` |
-| 10 | Horizon Integrations | Horizon Integrations | `/app/horizon-integrations` |
+| 2 | Horizon CRM | Horizon CRM | `/app/horizon-crm` |
+| 3 | Horizon Selling | Horizon Selling | `/app/horizon-selling` |
+| 4 | Horizon Buying | Horizon Buying | `/app/horizon-buying` |
+| 5 | Horizon Inventory | Horizon Stock | `/app/horizon-inventory` |
+| 6 | Horizon Manufacturing | Horizon Manufacturing | `/app/horizon-manufacturing` |
+| 7 | Horizon Quality | Horizon Quality Management | `/app/horizon-quality` |
+| 8 | Horizon Projects & Assets | Horizon Projects | `/app/horizon-projects-&-assets` |
+| 9 | Horizon HR & Payroll | Horizon HR | `/app/horizon-hr-&-payroll` |
+| 10 | Horizon Accounts & Finance | Horizon Accounts | `/app/horizon-accounts-&-finance` |
+| 11 | Horizon Integrations | Horizon Integrations | `/app/horizon-integrations` |
 
 `bench --site horizon.local execute horizon_erp.horizon_setup.dashboards.setup_dashboards` checks
 icons, parents, every referenced card / chart / DocType / Report / Page / child-workspace URL and

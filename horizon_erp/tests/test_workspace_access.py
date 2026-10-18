@@ -67,6 +67,18 @@ class TestWorkspaceAccess(FrappeTestCase):
 		frappe.set_user(self.users["HR Manager"])
 		self.assertNotIn("Horizon Manufacturing", [p["name"] for p in get_workspace_sidebar_items()["pages"]])
 
+	def test_sales_roles_open_crm_workspace(self):
+		# Lead -> Opportunity -> Quotation lives in its own workspace; both sales roles reach it
+		user = ensure_user("fixtest.ws.crm@horizon.local", "FIXTEST WS CRM", ["Sales User"]).name
+		for login in (self.users["Sales Manager"], user):
+			frappe.set_user(login)
+			self.assertIn("Horizon CRM", [p["name"] for p in get_workspace_sidebar_items()["pages"]], login)
+			result = get_desktop_page(page("Horizon CRM"))
+			self.assertTrue(result["shortcuts"]["items"], login)
+			self.assertTrue(result["number_cards"]["items"], login)
+		frappe.set_user(self.users["HR Manager"])
+		self.assertRaises(frappe.PermissionError, get_desktop_page, page("Horizon CRM"))
+
 	def test_role_outside_workspace_is_refused(self):
 		frappe.set_user(self.users["HR Manager"])
 		self.assertRaises(frappe.PermissionError, get_desktop_page, page("Horizon Manufacturing"))

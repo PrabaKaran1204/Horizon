@@ -21,6 +21,7 @@ APP_ROOT = pathlib.Path(__file__).resolve().parents[2]  # horizon_erp/horizon_er
 EXPECTED_WORKSPACES = {
 	"Horizon ERP",
 	"Horizon Setup & Masters",
+	"Horizon CRM",
 	"Horizon Selling",
 	"Horizon Buying",
 	"Horizon Inventory",
@@ -145,6 +146,25 @@ class TestDashboards(FrappeTestCase):
 		}
 		self.assertEqual(len(children), len(EXPECTED_WORKSPACES) - 1)
 		self.assertEqual(urls, {"/app/" + t.lower().replace(" ", "-") for t in children})
+
+	def test_parent_numbers_children_in_sidebar_order(self):
+		# "1. Setup & Masters", "2. CRM", ... follow the sidebar (sequence_id) order of the children
+		children = frappe.get_all(
+			"Workspace",
+			filters={"parent_page": dashboards.PARENT_WORKSPACE},
+			fields=["title"],
+			order_by="sequence_id asc",
+			pluck="title",
+		)
+		shortcuts = [
+			s for s in frappe.get_doc("Workspace", dashboards.PARENT_WORKSPACE).shortcuts if s.type == "URL"
+		]
+		self.assertEqual(
+			[s.url for s in shortcuts], ["/app/" + t.lower().replace(" ", "-") for t in children]
+		)
+		self.assertEqual(
+			[s.label.split(". ", 1)[0] for s in shortcuts], [str(i) for i in range(1, len(children) + 1)]
+		)
 
 	def test_obsolete_records_are_gone(self):
 		from horizon_erp.patches.v1_0 import redesign_workspaces

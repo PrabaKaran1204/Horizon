@@ -1,0 +1,291 @@
+{
+ "charts": [
+  {
+   "chart_name": "Horizon Leads by Status",
+   "label": "Leads by Status"
+  },
+  {
+   "chart_name": "Horizon Opportunities by Status",
+   "label": "Opportunities by Status"
+  }
+ ],
+ "content": "[{\"id\": \"8a3357c349\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>2. CRM</b></span>\", \"col\": 12}}, {\"id\": \"7109aad961\", \"type\": \"paragraph\", \"data\": {\"text\": \"Assignment: CRM &amp; Selling — Lead-to-Quote pipeline (Lead → Opportunity → Quotation; docs/01 matrix 5.3: LQ-1..4). Leads stay light; a qualified Opportunity captures Customer Group, GSTIN, billing address, credit limit and payment terms, and the Customer is created automatically when the Quotation is made (ADR-17).\", \"col\": 12}}, {\"id\": \"9e6ff4d02a\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>Flow:</b> Lead → Opportunity (customer details) → Quotation (customer auto-created) → Sales Order (<i>3. Selling</i>)\", \"col\": 12}}, {\"id\": \"3e5144fd43\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"d9df97a338\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Key figures</b></span>\", \"col\": 12}}, {\"id\": \"3399291037\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Leads\", \"col\": 4}}, {\"id\": \"a786529f9c\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Leads Older Than 14 Days\", \"col\": 4}}, {\"id\": \"f54a5128f5\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Opportunities\", \"col\": 4}}, {\"id\": \"57d4903e18\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Opportunity Value\", \"col\": 4}}, {\"id\": \"bdc4a4cce9\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Leads Converted (90d)\", \"col\": 4}}, {\"id\": \"036ef94ae9\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Quote to Order % (90d)\", \"col\": 4}}, {\"id\": \"83c0dbc374\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Leads by Status\", \"col\": 6}}, {\"id\": \"54f58f2a6a\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Opportunities by Status\", \"col\": 6}}, {\"id\": \"c00a50dc23\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"c9a2e8a03f\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Shortcuts (process order)</b></span>\", \"col\": 12}}, {\"id\": \"da4edd12c7\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lead\", \"col\": 4}}, {\"id\": \"e0129cc45f\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Opportunity\", \"col\": 4}}, {\"id\": \"4364391a36\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Quotation\", \"col\": 4}}, {\"id\": \"ae7742f9b4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Customer\", \"col\": 4}}, {\"id\": \"e28e314b13\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Contact\", \"col\": 4}}, {\"id\": \"455f706f80\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"b5d2a6c22d\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Transactions, masters and reports</b></span>\", \"col\": 12}}, {\"id\": \"cc49bd0830\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"e87bb885d5\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"43a9aab7c2\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "creation": "2026-10-18 12:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "crm",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Horizon CRM",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Lead",
+   "link_count": 0,
+   "link_to": "Lead",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Opportunity",
+   "link_count": 0,
+   "link_to": "Opportunity",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quotation",
+   "link_count": 0,
+   "link_to": "Quotation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Customer",
+   "link_count": 0,
+   "link_to": "Customer",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Contact",
+   "link_count": 0,
+   "link_to": "Contact",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Lead Source",
+   "link_count": 0,
+   "link_to": "Lead Source",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales Stage",
+   "link_count": 0,
+   "link_to": "Sales Stage",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Customer Group",
+   "link_count": 0,
+   "link_to": "Customer Group",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Territory",
+   "link_count": 0,
+   "link_to": "Territory",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales Funnel",
+   "link_count": 0,
+   "link_to": "sales-funnel",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Lead Details",
+   "link_count": 0,
+   "link_to": "Lead Details",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Opportunity Summary by Sales Stage",
+   "link_count": 0,
+   "link_to": "Opportunity Summary by Sales Stage",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Lead Conversion Time",
+   "link_count": 0,
+   "link_to": "Lead Conversion Time",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Lost Opportunity",
+   "link_count": 0,
+   "link_to": "Lost Opportunity",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Prospects Engaged But Not Converted",
+   "link_count": 0,
+   "link_to": "Prospects Engaged But Not Converted",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-18 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Horizon CRM",
+ "name": "Horizon CRM",
+ "number_cards": [
+  {
+   "label": "Open Leads",
+   "number_card_name": "Horizon Open Leads"
+  },
+  {
+   "label": "Leads Older Than 14 Days",
+   "number_card_name": "Horizon Leads Over 14 Days Old"
+  },
+  {
+   "label": "Open Opportunities",
+   "number_card_name": "Horizon Open Opportunities"
+  },
+  {
+   "label": "Open Opportunity Value",
+   "number_card_name": "Horizon Open Opportunity Value"
+  },
+  {
+   "label": "Leads Converted (90d)",
+   "number_card_name": "Horizon Leads Converted (90d)"
+  },
+  {
+   "label": "Quote to Order % (90d)",
+   "number_card_name": "Horizon Quote to Order Conversion Pct (90d)"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "Horizon ERP",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "Sales Manager"
+  },
+  {
+   "role": "Sales User"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 0.515,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "Lead",
+   "link_to": "Lead",
+   "stats_filter": "{\"status\": [\"in\", [\"Lead\", \"Open\", \"Replied\", \"Opportunity\", \"Quotation\", \"Interested\"]]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "Opportunity",
+   "link_to": "Opportunity",
+   "stats_filter": "{\"status\": [\"in\", [\"Open\", \"Replied\"]]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "Quotation",
+   "link_to": "Quotation",
+   "stats_filter": "{\"status\": [\"=\", \"Open\"], \"docstatus\": [\"=\", 1]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Customer",
+   "link_to": "Customer",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Contact",
+   "link_to": "Contact",
+   "type": "DocType"
+  }
+ ],
+ "title": "Horizon CRM"
+}

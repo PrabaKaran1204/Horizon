@@ -24,8 +24,8 @@ workflow - each with `custom/` Custom Field JSON, doctypes, reports, workspaces 
 jobs in `tasks.py`), `horizon_erp/horizon_core/` (config, `@horizon_job`, daily summary),
 `horizon_erp/horizon_integrations/` (inventory API, rate limiter, sync client; legacy
 `horizon_erp/api/` alias shims), `horizon_erp/*/report/` (19 script reports + the API Usage Report = 20;
-11 workspaces: the *Horizon ERP* home plus one child per assignment section - Setup & Masters,
-Selling, Buying, Inventory, Manufacturing, Quality, Projects & Assets, HR & Payroll, Accounts &
+12 workspaces: the *Horizon ERP* home plus one child per assignment section - Setup & Masters,
+CRM, Selling (the CRM & Selling section split in two), Buying, Inventory, Manufacturing, Quality, Projects & Assets, HR & Payroll, Accounts &
 Finance, Integrations; ADR-16).
 
 ## 12-minute presentation outline

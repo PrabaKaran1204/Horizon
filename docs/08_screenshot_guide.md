@@ -28,15 +28,16 @@ second user where the table says so.
 | --- | --- | --- |
 | `/app/horizon-erp` | Horizon ERP (home) | Overview, headline KPIs, module index, the three demo flows |
 | `/app/horizon-setup-&-masters` | 1. Setup & Masters | Structure, CoA / cost centres, permissions (5.1-5.2) |
-| `/app/horizon-selling` | 2. Selling | Lead-to-quote, pricing, order to delivery (5.3-5.5) |
-| `/app/horizon-buying` | 3. Buying | Supplier quality and purchase approval (5.6) |
-| `/app/horizon-inventory` | 4. Inventory | Receipt / inspection / GRN, reorder and MRP, inventory dashboard (5.7-5.8) |
-| `/app/horizon-manufacturing` | 5. Manufacturing | BOM, production planning and capacity (5.9-5.10) |
-| `/app/horizon-quality` | 6. Quality | Quality control, Production Audit, quality vs deadline (5.11, DV) |
-| `/app/horizon-projects-&-assets` | 7. Projects & Assets | Projects, assets (5.12-5.13) |
-| `/app/horizon-hr-&-payroll` | 8. HR & Payroll | Attendance and leave, payroll (5.14-5.15) |
-| `/app/horizon-accounts-&-finance` | 9. Accounts & Finance | Bank and payments, budgets, GST (5.16-5.18) |
-| `/app/horizon-integrations` | 10. Integrations | Inventory API, scheduled jobs (5.19 API / SJ) |
+| `/app/horizon-crm` | 2. CRM | Lead-to-quote: Lead -> Opportunity (customer details) -> Quotation, Customer created on the Quotation (5.3, ADR-17) |
+| `/app/horizon-selling` | 3. Selling | Pricing and discounts, order to delivery (5.4-5.5) |
+| `/app/horizon-buying` | 4. Buying | Supplier quality and purchase approval (5.6) |
+| `/app/horizon-inventory` | 5. Inventory | Receipt / inspection / GRN, reorder and MRP, inventory dashboard (5.7-5.8) |
+| `/app/horizon-manufacturing` | 6. Manufacturing | BOM, production planning and capacity (5.9-5.10) |
+| `/app/horizon-quality` | 7. Quality | Quality control, Production Audit, quality vs deadline (5.11, DV) |
+| `/app/horizon-projects-&-assets` | 8. Projects & Assets | Projects, assets (5.12-5.13) |
+| `/app/horizon-hr-&-payroll` | 9. HR & Payroll | Attendance and leave, payroll (5.14-5.15) |
+| `/app/horizon-accounts-&-finance` | 10. Accounts & Finance | Bank and payments, budgets, GST (5.16-5.18) |
+| `/app/horizon-integrations` | 11. Integrations | Inventory API, scheduled jobs (5.19 API / SJ) |
 
 Capture `/app/horizon-erp` first as the title slide of the demo.
 
@@ -107,7 +108,8 @@ Capture `/app/horizon-erp` first as the title slide of the demo.
 | 39 | Sales Invoice | `/app/sales-invoice/SINV-26-00006` | rajesh@horizon.local | INR 537 243, Branch Mumbai HQ, due date +30 from *Net 30*; GST split from the customer's state |
 | 40 | Sales Invoice print | `/printview?doctype=Sales%20Invoice&name=SINV-26-00006&format=Horizon%20Sales%20Invoice` | Administrator | Custom print format: GSTIN of the issuing branch, HSN-wise tax table, bank details, terms |
 | 41 | Thermal packing slip | `/printview?doctype=Delivery%20Note&name=DN-26-00008&format=Horizon%20Packing%20Slip%20Thermal` | Administrator | 80 mm packing slip for the dispatch bay |
-| 42 | Selling workspace | `/app/horizon-selling` | amit@horizon.local | Flow Lead -> ... -> Sales Invoice; open leads, leads older than 14 days, open quotation value, quote-to-order %, avg days quote to SO, deliveries due today; Quotation Value Trend |
+| 41a | CRM workspace | `/app/horizon-crm` | amit@horizon.local | Flow Lead -> Opportunity (customer details) -> Quotation (customer auto-created) -> Sales Order; open leads, leads older than 14 days, open opportunities, open opportunity value, leads converted (90d), quote-to-order %; Leads by Status, Opportunities by Status |
+| 42 | Selling workspace | `/app/horizon-selling` | amit@horizon.local | Flow Quotation (from 2. CRM) -> Sales Order -> Delivery Note -> Sales Invoice; open quotation value, quote-to-order %, avg days quote to SO, deliveries due today; Quotation Value Trend |
 | 43 | Order Status Report | `/app/query-report/Order%20Status%20Report` | Administrator | Fulfilment of every Sales Order line (ordered / delivered / billed) with an overdue flag after 5 days |
 
 ## F. Inventory, Delhi warehouse user, API (Demo 3)
