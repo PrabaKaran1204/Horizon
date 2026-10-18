@@ -5,3 +5,8 @@
 tags
 node_modules
 __pycache__
+# Local presentation material and helper scripts (not part of the app)
+*.pptx
+screenshots/
+build_deck.py
+capture.py

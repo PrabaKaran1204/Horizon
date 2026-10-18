@@ -24,6 +24,55 @@ forecast columns (the standard *Budget Variance Report* stays untouched). Design
 full API contract are in `docs/` (`docs/api.md` for the endpoint). The folder layout mirrors the
 `kaynes` app: one Frappe module per ERPNext domain (see *Folder structure*).
 
+## The assignment and how it is delivered
+
+**Brief.** Replace Horizon Manufacturing's legacy ERP and spreadsheets with ERPNext, acting as the
+techno-functional lead: design the architecture, configure interconnected modules, build the
+customisations, handle edge cases and conflicting requirements, and document every trade-off.
+Horizon: industrial equipment maker, ~500 employees, INR 50 Cr revenue, Mumbai HQ (factory) and
+Delhi DC (distribution). Stakeholders: Rajesh (Finance Director), Priya (Operations Head), Amit
+(Sales Director), Neha (HR Manager).
+
+### Pain points and what was achieved
+
+| Pain point (brief) | Delivered | Where |
+| --- | --- | --- |
+| No real-time inventory visibility across 3 warehouses | One company, two GSTINs, Branch dimension; warehouse tree; consolidated stock; reorder formula + auto Material Request; inventory API for Delhi DC | `horizon_stock/`, `horizon_integrations/`, *Horizon Inventory* workspace |
+| Sales and production in silos | Quotation delivery date from multi-level BOM lead time; Sales Order → Production Plan → Work Order with a capacity check | `horizon_selling/`, `horizon_manufacturing/` |
+| No approval workflows, weak financial controls | PO approval by amount (INR 1 L / 5 L), blacklisted-supplier override to the Finance Director with an exception log, discount > 15 % approval, payment approval, budget Stop / Warn, 24 h reminders / 48 h escalation, audit trail | `horizon_buying/`, `horizon_workflow/`, `horizon_accounts/` |
+| Manual payroll, no project time tracking | Shifts and late marking, leave policy, three salary structures in one payroll (PF / ESI / PT / TDS), timesheets with overtime, project costing, milestone invoices | `horizon_hr/`, `horizon_payroll/`, `horizon_projects/` |
+| Quote generation not linked to manufacturing | Lead → qualified Opportunity (customer details) → Quotation (Customer created, pricing rules, agreed rates) → Sales Order (rates locked to the SO) → Work Order | `horizon_crm/`, `horizon_selling/` (ADR-14, 17, 18) |
+| Quality tracked in e-mail | Inspection before GRN, operation inspections, Production Audit (< 70 blocks completion), rework Work Orders, Non Conformance + Quality Action, Shipment Decision, Supplier Scorecard | `horizon_quality_management/` |
+
+Open item: customer-complaint intake (standard Warranty Claim / Issue linked to Non Conformance)
+is designed, not configured.
+
+### Assignment sections → implementation
+
+| Assignment section | Implementation | Design / evidence |
+| --- | --- | --- |
+| Setup & Masters, Chart of Accounts, cost centres | Company, GST addresses, Branch dimension, warehouses, cost-centre tree with allocation, CoA additions, permission model (`horizon_setup/demo_data.py`) | docs/01 §1–3, ADR-1 |
+| CRM & Selling: lead-to-quote, pricing, order-to-delivery | Opportunity → Customer automation, 4 pricing rules, discount approval, Delivery Note before invoice, auto draft invoice, Order Status report | docs/01 §5, ADR-14/17/18 |
+| Buying: approvals, blacklist, receipt → QC → GRN | PO workflow, Supplier Exception Log, Purchase Receipt draft = receipt, submit = GRN after Quality Inspection, auto return / debit note, Supplier Scorecard | ADR-2 |
+| Inventory reorder & MRP | Daily reorder-level formula, auto Material Request, Forecast vs Actual, Inventory Obsolescence | docs/01 §5 |
+| Manufacturing: BOM, capacity, QC | 8 three-level BOMs, capacity check, Capacity Utilisation report, rework loop, Quality Metrics | ADR-4 |
+| Projects & Assets | Overtime flag, overhead %, milestone billing, asset depreciation, maintenance | docs/01 |
+| HR & Payroll | Shifts, leave, three salary structures, statutory deductions, Salary Cost Analysis | docs/01 |
+| Accounts: bank, budget, GST | Bank import + sign-off, budgets + forecast mail, India Compliance GST | docs/01 |
+| Development tasks (5) | Production Audit DocType, inventory REST API, print formats, scheduler jobs, Obsolescence report | `docs/api.md` |
+| Strategic challenges (4) | One company vs multi-company, customer-supplier overlap, quality vs deadline, data migration | docs/03 |
+| Bonus | E-commerce portal design (design only) | docs/09 |
+
+### Submission contents
+
+| Deliverable (brief) | Location |
+| --- | --- |
+| ERPNext instance | Database backup + restore guide (`docs/06`), demo data reproducible with `setup_all`; screenshots PDF and walkthrough video supplied separately |
+| Code repository | This repository (`horizon_erp` app) |
+| Documentation | `docs/01`–`09`: configuration design, decision log (ADR-1…18), strategic challenges, requirements challenged, test plan and evidence, deployment guide, QA report, screenshot guide, e-commerce design, API contract |
+| Test data & scripts | `horizon_erp/data/*.csv`, `horizon_setup/demo_data.py`, `demo_hr_finance.py`; automated tests (`bench run-tests --app horizon_erp --skip-test-records`) |
+| Users and roles | `docs/users_roles.md` (demo logins) |
+
 ## Setup
 
 Run from the bench root (`frappe-bench/`). The site used throughout is `horizon.local`.
