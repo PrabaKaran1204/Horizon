@@ -75,6 +75,11 @@ override_whitelisted_methods = {
 	"erpnext.crm.doctype.opportunity.opportunity.make_quotation": (
 		"horizon_erp.horizon_crm.opportunity.make_quotation"
 	),
+	# Work Order "Finish": the consolidated Job Card / inspection gate (ADR-19) answers the button
+	# before ERPNext's first-incomplete-operation message
+	"erpnext.manufacturing.doctype.work_order.work_order.make_stock_entry": (
+		"horizon_erp.horizon_quality_management.operation_inspection.make_stock_entry"
+	),
 }
 extend_bootinfo = "horizon_erp.overrides.desktop.extend_bootinfo"
 
@@ -100,8 +105,15 @@ doc_events = {
 	"Quality Inspection": {
 		"on_submit": "horizon_erp.horizon_quality_management.inspection.on_submit_quality_inspection"
 	},
+	# Manufacture ("Finish") entry: open audit < 70 and per-operation Job Card + Accepted QI
+	# (ADR-19); before_validate so the one combined message precedes ERPNext's operations check
 	"Stock Entry": {
-		"validate": "horizon_erp.horizon_quality_management.production_audit_hooks.validate_stock_entry"
+		"before_validate": "horizon_erp.horizon_quality_management.production_audit_hooks.validate_stock_entry"
+	},
+	# no Job Card completion without an Accepted Quality Inspection when the operation has a template
+	"Job Card": {
+		"before_validate": "horizon_erp.horizon_quality_management.operation_inspection.before_validate_job_card",
+		"before_submit": "horizon_erp.horizon_quality_management.operation_inspection.before_submit_job_card",
 	},
 	# CRM: Customer created from the qualified Opportunity (ADR-17)
 	"Opportunity": {"validate": "horizon_erp.horizon_crm.opportunity.validate_opportunity"},

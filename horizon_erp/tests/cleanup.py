@@ -37,6 +37,7 @@ DEFAULT_PREFIXES = (
 	"FIXTEST",
 	"LEADTEST",
 	"PRICETEST",
+	"QCGATE",
 )
 
 # doctype -> columns that carry the fixture prefix when a row is test residue

@@ -779,6 +779,7 @@ OPERATIONS = [
 		"name": "Cutting",
 		"workstation": "Line B",
 		"description": "Plasma / shear cutting of plate and channel",
+		"qi_template": "Cutting Inspection",
 	},
 	{
 		"name": "Welding",
@@ -792,15 +793,30 @@ OPERATIONS = [
 		"description": "Primer + industrial grey top coat",
 		"qi_template": "Paint Inspection",
 	},
-	{"name": "Machining", "workstation": "Line B", "description": "Turning / boring of castings and shafts"},
+	{
+		"name": "Machining",
+		"workstation": "Line B",
+		"description": "Turning / boring of castings and shafts",
+		"qi_template": "Machining Inspection",
+	},
 	{
 		"name": "Assembly",
 		"workstation": "Line A",
 		"description": "Mechanical assembly and fastening",
 		"qi_template": "Assembly Inspection",
 	},
-	{"name": "Wiring", "workstation": "Line B", "description": "Control panel wiring and termination"},
-	{"name": "Testing", "workstation": "Line A", "description": "Functional / load test before release"},
+	{
+		"name": "Wiring",
+		"workstation": "Line B",
+		"description": "Control panel wiring and termination",
+		"qi_template": "Wiring Inspection",
+	},
+	{
+		"name": "Testing",
+		"workstation": "Line A",
+		"description": "Functional / load test before release",
+		"qi_template": "Testing Inspection",
+	},
 ]
 
 QI_TEMPLATES = {
@@ -829,6 +845,29 @@ QI_TEMPLATES = {
 	"Assembly Inspection": [
 		{"specification": "Torque Nm", "numeric": 1, "min_value": 45, "max_value": 50},
 		{"specification": "Alignment", "numeric": 0, "value": "Within 0.05 mm TIR"},
+	],
+	# In-process templates for the remaining operations (ADR-19: every operation is inspected).
+	# Numeric checks need both limits in ERPNext (min <= reading <= max), so one-sided limits get a
+	# practical bound: insulation up to the tester range, Ra / noise from 0, pressure up to the rig.
+	"Wiring Inspection": [
+		{"specification": "Insulation Resistance MOhm", "numeric": 1, "min_value": 1, "max_value": 10000},
+		{"specification": "Continuity Test", "numeric": 0, "value": "Pass"},
+		{"specification": "Terminal Torque Nm", "numeric": 1, "min_value": 2, "max_value": 3},
+	],
+	"Machining Inspection": [
+		# nominal bore 50 mm H-class fit, +/-0.05 mm (illustrative; real limits come from the drawing)
+		{"specification": "Bore Diameter mm", "numeric": 1, "min_value": 49.95, "max_value": 50.05},
+		{"specification": "Surface Finish Ra um", "numeric": 1, "min_value": 0, "max_value": 3.2},
+	],
+	"Cutting Inspection": [
+		# nominal cut length 1000 mm +/-2 mm (illustrative; the job's drawing length applies)
+		{"specification": "Cut Length mm", "numeric": 1, "min_value": 998, "max_value": 1002},
+		{"specification": "Burr Free", "numeric": 0, "value": "No burrs"},
+	],
+	"Testing Inspection": [
+		{"specification": "Pressure Test bar", "numeric": 1, "min_value": 10, "max_value": 15},
+		{"specification": "Run Test 30 min", "numeric": 0, "value": "Pass"},
+		{"specification": "Noise dB", "numeric": 1, "min_value": 0, "max_value": 85},
 	],
 }
 
@@ -2017,7 +2056,8 @@ def _ensure_qi_templates():
 
 
 def _assign_operation_qi_templates():
-	"""Operation.quality_inspection_template (fetched onto Job Cards) for the in-process steps.
+	"""Operation.quality_inspection_template (fetched onto Job Cards) for every in-process step;
+	Job Card submit and the Manufacture entry require an Accepted inspection per template (ADR-19).
 	Runs after ``_ensure_qi_templates`` so the templates exist on a fresh site."""
 	if not _has_field("Operation", "quality_inspection_template"):
 		_warn("Operation has no quality_inspection_template field; set the template on BOM operations")

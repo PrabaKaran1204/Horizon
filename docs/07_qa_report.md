@@ -403,3 +403,24 @@ paths keep ADR-17's light Lead path.
 *Status*: **Fixed-verified** (browser UB-6 / UB-7, unit
 `test_lead_opportunity_customer_details_on_main_tab_and_required`). Existing open Lead opportunities
 without details (e.g. CRM-OPP-2026-00002) now ask for them on their next save in the form.
+
+## 12. Defect from user UI testing (2026-10-19)
+
+### DEF-25 – Work Order finished without any Quality Inspection
+*Severity* High · *Priority* P1 · *Risk* High · *Type* Functional / Compliance
+*Evidence*: found by the user in UI testing. MFG-WO-2026-00008 (SA-PANEL-01 x 2,
+BOM-SA-PANEL-01-001, single operation Wiring on Line B): Job Card PO-JOB00011 completed with no QI,
+*Finish* -> Manufacture MAT-STE-00015 submitted, Work Order Completed. The brief requires inspection
+steps per BOM operation and Quality Inspections linked to Work Order operations.
+*Root cause*: only 3 of the 7 operations (Welding, Painting, Assembly) had a Quality Inspection
+Template, so Wiring Job Cards carried no checklist; ERPNext v15 enforces no inspection on Job Card
+submit or on the Manufacture entry; the Horizon finish gate only checked open Production Audits
+< 70.
+*Fix* (ADR-19): templates Wiring / Machining / Cutting / Testing Inspection and an Operation template
+for all seven operations (`demo_data`); Job Card `before_submit` requires a submitted Accepted QI
+(not Fail / Rework) when the card's operation has a template; the Work Order *Finish* endpoint and
+the Manufacture Stock Entry `before_validate` list every operation without a completed Job Card or
+an Accepted QI in one message (`horizon_quality_management/operation_inspection.py`). Audit < 70
+block unchanged; audits stay optional. No bypass role.
+*Status*: **Fixed-verified** (unit QG-2 … QG-11, live QG-12 / QG-13 in `05`). MFG-WO-2026-00008 /
+MAT-STE-00015 are left as history (not retroactive).

@@ -585,3 +585,67 @@ the same rules. Costs and limits:
   DocTypes would need to subclass these.
 
 **Status.** Accepted.
+
+## ADR-19 Inspection is mandatory per operation before a Work Order can finish; Production Audit stays optional (daily) with the < 70 block
+
+**Context.** The brief asks for quality checkpoints in the BOM ("link inspection step to each
+operation") and for "Quality Inspection linked to Work Order operation" with operation-specific
+checklists on Work Order tasks. In UI testing the user made MFG-WO-2026-00008 (SA-PANEL-01 x 2,
+BOM-SA-PANEL-01-001, one operation Wiring on Line B), completed Job Card PO-JOB00011 without any
+inspection, clicked *Finish* and submitted Manufacture MAT-STE-00015 (DEF-25). Two gaps:
+
+- Only Welding, Painting and Assembly had a Quality Inspection Template; Cutting, Machining, Wiring
+  and Testing had none.
+- ERPNext v15 carries the data model (Operation and Job Card `quality_inspection_template`, Job Card
+  `quality_inspection`, QI reference type *Job Card*) but enforces nothing: `JobCard.on_submit`
+  checks transfer qty, time logs and completed qty only, and `StockEntry.check_if_operations_completed`
+  checks operation quantities only. The standard `inspection_required` check on Stock Entry
+  (`StockController.validate_inspection`) needs a QI per finished-goods row of the Stock Entry
+  itself, not per operation. Manufacturing Settings has no inspection flag. The only Horizon finish
+  gate was the open Production Audit < 70.
+
+**Options.**
+
+- (a) Turn on the BOM's `inspection_required`: one final inspection of the Manufacture entry, not one
+  per operation; does not meet the brief.
+- (b) Make the daily Production Audit mandatory per Work Order. Rejected: the brief calls audits
+  daily, they score a line / shift rather than an operation, and the < 70 rule already covers the
+  failing case.
+- (c) Template on every operation + Job Card completion gate + consolidated finish gate. Chosen.
+
+**Decision.** (c).
+
+- Every operation has a template (`demo_data.QI_TEMPLATES`, `_assign_operation_qi_templates`):
+  Wiring, Machining, Cutting and Testing Inspection added; ERPNext fetches the Operation's template
+  onto new Job Cards, and drafts created before pick it up on save.
+- Job Card `before_submit`: if the card (or its Operation) has a template, the latest submitted QI
+  with reference Job Card = this card must be Accepted with a QC result other than Fail / Rework
+  (blank, Pass and Conditional Pass count as accepted). Rejected / Fail / Rework keep the card open;
+  the existing QI hook raises the Non Conformance or the draft rework Work Order, and an Accepted
+  re-inspection releases the card.
+- Finish gate: the Work Order *Finish* endpoint
+  (`erpnext...work_order.make_stock_entry`, wrapped through `override_whitelisted_methods`, because
+  ERPNext already runs the operation check while building the entry) and the Manufacture Stock Entry
+  `before_validate` hook (`production_audit_hooks.validate_stock_entry`, moved from `validate` so
+  it runs ahead of ERPNext's own operation check) throw one message listing everything missing, e.g.
+  "Missing before finish: Quality Inspection for Wiring (PO-JOB00011); Job Card for Testing not
+  completed (PO-JOB00020)". Per operation at least one submitted Job Card is required and every
+  submitted card with a template needs an Accepted QI; draft cards for the remaining quantity of a
+  partially completed operation do not block and quantities stay with ERPNext. Work Orders without
+  operations are skipped; rework Work Orders follow the same rules.
+- No bypass role. The open Production Audit < 70 block is unchanged; audits stay optional.
+
+**Consequences.** No Work Order with operations finishes without an Accepted inspection of each
+operation, and the user sees every gap in one place. Costs and limits:
+
+- Only operations with a template are inspection-controlled. A new Operation added without a
+  template is not gated until one is assigned (the setup assigns one to all seven).
+- The rule is not retroactive: completed Work Orders (e.g. MFG-WO-2026-00008 / MAT-STE-00015) are
+  history. A Job Card submitted before this change without a QI still blocks a *new* Manufacture
+  entry of an unfinished Work Order until a QI is submitted against it (QI can reference a submitted
+  Job Card), which is the intended behaviour.
+- The ERPNext `make_stock_entry` endpoint is wrapped; it delegates unchanged for every other purpose.
+  An ERPNext upgrade that renames it would need the override re-pointed.
+- Template limits are illustrative for drawing-dependent checks (bore 50 mm, cut length 1000 mm).
+
+**Status.** Accepted.

@@ -278,3 +278,37 @@ reflected in the standard score; the *Supplier Quality Scorecard* report carries
 
 Suite: `bench --site horizon.local run-tests --app horizon_erp --skip-test-records` → **Ran 163 tests — OK**,
 residue (`find_test_residue()`) = {}.
+
+### Inspection per operation before finish (19-Oct-2026, DEF-25, ADR-19)
+
+User finding: MFG-WO-2026-00008 (SA-PANEL-01 x 2, operation Wiring) finished through Job Card
+PO-JOB00011 and Manufacture MAT-STE-00015 without any Quality Inspection. Both are kept as history;
+the gate now reports for that Work Order "Quality Inspection for Wiring (PO-JOB00011)". Unit tests in
+`horizon_erp.horizon_quality_management.tests.test_operation_inspection` (prefix QCGATE; own
+operations *QCGATE Wiring* / *QCGATE Testing* with template *QCGATE Inspection*, *QCGATE Deburr*
+without one). Browser run in Chromium (Playwright) as **Administrator** against http://127.0.0.1:8000.
+
+| ID | Scenario | Expected | Evidence |
+| --- | --- | --- | --- |
+| QG-1 | Templates on all operations (`setup_manufacturing_masters`, run twice) | Wiring / Machining / Cutting / Testing Inspection created once; all 7 Operations carry a template | **PASS** - Cutting -> Cutting Inspection, Welding -> Weld, Painting -> Paint, Machining -> Machining, Assembly -> Assembly, Wiring -> Wiring, Testing -> Testing; 10 templates after the second run |
+| QG-2 | New Job Card picks up the Operation's template | `quality_inspection_template` set | **PASS** - `test_job_card_template_from_operation`; live PO-JOB00012 / PO-JOB00013 = Wiring Inspection |
+| QG-3 | Job Card submit without QI | Blocked "Quality Inspection Required" naming the operation and how to create the QI | **PASS** - `test_job_card_submit_blocked_without_qi`; live `a06` / `b06` |
+| QG-4 | Job Card submit with the latest QI Rejected, then Accepted + Rework; then Conditional Pass | Blocked twice naming the QI; Conditional Pass releases | **PASS** - `test_job_card_submit_blocked_by_rejected_and_rework_qi` |
+| QG-5 | Operation without template | Job Card submits, nothing missing at finish | **PASS** - `test_job_card_without_template_unaffected` |
+| QG-6 | Finish with one completed card without QI (legacy) and one card not completed | One message listing both | **PASS** - `test_manufacture_blocked_lists_every_missing_item`: "Missing before finish: Quality Inspection for QCGATE Wiring (PO-JOB…); Job Card for QCGATE Testing not completed (PO-JOB…)" |
+| QG-7 | Manufacture entry when the latest QI of a card is Rework, then Rejected | Blocked by the Stock Entry `before_validate` gate naming the QI | **PASS** - `test_manufacture_blocked_by_rejected_or_rework_qi` |
+| QG-8 | All cards Accepted; partial manufacture 1 of 2 | Submits; produced qty 1 | **PASS** - `test_manufacture_allowed_with_accepted_qis` |
+| QG-9 | Rework Work Order (`rework_of`) | Same rules | **PASS** - `test_rework_work_order_same_rules` |
+| QG-10 | Work Order without operations | Manufacture submits | **PASS** - `test_work_order_without_operations_unaffected` |
+| QG-11 | Open Production Audit 60 with all QIs Accepted; then Action Closed | Blocked "Production Audit Open"; saves after closing | **PASS** - `test_open_low_audit_still_blocks_with_qis`; PA-2 test now asserts the audit part (`validate_open_audits`) after closing |
+| QG-12 | Live happy path: new WO SA-PANEL-01 x 1 -> Submit -> Start (transfer) -> Job Card Wiring Start Job (Sunita Pawar) / Complete Job -> Submit -> Quality Inspection field > *Create a new Quality Inspection* (In Process, Job Card, Wiring Inspection pre-filled; insulation 500 MOhm, continuity Pass, torque 2.5 Nm) -> Submit -> Job Card Submit -> WO *Finish* -> Manufacture Submit | Job Card blocked without QI; Accepted QI releases it; Manufacture submits; WO Completed | **PASS** - MFG-WO-2026-00009, transfer MAT-STE-00016, Job Card PO-JOB00012 (blocked, then Completed), QI MAT-QA-2026-00008 (Accepted, Pass), Manufacture MAT-STE-00017, WO Completed. Kept as demo documents |
+| QG-13 | Live: second WO, QI skipped | Job Card submit blocked; *Finish* shows the consolidated message | **PASS** - MFG-WO-2026-00010 (transfer MAT-STE-00018, Job Card PO-JOB00013 left in draft): *Finish* -> "Inspection Missing: Work Order MFG-WO-2026-00010 cannot be finished. Missing before finish: Job Card for Wiring not completed (PO-JOB00013)." The "Quality Inspection for <operation>" line needs a completed card without QI, which the Job Card gate now prevents in the UI; it is shown by QG-6 |
+
+Screenshots (`qcgate/`): `a01_work_order_submitted.png`, `a03_material_transfer_submitted.png`,
+`a04_start_job_dialog.png`, `a05_job_card_completed_draft.png`, `a06_job_card_submit_blocked_no_qi.png`,
+`a07_job_card_create_qi_from_field.png`, `a08_qi_saved_readings.png`, `a09_qi_submitted_accepted.png`,
+`a10_job_card_submitted_completed.png`, `a11_finish_clicked.png`, `a12_manufacture_entry_submitted.png`,
+`a13_work_order_completed.png`, `b06_job_card_submit_blocked_no_qi.png`, `b11_finish_clicked.png`.
+
+Suite: `bench --site horizon.local run-tests --app horizon_erp --skip-test-records` -> **Ran 210 tests - OK**,
+residue (`find_test_residue()`) = {}.

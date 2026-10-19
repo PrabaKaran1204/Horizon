@@ -55,7 +55,7 @@ is designed, not configured.
 | CRM & Selling: lead-to-quote, pricing, order-to-delivery | Opportunity → Customer automation, 4 pricing rules, discount approval, Delivery Note before invoice, auto draft invoice, Order Status report | docs/01 §5, ADR-14/17/18 |
 | Buying: approvals, blacklist, receipt → QC → GRN | PO workflow, Supplier Exception Log, Purchase Receipt draft = receipt, submit = GRN after Quality Inspection, auto return / debit note, Supplier Scorecard | ADR-2 |
 | Inventory reorder & MRP | Daily reorder-level formula, auto Material Request, Forecast vs Actual, Inventory Obsolescence | docs/01 §5 |
-| Manufacturing: BOM, capacity, QC | 8 three-level BOMs, capacity check, Capacity Utilisation report, rework loop, Quality Metrics | ADR-4 |
+| Manufacturing: BOM, capacity, QC | 8 three-level BOMs, capacity check, Capacity Utilisation report, rework loop, Quality Metrics; an inspection template on every operation, Job Card and Work Order *Finish* blocked until each operation has an Accepted Quality Inspection | ADR-4, ADR-19 |
 | Projects & Assets | Overtime flag, overhead %, milestone billing, asset depreciation, maintenance | docs/01 |
 | HR & Payroll | Shifts, leave, three salary structures, statutory deductions, Salary Cost Analysis | docs/01 |
 | Accounts: bank, budget, GST | Bank import + sign-off, budgets + forecast mail, India Compliance GST | docs/01 |

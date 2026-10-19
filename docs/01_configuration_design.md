@@ -252,8 +252,8 @@ flowchart TD
     OVR -- no --> STOP[Save blocked]
     OVR -- yes --> AUD1[Audit comment on WO] --> JC
     CAP -- yes --> JC[Job Cards per operation<br/>Cutting / Welding / Painting / Machining / Assembly / Wiring / Testing]
-    JC --> QI{Quality Inspection on Job Card<br/>Weld / Paint / Assembly template}
-    QI -- Pass --> PA
+    JC --> QI{Quality Inspection on Job Card<br/>template of the operation (all 7 operations)<br/>Job Card submit needs an Accepted QI}
+    QI -- Pass / Conditional Pass --> PA
     QI -- Rework --> RW[Draft rework Work Order<br/>qty = sample_size, rework_of = WO] --> JC
     QI -- Fail --> NC[Non Conformance under<br/>Horizon Manufacturing QC] --> PA
     PA[Production Audit by Quality Inspector<br/>score 0-100, photos mandatory < 70]
@@ -261,8 +261,10 @@ flowchart TD
     SC -- yes --> ESC[Operations Head notified<br/>Quality Action opened<br/>escalated = 1]
     ESC --> CLOSE{Audit moved to Action Closed?}
     CLOSE -- no --> BLOCK[Manufacture Stock Entry blocked:<br/>Production Audit Open]
-    CLOSE -- yes --> FG
-    SC -- no --> FG[Manufacture Stock Entry -> HQ Finished Goods<br/>Work Order Completed]
+    CLOSE -- yes --> GATE
+    SC -- no --> GATE{Finish gate: every operation has a<br/>completed Job Card with an Accepted QI?}
+    GATE -- no --> MISS[Finish / Manufacture Stock Entry blocked:<br/>one 'Missing before finish' list]
+    GATE -- yes --> FG[Manufacture Stock Entry -> HQ Finished Goods<br/>Work Order Completed]
     FG --> DN[Delivery Note<br/>quality gate: open audit / rejected QI needs Shipment Decision]
 ```
 
@@ -382,7 +384,7 @@ notification, print format, workspace, permissions; **Custom code** = Python / J
 | --- | --- | --- | --- | --- |
 | BOM-1 | 3-level BOM with operations, two product types | HZ-PUMP-100 (SA-MOTOR-01, SA-HOUSING-01, SA-PANEL-01 -> components) and HZ-CONV-200 (SA-FRAME-01, SA-DRIVE-01); operations Cutting, Welding, Painting, Machining, Assembly, Wiring, Testing on Line A / Line B | Configuration | `demo_data.BOMS`, `OPERATIONS` |
 | BOM-2 | BOM versioning with audit | Submittable BOM (new version = new document), BOM Update Tool; custom `revision_reason` (Design Change / Cost Update / Supplier Change / Quality Issue) and `approved_by` | Standard + Configuration | `horizon_manufacturing/custom/bom.json` |
-| BOM-3 | Inspection step per operation | ERPNext `Operation.quality_inspection_template` is fetched onto Job Cards; `setup_manufacturing_masters` assigns Weld Inspection -> Welding, Paint Inspection -> Painting, Assembly Inspection -> Assembly | Standard + Configuration | `demo_data._assign_operation_qi_templates` |
+| BOM-3 | Inspection step per operation | ERPNext `Operation.quality_inspection_template` is fetched onto Job Cards; `setup_manufacturing_masters` assigns a template to **all 7 operations**: Cutting Inspection -> Cutting, Weld Inspection -> Welding, Paint Inspection -> Painting, Machining Inspection -> Machining, Assembly Inspection -> Assembly, Wiring Inspection -> Wiring, Testing Inspection -> Testing. The inspection is mandatory (ADR-19): a Job Card of an operation with a template cannot be submitted without an Accepted QI, and the Work Order cannot finish until every operation has a completed Job Card with an Accepted QI | Standard + Configuration + Custom code | `demo_data._assign_operation_qi_templates`, `horizon_quality_management/operation_inspection.py` |
 | BOM-4 | Rolled-up costing and variance | Standard BOM cost roll-up (`update_cost` run for top-level BOMs); variance via Work Order planned vs actual operating cost and Stock Entry valuation | Standard | `demo_data._ensure_boms` |
 | BOM-5 | BOM Explosion report with lead time and cost | Exploded leaf items vs stock, lead time, projected cost | Custom code | `horizon_manufacturing/report/bom_explosion_with_lead_time` |
 
@@ -400,8 +402,9 @@ notification, print format, workspace, permissions; **Custom code** = Python / J
 
 | # | Requirement | How it is met | Type | Where |
 | --- | --- | --- | --- | --- |
-| QC-1 | Operation-specific checklists with parameters and evidence | Quality Inspection Templates (weld depth 4-6 mm, DFT 60-80 um, torque 45-50 Nm); `evidence_required` enforced | Configuration + Custom code | `demo_data.QI_TEMPLATES`, `inspection.validate_evidence` |
+| QC-1 | Operation-specific checklists with parameters and evidence | Quality Inspection Templates per operation: Weld (depth 4-6 mm, bead, crack), Paint (DFT 60-80 um), Assembly (torque 45-50 Nm, alignment), Wiring (insulation >= 1 MOhm, continuity Pass, terminal torque 2-3 Nm), Machining (bore 49.95-50.05 mm, Ra <= 3.2 um), Cutting (cut length 998-1002 mm = illustrative 1000 +/- 2, burr free), Testing (pressure 10-15 bar, 30 min run Pass, noise <= 85 dB). ERPNext numeric checks need both limits, so one-sided limits carry a practical bound (tester range, 0, test-rig maximum); drawing-specific nominals are illustrative. `evidence_required` enforced | Configuration + Custom code | `demo_data.QI_TEMPLATES`, `inspection.validate_evidence` |
 | QC-2 | QI linked to WO operation; Pass/Fail/Rework; auto rework WO | QI on Job Card / Stock Entry (v15 has no WO reference type, resolved from the reference); `qc_result = Rework` -> draft rework Work Order with `rework_of`; `Fail` -> Non Conformance | Custom code | `inspection.on_submit_quality_inspection` |
+| QC-6 | Inspection mandatory before completion (ADR-19, DEF-25) | **Job Card gate** (`before_submit`): an operation with a template (Job Card's own, else the Operation's) needs a submitted QI on the Job Card whose latest submission is Accepted and not Fail / Rework (blank, Pass, Conditional Pass accepted); Fail / Rework / Rejected keep the card open and route to the NC / rework WO. Draft cards created before the template pick it up on save. **Finish gate**: the Work Order *Finish* endpoint (`make_stock_entry`, overridden) and the Manufacture Stock Entry `before_validate` list in one message every operation without a completed Job Card and every completed card without an Accepted QI; WOs without operations are skipped; quantities stay with ERPNext's completed-qty check (partial manufacture works); rework WOs follow the same rules. The Production Audit < 70 block is unchanged and audits stay optional | Custom code | `horizon_quality_management/operation_inspection.py`, `production_audit_hooks.validate_stock_entry`, `hooks.py` |
 | QC-3 | Non-conformance with root cause, corrective action plan, supplier link | Standard Non Conformance + Quality Action under procedure *Horizon Manufacturing QC*; supplier defects via Purchase Receipt QI and Supplier Quality Scorecard | Standard + Custom code | `inspection.create_non_conformance`, `create_quality_action` |
 | QC-4 | Quality metrics: first-pass yield, rework cost %, defect trends | *Quality Metrics* report: first-pass yield (completed WOs without a rework WO or a Production Audit < 70), rework cost % (rework WO operating + material cost over all WO cost in the period), top 10 defect reasons by month with trend chart (QI `rejection_reason` + Non Conformance), inspection SLA 4 h; four KPIs in the summary | Custom code | `horizon_quality_management/report/quality_metrics` |
 | QC-5 | Corrective Action Tracker (due vs overdue, owner, training link) | Quality Action with resolution owner and `completion_by` (+7 days); Audit Findings Dashboard lists pending corrective actions; Open Corrective Actions card | Standard + Custom code | `horizon_quality_management/report/audit_findings_dashboard` |

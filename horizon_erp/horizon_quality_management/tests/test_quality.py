@@ -11,7 +11,10 @@ from horizon_erp.horizon_core.tests.fixtures import (
 	make_work_order,
 	setup_common,
 )
-from horizon_erp.horizon_quality_management.production_audit_hooks import validate_stock_entry
+from horizon_erp.horizon_quality_management.production_audit_hooks import (
+	validate_open_audits,
+	validate_stock_entry,
+)
 from horizon_erp.tests.cleanup import purge_test_residue
 
 
@@ -73,7 +76,8 @@ class TestQuality(FrappeTestCase):
 		self.assertIn(audit.name, str(ctx.exception))
 
 		audit.db_set("status", "Action Closed")
-		validate_stock_entry(stock_entry)  # no exception
+		# the audit no longer blocks; the Job Card / inspection gate (ADR-19) is tested separately
+		validate_open_audits(stock_entry)  # no exception
 
 	def test_high_score_not_escalated(self):
 		audit = self._audit(90, photos=False).insert()
