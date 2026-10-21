@@ -9,8 +9,8 @@ Horizon ERP packages the Horizon Manufacturing implementation as code so it can 
 any bench: 7 custom DocTypes (Production Audit, Shipment Decision, Supplier Exception Log,
 Quarterly Purchase Plan, Inventory API Log, Budget Override Request, Bank Reconciliation Sign-off,
 plus two child tables), 4 approval workflows (PO approval, discount approval for Quotation and
-Sales Order, production audit review, payment approval - 5 Workflow records), 19 tested Script
-Reports (+ the API Usage Report = 20), 12 workspaces (a *Horizon ERP* home + one per assignment section, CRM & Selling split in two) backed by 26 number cards and
+Sales Order, production audit review, payment approval - 5 Workflow records), 20 tested Script
+Reports (+ the API Usage Report = 21), 12 workspaces (a *Horizon ERP* home + one per assignment section, CRM & Selling split in two) backed by 26 number cards and
 8 dashboard charts (1 custom chart source),
 2 Jinja print formats, 4 notifications, 7 scheduler jobs, 1 REST API
 (`get_inventory_snapshot`, rate limited and logged) and 7 form client scripts loaded through
@@ -208,7 +208,8 @@ horizon_erp/
                                 number_card/, dashboard_chart/, tests/
   horizon_crm/                  opportunity.py (Opportunity -> Customer, Lead quotation switch), custom/opportunity.json,
                                 workspace/horizon_crm, number_card/ (open leads, leads > 14 days, open
-                                opportunities + value, leads converted 90d), dashboard_chart/, tests/
+                                opportunities + value, leads converted 90d), dashboard_chart/,
+                                report/crm_pipeline_summary, tests/
   horizon_stock/                purchase_receipt.py (rejection paperwork, optional QC Hold), scrap.py,
                                 tasks.py (reorder + accuracy, reorder recompute), custom/{item,stock_settings}.json,
                                 report/ (inventory_obsolescence_analysis, forecast_vs_actual_demand),

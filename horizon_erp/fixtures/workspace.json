@@ -5568,7 +5568,7 @@
     "icon": null,
     "is_query_report": 0,
     "label": "Reports",
-    "link_count": 6,
+    "link_count": 7,
     "link_to": null,
     "link_type": null,
     "onboard": 0,
@@ -5578,6 +5578,24 @@
     "parenttype": "Workspace",
     "report_ref_doctype": null,
     "type": "Card Break"
+   },
+   {
+    "dependencies": null,
+    "description": null,
+    "hidden": 0,
+    "icon": null,
+    "is_query_report": 1,
+    "label": "CRM Pipeline Summary",
+    "link_count": 0,
+    "link_to": "CRM Pipeline Summary",
+    "link_type": "Report",
+    "onboard": 0,
+    "only_for": null,
+    "parent": "Horizon CRM",
+    "parentfield": "links",
+    "parenttype": "Workspace",
+    "report_ref_doctype": null,
+    "type": "Link"
    },
    {
     "dependencies": null,
@@ -5688,7 +5706,7 @@
     "type": "Link"
    }
   ],
-  "modified": "2026-10-18 12:00:00",
+  "modified": "2026-10-21 12:00:00",
   "module": "Horizon CRM",
   "name": "Horizon CRM",
   "number_cards": [

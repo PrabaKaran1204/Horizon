@@ -132,9 +132,19 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 6,
+   "link_count": 7,
    "onboard": 0,
    "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "CRM Pipeline Summary",
+   "link_count": 0,
+   "link_to": "CRM Pipeline Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   },
   {
    "hidden": 0,
@@ -197,7 +207,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-18 12:00:00.000000",
+ "modified": "2026-10-21 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Horizon CRM",
  "name": "Horizon CRM",
