@@ -13,7 +13,7 @@ Sales Order, production audit review, payment approval - 5 Workflow records), 19
 Reports (+ the API Usage Report = 20), 12 workspaces (a *Horizon ERP* home + one per assignment section, CRM & Selling split in two) backed by 26 number cards and
 8 dashboard charts (1 custom chart source),
 2 Jinja print formats, 4 notifications, 7 scheduler jobs, 1 REST API
-(`get_inventory_snapshot`, rate limited and logged) and 5 form client scripts loaded through
+(`get_inventory_snapshot`, rate limited and logged) and 7 form client scripts loaded through
 `doctype_js`. Business rules (PO approval limits, blacklisted suppliers, discount caps, Delivery
 Note before Invoice, Work Order capacity, quality gates, timesheet / task rules) live in
 `doc_events` hooks and are covered by the test suite. The inventory API honours Warehouse User
@@ -55,7 +55,7 @@ is designed, not configured.
 | CRM & Selling: lead-to-quote, pricing, order-to-delivery | Opportunity → Customer automation, 4 pricing rules, discount approval, Delivery Note before invoice, auto draft invoice, Order Status report | docs/01 §5, ADR-14/17/18 |
 | Buying: approvals, blacklist, receipt → QC → GRN | PO workflow, Supplier Exception Log, Purchase Receipt draft = receipt, submit = GRN after Quality Inspection, auto return / debit note, Supplier Scorecard | ADR-2 |
 | Inventory reorder & MRP | Daily reorder-level formula, auto Material Request, Forecast vs Actual, Inventory Obsolescence | docs/01 §5 |
-| Manufacturing: BOM, capacity, QC | 8 three-level BOMs, capacity check, Capacity Utilisation report, rework loop, Quality Metrics; an inspection template on every operation, Job Card and Work Order *Finish* blocked until each operation has an Accepted Quality Inspection | ADR-4, ADR-19 |
+| Manufacturing: BOM, capacity, QC | 8 three-level BOMs, capacity check, Capacity Utilisation report, rework loop, Quality Metrics; an inspection template on every operation, Job Card and Work Order *Finish* blocked until each operation has an Accepted Quality Inspection (Job Card *Create > Quality Inspection* pre-fills it) | ADR-4, ADR-19 |
 | Projects & Assets | Overtime flag, overhead %, milestone billing, asset depreciation, maintenance | docs/01 |
 | HR & Payroll | Shifts, leave, three salary structures, statutory deductions, Salary Cost Analysis | docs/01 |
 | Accounts: bank, budget, GST | Bank import + sign-off, budgets + forecast mail, India Compliance GST | docs/01 |

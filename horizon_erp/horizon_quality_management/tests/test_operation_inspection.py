@@ -18,7 +18,11 @@ from horizon_erp.horizon_core.tests.fixtures import (
 	setup_common,
 	with_dimensions,
 )
-from horizon_erp.horizon_quality_management.operation_inspection import get_missing_before_finish
+from horizon_erp.horizon_quality_management.operation_inspection import (
+	get_inspection_status,
+	get_missing_before_finish,
+	make_quality_inspection,
+)
 from horizon_erp.horizon_quality_management.operation_inspection import make_stock_entry as finish_entry
 from horizon_erp.tests.cleanup import purge_test_residue
 
@@ -241,6 +245,83 @@ class TestOperationInspectionGate(FrappeTestCase):
 		card = self._cards(wo)["QCGATE Deburr"]
 		self.assertEqual(self._complete(card).docstatus, 1)
 		self.assertEqual(get_missing_before_finish(wo.name), [])
+
+	# -- Job Card form: Create > Quality Inspection and status headline ----------------------
+
+	def test_make_quality_inspection_prefilled_from_job_card(self):
+		wo = self._work_order(qty=3)
+		card = self._cards(wo)[OPERATIONS[0]]
+		qi = make_quality_inspection(card)
+		self.assertTrue(qi.get("__islocal"))
+		self.assertEqual(qi.inspection_type, "In Process")
+		self.assertEqual((qi.reference_type, qi.reference_name), ("Job Card", card))
+		self.assertEqual(qi.item_code, "QCGATE-FG")
+		self.assertEqual(qi.bom_no, self.bom.name)
+		self.assertEqual(qi.quality_inspection_template, TEMPLATE)
+		self.assertEqual(qi.sample_size, 3)
+		self.assertEqual(qi.inspected_by, "Administrator")
+		self.assertEqual([r.specification for r in qi.readings], [PARAMETER])
+		self.assertEqual((qi.readings[0].min_value, qi.readings[0].max_value), (1, 10))
+
+		qi.readings[0].reading_1 = "5"
+		qi.insert()
+		qi.submit()
+		self.assertEqual(qi.status, "Accepted")
+		self.assertEqual(frappe.db.get_value("Job Card", card, "quality_inspection"), qi.name)
+		self.assertEqual(self._complete(card).docstatus, 1)
+
+	def test_make_quality_inspection_refused_without_template_or_permission(self):
+		wo = self._work_order("QCGATE-FG-PLAIN", self.bom_plain)
+		card = self._cards(wo)["QCGATE Deburr"]
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			make_quality_inspection(card)
+		self.assertIn("no Quality Inspection Template", str(ctx.exception))
+
+		gated = self._cards(self._work_order())[OPERATIONS[0]]
+		frappe.set_user("Guest")
+		with self.assertRaises(frappe.PermissionError):
+			make_quality_inspection(gated)
+		with self.assertRaises(frappe.PermissionError):
+			get_inspection_status(gated)
+
+	def test_inspection_status_follows_latest_inspection(self):
+		wo = self._work_order()
+		cards = self._cards(wo)
+		card = cards[OPERATIONS[0]]
+		status = get_inspection_status(card)
+		self.assertEqual(
+			status,
+			{"template": TEMPLATE, "required": True, "inspection": None, "result": None, "accepted": False},
+		)
+
+		rework = self._inspect(card, reading="5", qc_result="Rework")
+		status = get_inspection_status(card)
+		self.assertEqual(
+			(status["inspection"], status["result"], status["accepted"]), (rework.name, "Rework", False)
+		)
+
+		accepted = self._inspect(card, reading="5", qc_result="Pass")
+		status = get_inspection_status(card)
+		self.assertEqual(
+			(status["inspection"], status["result"], status["accepted"]), (accepted.name, "Pass", True)
+		)
+
+		plain = self._cards(self._work_order("QCGATE-FG-PLAIN", self.bom_plain))["QCGATE Deburr"]
+		self.assertFalse(get_inspection_status(plain)["required"])
+		with self.assertRaises(frappe.DoesNotExistError):
+			get_inspection_status("PO-JOB-QCGATE-MISSING")
+
+	def test_job_card_links_accepted_inspection_on_save(self):
+		"""Fallback for ERPNext's update_qc_reference, which skips cards whose production_item
+		differs from the inspection's item_code."""
+		wo = self._work_order()
+		card = self._cards(wo)[OPERATIONS[0]]
+		qi = self._inspect(card)
+		frappe.db.set_value("Job Card", card, "quality_inspection", None)
+		jc = frappe.get_doc("Job Card", card)
+		self.assertFalse(jc.quality_inspection)
+		jc.save()
+		self.assertEqual(jc.quality_inspection, qi.name)
 
 	# -- Manufacture (Finish) gate -----------------------------------------------------------
 

@@ -39,6 +39,7 @@ doctype_js = {
 	"Purchase Order": "public/js/purchase_order.js",
 	"Delivery Note": "public/js/delivery_note.js",
 	"Work Order": "public/js/work_order.js",
+	"Job Card": "public/js/job_card.js",
 }
 
 # Jinja

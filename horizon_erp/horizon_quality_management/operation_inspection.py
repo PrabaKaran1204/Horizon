@@ -12,6 +12,10 @@ nothing: a Job Card submits and the Manufacture entry posts without any inspecti
 - Manufacture Stock Entry (called from ``production_audit_hooks.validate_stock_entry``): every
   operation of the Work Order needs a completed Job Card and each of those cards an Accepted
   inspection; everything missing is reported in one message.
+- Job Card form (``public/js/job_card.js``): ERPNext v15 has no "Create > Quality Inspection"
+  button on the Job Card, so ``make_quality_inspection`` builds the pre-filled In Process
+  inspection (readings from the template) and ``get_inspection_status`` feeds the red / green
+  headline that tells the operator whether the card can be completed.
 
 "Accepted" means the latest submitted inspection of the card has status Accepted and a QC result
 other than Fail / Rework (blank, Pass and Conditional Pass are accepted). Fail and Rework route
@@ -68,12 +72,24 @@ def describe_result(inspection):
 
 
 def before_validate_job_card(doc, method=None):
-	"""Draft Job Cards created before their Operation had a template pick it up, so the
-	standard "+ Create Quality Inspection" route on the form pre-fills the right template."""
-	if doc.docstatus == 0 and not doc.get("quality_inspection_template"):
+	"""Draft Job Cards created before their Operation had a template pick it up, so the Create >
+	Quality Inspection button and the standard link-field route pre-fill the right template.
+
+	ERPNext links the inspection back to the card itself (``QualityInspection.update_qc_reference``,
+	on submit when Stock Settings say Stop, on every save otherwise) but only when the inspection's
+	``item_code`` equals the card's ``production_item``; the gate accepts any Accepted inspection
+	referencing the card, so the link is completed here for the remaining case.
+	"""
+	if doc.docstatus != 0:
+		return
+	if not doc.get("quality_inspection_template"):
 		template = get_required_template(doc)
 		if template:
 			doc.quality_inspection_template = template
+	if not doc.is_new() and not doc.get("quality_inspection"):
+		inspection = get_latest_inspections([doc.name]).get(doc.name)
+		if is_accepted(inspection):
+			doc.quality_inspection = inspection.name
 
 
 def before_submit_job_card(doc, method=None):
@@ -112,6 +128,71 @@ def before_submit_job_card(doc, method=None):
 		),
 		title=_("Quality Inspection Not Accepted"),
 	)
+
+
+@frappe.whitelist()
+def get_inspection_status(job_card):
+	"""Headline data for the Job Card form: is an inspection required, and does the latest
+	submitted one release the card? Read permission on the Job Card is the gate; the inspection
+	name is returned even to users without Quality Inspection read so the headline is never a
+	misleading "required" for a card that is in fact released."""
+	frappe.has_permission("Job Card", "read", doc=job_card, throw=True)
+	card = frappe.db.get_value(
+		"Job Card", job_card, ["operation", "quality_inspection_template"], as_dict=True
+	)
+	if not card:
+		frappe.throw(_("Job Card {0} not found").format(job_card), frappe.DoesNotExistError)
+
+	template = get_required_template(card)
+	inspection = get_latest_inspections([job_card]).get(job_card) if template else None
+	return {
+		"template": template,
+		"required": bool(template),
+		"inspection": inspection.name if inspection else None,
+		"result": describe_result(inspection) if inspection else None,
+		"accepted": is_accepted(inspection),
+	}
+
+
+@frappe.whitelist()
+def make_quality_inspection(source_name, target_doc=None):
+	"""Job Card "Create > Quality Inspection": the In Process inspection of the card, pre-filled
+	and with the readings of the required template, returned unsaved for the form
+	(``frappe.model.open_mapped_doc``, the same route ERPNext's own Create buttons use)."""
+	frappe.has_permission("Job Card", "read", doc=source_name, throw=True)
+	frappe.has_permission("Quality Inspection", "create", throw=True)
+
+	job_card = frappe.get_doc("Job Card", source_name)
+	if job_card.docstatus == 2:
+		frappe.throw(_("Job Card {0} is cancelled").format(frappe.bold(source_name)))
+	template = get_required_template(job_card)
+	if not template:
+		frappe.throw(
+			_("Operation {0} on Job Card {1} has no Quality Inspection Template").format(
+				frappe.bold(job_card.operation), frappe.bold(source_name)
+			)
+		)
+
+	serial_no = (job_card.get("serial_no") or "").strip()
+	inspection = frappe.new_doc("Quality Inspection")
+	inspection.update(
+		{
+			"inspection_type": "In Process",
+			"reference_type": "Job Card",
+			"reference_name": job_card.name,
+			"item_code": job_card.production_item,
+			"item_name": job_card.item_name,
+			"bom_no": job_card.bom_no,
+			"quality_inspection_template": template,
+			"sample_size": job_card.for_quantity,
+			"batch_no": job_card.get("batch_no"),
+			# the card's serial_no is a Small Text list; the inspection link takes a single serial
+			"item_serial_no": serial_no if serial_no and "\n" not in serial_no else None,
+			"inspected_by": frappe.session.user,
+		}
+	)
+	inspection.get_item_specification_details()
+	return inspection
 
 
 # ---------------------------------------------------------------------------
