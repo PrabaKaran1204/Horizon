@@ -1,6 +1,8 @@
 // Copyright (c) 2026, Horizon Manufacturing Ltd and contributors
 // For license information, please see license.txt
 
+const HORIZON_DAYS = 7;
+
 frappe.query_reports["Capacity Utilisation and Sequence"] = {
 	filters: [
 		{
@@ -17,12 +19,24 @@ frappe.query_reports["Capacity Utilisation and Sequence"] = {
 			fieldtype: "Date",
 			default: frappe.datetime.get_today(),
 			reqd: 1,
+			on_change() {
+				// keep the horizon ahead of the day being looked at
+				const from_date = frappe.query_report.get_filter_value("from_date");
+				const to_date = frappe.query_report.get_filter_value("to_date");
+				if (from_date && (!to_date || to_date < from_date)) {
+					frappe.query_report.set_filter_value(
+						"to_date",
+						frappe.datetime.add_days(from_date, HORIZON_DAYS),
+					);
+				}
+				frappe.query_report.refresh();
+			},
 		},
 		{
 			fieldname: "to_date",
 			label: __("To Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.add_days(frappe.datetime.get_today(), 14),
+			default: frappe.datetime.add_days(frappe.datetime.get_today(), HORIZON_DAYS),
 			reqd: 1,
 		},
 		{
@@ -30,6 +44,13 @@ frappe.query_reports["Capacity Utilisation and Sequence"] = {
 			label: __("Workstation"),
 			fieldtype: "Link",
 			options: "Workstation",
+		},
+		{
+			fieldname: "only_today",
+			label: __("Only today"),
+			fieldtype: "Check",
+			default: 0,
+			description: __("Show only the From Date rows in the table"),
 		},
 	],
 

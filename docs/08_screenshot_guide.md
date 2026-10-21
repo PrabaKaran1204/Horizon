@@ -94,7 +94,7 @@ Capture `/app/horizon-erp` first as the title slide of the demo.
 | 31 | BOM Explosion with Lead Time | `/app/query-report/BOM%20Explosion%20with%20Lead%20Time?bom=BOM-HZ-PUMP-100-001` | Administrator | Exploded leaf items vs stock on hand with procurement lead time per item; the longest lead time is the real promise date |
 | 32 | Work Order with job cards | `/app/work-order/MFG-WO-2026-00001` (Operations table, *Job Cards* connection) | priya@horizon.local | Completed order for 2 pumps; job cards per operation; In-process inspection required at Assembly |
 | 33 | Manufacturing workspace | `/app/horizon-manufacturing` | priya@horizon.local | Flow SO -> Production Plan -> Work Order (capacity check) -> Job Card + QI -> Production Audit; *Work Orders In Progress*, *Overdue*, *Line Utilisation Today %*; Work Orders by Status |
-| 34 | Capacity Utilisation and Sequence | `/app/query-report/Capacity%20Utilisation%20and%20Sequence` | Administrator | Line A / Line B load per day vs a 16 h shift net of downtime (10 % / 15 %) and the suggested Work Order sequence |
+| 34 | Capacity Utilisation and Sequence | `/app/query-report/Capacity%20Utilisation%20and%20Sequence` | Administrator | Top of page: one card per line with today's free hours (e.g. *Line A free today (of 14.4 h, 2.0 h booked)* = 12.4 h), *Today - line status* table (capacity / booked / free / running WOs / Free-Busy-Overloaded), then the suggested Work Order sequence, utilisation % per line per day chart and the day-by-line rows (16 h shift net of downtime 10 % / 15 %) |
 
 ## E. Selling - discounts, volume pricing, dispatch, invoice (Demo flows and docs/01 section 4)
 

@@ -8,6 +8,8 @@ from frappe import _
 from frappe.utils import add_days, cint, date_diff, flt, formatdate, getdate, nowdate
 
 SHIFT_HOURS = 16
+DEFAULT_HORIZON_DAYS = 7
+BUSY_PCT = 85
 DEFAULT_DOWNTIME = {"Line A": 0.10, "Line B": 0.15}
 OPEN_WO_STATUSES = ("Not Started", "In Process")
 DOWNTIME_FIELD = "horizon_downtime_pct"
@@ -18,7 +20,7 @@ def execute(filters=None):
 	if not filters.company:
 		filters.company = frappe.defaults.get_user_default("Company")
 	filters.from_date = getdate(filters.from_date or nowdate())
-	filters.to_date = getdate(filters.to_date or add_days(filters.from_date, 14))
+	filters.to_date = getdate(filters.to_date or add_days(filters.from_date, DEFAULT_HORIZON_DAYS))
 	if filters.to_date < filters.from_date:
 		filters.to_date = filters.from_date
 	columns = get_columns()
@@ -26,7 +28,12 @@ def execute(filters=None):
 	work_orders = get_open_work_orders(filters)
 	data = get_capacity_rows(filters, workstations, work_orders)
 	sequence = suggest_sequence(filters, workstations, work_orders, data)
-	return columns, data, get_message(sequence), get_chart(data), get_summary(data, sequence)
+	today_rows = [r for r in data if r.date == filters.from_date]
+	message = get_message(filters, today_rows, sequence)
+	summary = get_summary(filters, today_rows, data, sequence)
+	if cint(filters.only_today):
+		data = today_rows
+	return columns, data, message, get_chart(data), summary
 
 
 def get_columns():
@@ -168,8 +175,8 @@ def get_capacity_rows(filters, workstations, work_orders):
 				entry[0] += hours / span
 				entry[1].add(wo.name)
 	data = []
-	for ws in workstations:
-		for day in days:
+	for day in days:  # today's rows first, then workstation
+		for ws in workstations:
 			hours, wos = booked.get((ws.name, day), (0.0, set()))
 			util = hours / ws.capacity_hours * 100 if ws.capacity_hours else 0
 			data.append(
@@ -224,9 +231,67 @@ def suggest_sequence(filters, workstations, work_orders, data):
 	return sequence
 
 
-def get_message(sequence):
+def status_for(utilisation_pct):
+	"""(label, colour) for a utilisation percentage: Free < 85, Busy 85-100, Overloaded > 100."""
+	util = flt(utilisation_pct)
+	if util > 100:
+		return _("Overloaded"), "red"
+	if util >= BUSY_PCT:
+		return _("Busy"), "orange"
+	return _("Free"), "green"
+
+
+def day_label(filters):
+	return _("today") if filters.from_date == getdate(nowdate()) else formatdate(filters.from_date)
+
+
+def get_message(filters, today_rows, sequence):
+	return get_today_table(filters, today_rows) + get_sequence_table(sequence)
+
+
+def get_today_table(filters, today_rows):
+	"""Compact line status for the From Date: this is what a supervisor needs first."""
+	heading = (
+		_("Today - line status ({0})").format(formatdate(filters.from_date))
+		if filters.from_date == getdate(nowdate())
+		else _("Line status on {0}").format(formatdate(filters.from_date))
+	)
+	if not today_rows:
+		return f"<h5>{heading}</h5><p class='text-muted'>{_('No workstations found.')}</p>"
+	head = "".join(
+		f"<th>{_(h)}</th>"
+		for h in ("Line", "Capacity h", "Booked h", "Free h", "Running Work Orders", "Status")
+	)
+	rows = []
+	for r in today_rows:
+		label, colour = status_for(r.utilisation_pct)
+		wos = (
+			", ".join(frappe.utils.get_link_to_form("Work Order", w) for w in r.work_orders.split(", ") if w)
+			or f"<span class='text-muted'>{_('None')}</span>"
+		)
+		free = flt(r.free_hours, 1)
+		free_html = f"<span style='color:red;font-weight:600'>{free}</span>" if free < 0 else f"<b>{free}</b>"
+		rows.append(
+			f"<tr><td>{frappe.utils.get_link_to_form('Workstation', r.workstation)}</td>"
+			f"<td>{flt(r.capacity_hours, 1)}</td><td>{flt(r.booked_hours, 1)}</td><td>{free_html}</td>"
+			f"<td>{wos}</td>"
+			f"<td><span class='indicator-pill {colour}'>{label} ({flt(r.utilisation_pct, 1)}%)</span></td></tr>"
+		)
+	return (
+		f"<h5>{heading}</h5>"
+		f"<table class='table table-bordered table-sm'><thead><tr>{head}</tr></thead>"
+		f"<tbody>{''.join(rows)}</tbody></table>"
+	)
+
+
+def get_sequence_table(sequence):
+	heading = f"<h5>{_('Suggested Work Order Sequence')}</h5>"
 	if not sequence:
-		return f"<h5>{_('Suggested Work Order Sequence')}</h5><p class='text-muted'>{_('No open Work Orders.')}</p>"
+		return f"{heading}<p class='text-muted'>{_('No open Work Orders.')}</p>"
+	note = (
+		f"<p class='text-muted small'>{_('Ordered by due date, same item group grouped to save setup; ')}"
+		f"<span style='color:red;font-weight:600'>{_('Fits By')}</span> {_('in red when after the due date.')}</p>"
+	)
 	head = "".join(
 		f"<th>{_(h)}</th>"
 		for h in ("#", "Work Order", "Item", "Group", "Qty", "Line", "Hours", "Due Date", "Fits By")
@@ -248,57 +313,70 @@ def get_message(sequence):
 			f"<td>{formatdate(s.due_date)}</td><td>{fits}</td></tr>"
 		)
 	return (
-		f"<h5>{_('Suggested Work Order Sequence')} ({_('by due date, grouped by item group')})</h5>"
+		f"{heading}{note}"
 		f"<table class='table table-bordered table-sm'><thead><tr>{head}</tr></thead>"
 		f"<tbody>{''.join(rows)}</tbody></table>"
 	)
 
 
 def get_chart(data):
+	"""Utilisation % per workstation per day: one line per workstation, days on the x-axis."""
+	days = sorted({r.date for r in data})
 	by_ws = {}
 	for r in data:
-		entry = by_ws.setdefault(r.workstation, [0.0, 0.0])
-		entry[0] += r.booked_hours
-		entry[1] += r.capacity_hours
-	labels = list(by_ws.keys())
+		by_ws.setdefault(r.workstation, {})[r.date] = r.utilisation_pct
 	return {
+		"title": _("Utilisation % per workstation per day"),
 		"data": {
-			"labels": labels,
+			"labels": [formatdate(d) for d in days],
 			"datasets": [
-				{"name": _("Booked Hours"), "values": [flt(v[0], 1) for v in by_ws.values()]},
-				{"name": _("Capacity Hours"), "values": [flt(v[1], 1) for v in by_ws.values()]},
+				{"name": ws, "values": [flt(util.get(d, 0.0), 1) for d in days]} for ws, util in by_ws.items()
 			],
+			"yMarkers": [{"label": _("100 % capacity"), "value": 100, "options": {"labelPos": "left"}}],
 		},
-		"type": "bar",
-		"colors": ["#ff5858", "#5e64ff"],
+		"type": "line" if len(days) > 1 else "bar",
+		"fieldtype": "Percent",
+		"colors": ["#5e64ff", "#ff5858", "#28a745", "#ffa00a"],
+		"lineOptions": {"regionFill": 1, "hideDots": 0},
 	}
 
 
-def get_summary(data, sequence):
+def get_summary(filters, today_rows, data, sequence):
+	"""One card per workstation with free hours on the From Date first, then the period figures."""
 	capacity = sum(r.capacity_hours for r in data)
 	booked = sum(r.booked_hours for r in data)
-	overloaded = sum(1 for r in data if r.utilisation_pct > 100)
 	late = sum(
 		1 for s in sequence if s.fits_by == "beyond" or (s.fits_by and getdate(s.fits_by) > s.due_date)
 	)
-	return [
-		{
-			"value": booked / capacity * 100 if capacity else 0,
-			"label": _("Overall Utilisation %"),
-			"datatype": "Percent",
-			"indicator": "Blue",
-		},
-		{
-			"value": overloaded,
-			"label": _("Overloaded Workstation-Days"),
-			"datatype": "Int",
-			"indicator": "Red" if overloaded else "Green",
-		},
-		{"value": len(sequence), "label": _("Open Work Orders"), "datatype": "Int", "indicator": "Blue"},
-		{
-			"value": late,
-			"label": _("WOs Not Fitting Before Due"),
-			"datatype": "Int",
-			"indicator": "Red" if late else "Green",
-		},
-	]
+	when = day_label(filters)
+	summary = []
+	for r in today_rows:
+		_label, colour = status_for(r.utilisation_pct)
+		summary.append(
+			{
+				"value": _("{0} h").format(flt(r.free_hours, 1)),
+				"label": _("{0} free {1} (of {2} h, {3} h booked)").format(
+					r.workstation, when, flt(r.capacity_hours, 1), flt(r.booked_hours, 1)
+				),
+				"datatype": "Data",
+				"indicator": colour.capitalize(),
+			}
+		)
+	summary.extend(
+		[
+			{
+				"value": late,
+				"label": _("WOs Not Fitting Before Due"),
+				"datatype": "Int",
+				"indicator": "Red" if late else "Green",
+			},
+			{"value": len(sequence), "label": _("Open Work Orders"), "datatype": "Int", "indicator": "Blue"},
+			{
+				"value": flt(booked / capacity * 100, 1) if capacity else 0,
+				"label": _("Avg utilisation, period ({0} days)").format(len({r.date for r in data})),
+				"datatype": "Percent",
+				"indicator": "Blue",
+			},
+		]
+	)
+	return summary
